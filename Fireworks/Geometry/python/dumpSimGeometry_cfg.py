@@ -3,7 +3,11 @@ import sys
 import FWCore.ParameterSet.VarParsing as VarParsing
 from FWCore.Utilities.Enumerate import Enumerate
 
+<<<<<<< HEAD
 varType = Enumerate ("Run1 Ideal2015 Ideal2015dev 2015 2015dev GEMDev RPC4RE11 2017 2019 2023 2023dev 2023sim 2023Muon MaPSA CRack DB")
+=======
+varType = Enumerate ("Run1 Ideal2015 Ideal2015dev 2015 2015dev 2015MuonGEMDev RPC4RE11 2017 2019 2023 2023dev 2023sim 2023Muon MaPSA CRack DB")
+>>>>>>> jshlee/gem-CR-stand
 
 def help():
    print "Usage: cmsRun dumpSimGeometry_cfg.py  tag=TAG "
@@ -62,6 +66,9 @@ def simGeoLoad(score):
 
     elif score == "CRack":
        process.load('Geometry.TrackerCommonData.crackGeometryXML_cfi')
+
+    elif score == "GEMCosmic":
+       process.load('Configuration.Geometry.GeometryGEMCosmicStand_cff')
 
     elif score == "DB":
         process.load("Configuration.StandardSequences.GeometryDB_cff")
