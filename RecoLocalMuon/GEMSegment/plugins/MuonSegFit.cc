@@ -297,11 +297,11 @@ void MuonSegFit::setChi2(void) {
 #endif
 }
 
-MuonSegFit::SMatrixSym12 MuonSegFit::weightMatrix() {
+MuonSegFit::SMatrixSym20 MuonSegFit::weightMatrix() {
   
   bool ok = true;
 
-  SMatrixSym12 matrix = ROOT::Math::SMatrixIdentity(); // 12x12, init to 1's on diag
+  SMatrixSym20 matrix = ROOT::Math::SMatrixIdentity(); // 20x20, init to 1's on diag
 
   int row = 0;
   
@@ -326,9 +326,9 @@ MuonSegFit::SMatrixSym12 MuonSegFit::weightMatrix() {
 }
 
 
-MuonSegFit::SMatrix12by4 MuonSegFit::derivativeMatrix() {
+MuonSegFit::SMatrix20by4 MuonSegFit::derivativeMatrix() {
   
-  SMatrix12by4 matrix; // 12x4, init to 0
+  SMatrix20by4 matrix; // 20x4, init to 0
   int row = 0;
   
   for( MuonRecHitContainer::const_iterator it = hits_.begin(); it != hits_.end(); ++it) {
@@ -370,8 +370,8 @@ void MuonSegFit::setOutFromIP() {
 
 AlgebraicSymMatrix MuonSegFit::covarianceMatrix() {
   
-  SMatrixSym12 weights = weightMatrix();
-  SMatrix12by4 A = derivativeMatrix();
+  SMatrixSym20 weights = weightMatrix();
+  SMatrix20by4 A = derivativeMatrix();
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("MuonSegFitMatrixDetails") << "[MuonSegFit::covarianceMatrix] weights matrix W: \n" << weights;      
   edm::LogVerbatim("MuonSegFitMatrixDetails") << "[MuonSegFit::covarianceMatrix] derivatives matrix A: \n" << A;      

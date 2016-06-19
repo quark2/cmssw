@@ -57,7 +57,9 @@ void GEMSegmentBuilder::build(const GEMRecHitCollection* recHits, GEMSegmentColl
     int station = 0; 
     if(it2->gemId().station()==1) station=1;
     else if(it2->gemId().station()==2 || it2->gemId().station()==3) station=3;
-    GEMDetId id(it2->gemId().region(),1,station,0,it2->gemId().chamber(),0);
+    //GEMDetId id(it2->gemId().region(),1,station,0,it2->gemId().chamber(),0);
+    // make all from same chamber
+    GEMDetId id(it2->gemId().region(),1,station,0,1,0);
     // save current GEMRecHit in vector associated to the reference id
     ensembleRH[id.rawId()].push_back(it2->clone());
   }
@@ -81,7 +83,7 @@ void GEMSegmentBuilder::build(const GEMRecHitCollection* recHits, GEMSegmentColl
       ens[(*rechit)->gemId()]=geom_->etaPartition((*rechit)->gemId());
     }    
 
-    #ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode
+    //#ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode
     edm::LogVerbatim("GEMSegmentBuilder") << "[GEMSegmentBuilder::build] -----------------------------------------------------------------------------"; 
     edm::LogVerbatim("GEMSegmentBuilder") << "[GEMSegmentBuilder::build] found " << gemRecHits.size() << " rechits in GEM Super Chamber " << chamber->id()<<" ::"; 
     for (auto rh=gemRecHits.begin(); rh!=gemRecHits.end(); ++rh){
@@ -91,10 +93,10 @@ void GEMSegmentBuilder::build(const GEMRecHitCollection* recHits, GEMSegmentColl
       // auto rhGP = rhr->toGlobal(rhLP);
       // no sense to print local y because local y here is in the roll reference frame
       // in the roll reference frame the local y of a rechit is always the middle of the roll, and hence equal to 0.0
-      edm::LogVerbatim("GEMSegmentBuilder") << "[RecHit :: Loc x = "<<std::showpos<<std::setw(9)<<rhLP.x() /*<<" Loc y = "<<std::showpos<<std::setw(9)<<rhLP.y()*/
+      edm::LogVerbatim("GEMSegmentBuilder") << "[RecHit :: Loc x = "<<std::showpos<<std::setw(9)<<rhLP.x() <<" Loc y = "<<std::showpos<<std::setw(9)<<rhLP.y()
 					    <<" BX = "<<(*rh)->BunchX()<<" -- "<<gemid.rawId()<<" = "<<gemid<<" ]";
     }
-    #endif
+    //#endif
 
 
     GEMSegmentAlgorithmBase::GEMEnsemble ensemble(std::pair<const GEMSuperChamber*,      std::map<uint32_t,const GEMEtaPartition*> >(chamber,ens));
@@ -103,11 +105,11 @@ void GEMSegmentBuilder::build(const GEMRecHitCollection* recHits, GEMSegmentColl
     std::vector<GEMSegment> segv = algo->run(ensemble, gemRecHits);
     GEMDetId mid(enIt->first);
     
-    #ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode
+    //#ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode
     edm::LogVerbatim("GEMSegmentBuilder") << "[GEMSegmentBuilder::build] run the segment reconstruction algorithm now";
     edm::LogVerbatim("GEMSegmentBuilder") << "[GEMSegmentBuilder::build] found " << segv.size() << " segments in GEM Super Chamber " << mid;
     edm::LogVerbatim("GEMSegmentBuilder") << "[GEMSegmentBuilder::build] -----------------------------------------------------------------------------"; 
-    #endif
+    //#endif
     
     // Add the segments to master collection
     oc.put(mid, segv.begin(), segv.end());

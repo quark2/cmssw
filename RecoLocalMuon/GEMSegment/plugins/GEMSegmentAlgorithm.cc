@@ -328,6 +328,10 @@ void GEMSegmentAlgorithm::buildSegments(const GEMEnsemble& ensemble, const Ensem
     newRH->setPosition(lp);
     MuonSegFit::MuonRecHitPtr trkRecHit(newRH);
     muonRecHits.push_back(trkRecHit);
+    auto rhLP = newRH->localPosition();    
+    auto gemid = (*rh)->gemId();
+    edm::LogVerbatim("GEMSegmentAlgorithm") << "[RecHit :: Loc x = "<<std::showpos<<std::setw(9)<<rhLP.x()<<" Loc z = "<<std::showpos<<std::setw(9)<<rhLP.z()
+					    <<" BX = "<<std::showpos<<(*rh)->BunchX()<<" -- "<<gemid.rawId()<<" = "<<gemid<<" ]";
   }
   
   #ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode 

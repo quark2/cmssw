@@ -78,10 +78,10 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
-        MaxEta = cms.double(0.5),
+        MaxEta = cms.double(0.1),
         MaxPhi = cms.double(3.14159265359),
         MaxPt = cms.double(100.01),
-        MinEta = cms.double(0.5),
+        MinEta = cms.double(-0.1),
         MinPhi = cms.double(-3.14159265359),
         MinPt = cms.double(99.99),
         PartID = cms.vint32(-13)
@@ -166,4 +166,32 @@ process.RandomNumberGeneratorService.simMuonGEMDigis = cms.PSet(
         initialSeed = cms.untracked.uint32(1234567),
         engineName = cms.untracked.string('HepJamesRandom')
 )
+
+process.gemSegments.maxRecHitsInCluster = cms.int32(10)
+process.gemSegments.minHitsPerSegment = cms.uint32(3)
+process.gemSegments.clusterOnlySameBXRecHits = cms.bool(True)
+process.gemSegments.dEtaChainBoxMax = cms.double(1.05)
+process.gemSegments.dPhiChainBoxMax = cms.double(1.12)
+process.gemSegments.dXclusBoxMax = cms.double(10.0)
+process.gemSegments.dYclusBoxMax = cms.double(50.0)
+process.gemSegments.preClustering = cms.bool(False)
+process.gemSegments.preClusteringUseChaining = cms.bool(False)
+
+
+process.MessageLogger.categories.append("GEMSegmentBuilder")
+process.MessageLogger.categories.append("GEMSegmentAlgorithm")
+process.MessageLogger.destinations = cms.untracked.vstring("cout")
+process.MessageLogger.cout = cms.untracked.PSet(
+    threshold = cms.untracked.string("INFO"),
+    default   = cms.untracked.PSet( limit = cms.untracked.int32(0)  ),
+    FwkReport = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
+    GEMSegmentBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    GEMSegmentAlgorithm = cms.untracked.PSet( limit = cms.untracked.int32(-1) )
+)
+
+process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
+process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
+process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
+process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
+process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
 
