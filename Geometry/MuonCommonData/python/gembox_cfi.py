@@ -7,7 +7,7 @@ XMLIdealGeometryESSource = cms.ESSource("XMLIdealGeometryESSource",
         #'Geometry/MuonCommonData/data/cosmic1/muonBase.xml', # Phase-2 Muon
         #'Geometry/MuonCommonData/data/cosmic1/cmsMuon.xml',        
         #'Geometry/MuonCommonData/data/cosmic1/mf.xml',        
-        'Geometry/MuonCommonData/data/v2/gemf.xml',
+        'Geometry/MuonCommonData/data/PhaseII/gemf.xml',
         'Geometry/MuonCommonData/data/cosmic1/gem11.xml',
         'Geometry/MuonCommonData/data/cosmic1/muonNumbering.xml',
         'Geometry/MuonCommonData/data/cosmic1/gembox.xml',
