@@ -180,11 +180,13 @@ process.gemSegments.preClusteringUseChaining = cms.bool(False)
 
 process.MessageLogger.categories.append("GEMSegmentBuilder")
 process.MessageLogger.categories.append("GEMSegmentAlgorithm")
+process.MessageLogger.categories.append("MuonSegFit")
 process.MessageLogger.destinations = cms.untracked.vstring("cout")
 process.MessageLogger.cout = cms.untracked.PSet(
     threshold = cms.untracked.string("INFO"),
     default   = cms.untracked.PSet( limit = cms.untracked.int32(0)  ),
     FwkReport = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
+    MuonSegFit = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     GEMSegmentBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     GEMSegmentAlgorithm = cms.untracked.PSet( limit = cms.untracked.int32(-1) )
 )
@@ -194,4 +196,5 @@ process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
 process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
 process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
 process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
+
 

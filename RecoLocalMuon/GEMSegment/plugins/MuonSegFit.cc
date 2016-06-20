@@ -14,22 +14,18 @@
 bool MuonSegFit::fit(void) {
   if ( fitdone() ) return fitdone_; // don't redo fit unnecessarily
   short n = nhits();
-  switch ( n ) {
-  case 1:
+  if (n==1){
     edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit just 1 hit!!";
-    break;
-  case 2:
+  }
+  else if (n==2){
     fit2();
-    break;
-  case 3:
-  case 4:
-  case 5:
-  case 6:
+  }
+  else if (n < 11){
     fitlsq();
-    break;
-  default:
-    edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit more than 6 hits!!"; // should make this :: "cannot fit more than 4 hits!!"
-  }  
+  }
+  else {
+    edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit more than 10 hits!!"; // should make this :: "cannot fit more than 4 hits!!"
+  }
   return fitdone_;
 }
 

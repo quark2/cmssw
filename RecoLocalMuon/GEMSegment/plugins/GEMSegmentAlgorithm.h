@@ -17,6 +17,7 @@
 #include "RecoLocalMuon/GEMSegment/plugins/GEMSegmentAlgorithmBase.h"
 #include "DataFormats/GEMRecHit/interface/GEMRecHit.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "MuonSegFit.h"
 #include <deque>
 #include <vector>
 
@@ -40,6 +41,8 @@ public:
    */
   std::vector<GEMSegment> run(const GEMEnsemble& ensemble, const EnsembleHitContainer& rechits); 
 
+  static bool sortMuRecHits(MuonSegFit::MuonRecHitPtr i,MuonSegFit::MuonRecHitPtr j) { return (i->localPosition().z()<j->localPosition().z()); }
+  
 private:
   /// Utility functions 
 
