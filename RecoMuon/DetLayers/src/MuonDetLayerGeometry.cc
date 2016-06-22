@@ -263,24 +263,24 @@ MuonDetLayerGeometry::allLayers() const {
 
 const vector<const DetLayer*>&
 MuonDetLayerGeometry::allBarrelLayers() const {
-    return allBarrel;    
+    return gemLayers_all;    
 }    
 
 const vector<const DetLayer*>&
 MuonDetLayerGeometry::allEndcapLayers() const {
-    return allEndcap;    
+    return gemLayers_all;    
 }    
 
 
 const vector<const DetLayer*>&
 MuonDetLayerGeometry::allForwardLayers() const {
-    return allForward;    
+    return gemLayers_all;    
 }    
 
 
 const vector<const DetLayer*>&
 MuonDetLayerGeometry::allBackwardLayers() const {
-    return allBackward;    
+    return gemLayers_all;    
 }    
 
 //////////////////////////////GEMs

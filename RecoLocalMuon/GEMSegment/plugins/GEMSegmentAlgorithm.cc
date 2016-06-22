@@ -6,6 +6,7 @@
  */
  
 #include "GEMSegmentAlgorithm.h"
+#include "MuonSegFit.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -63,41 +64,38 @@ std::vector<GEMSegment> GEMSegmentAlgorithm::run(const GEMEnsemble& ensemble, co
   std::vector<GEMSegment>          segments_temp;
   std::vector<GEMSegment>          segments;
   ProtoSegments rechits_clusters; // this is a collection of groups of rechits
+  
+  if(preClustering) {
+    // run a pre-clusterer on the given rechits to split obviously separated segment seeds:
+    if(preClustering_useChaining){
+      // it uses X,Y,Z information; there are no configurable parameters used;
+      // the X, Y, Z "cuts" are just (much) wider than reasonable high pt segments
+      edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] preClustering :: use Chaining";
+      rechits_clusters = this->chainHits(ensemble, rechits );
+    }
+    else{
+      // it uses X,Y information + configurable parameters
+      edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] Clustering";
+      rechits_clusters = this->clusterHits(ensemble, rechits );
+    }
+    // loop over the found clusters:
+      edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] Loop over clusters and build segments";
+    for(auto sub_rechits = rechits_clusters.begin(); sub_rechits !=  rechits_clusters.end(); ++sub_rechits ) {
+      // clear the buffer for the subset of segments:
+      segments_temp.clear();
+      // build the subset of segments:
+      this->buildSegments(ensemble, (*sub_rechits), segments_temp);
+      // add the found subset of segments to the collection of all segments in this chamber:
+      segments.insert( segments.end(), segments_temp.begin(), segments_temp.end() );
+    }
+  
 
+    return segments;
+  }
+  else {
     this->buildSegments(ensemble, rechits, segments);
     return segments;
-  
-  // if(preClustering) {
-  //   // run a pre-clusterer on the given rechits to split obviously separated segment seeds:
-  //   if(preClustering_useChaining){
-  //     // it uses X,Y,Z information; there are no configurable parameters used;
-  //     // the X, Y, Z "cuts" are just (much) wider than reasonable high pt segments
-  //     edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] preClustering :: use Chaining";
-  //     rechits_clusters = this->chainHits(ensemble, rechits );
-  //   }
-  //   else{
-  //     // it uses X,Y information + configurable parameters
-  //     edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] Clustering";
-  //     rechits_clusters = this->clusterHits(ensemble, rechits );
-  //   }
-  //   // loop over the found clusters:
-  //     edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::run] Loop over clusters and build segments";
-  //   for(auto sub_rechits = rechits_clusters.begin(); sub_rechits !=  rechits_clusters.end(); ++sub_rechits ) {
-  //     // clear the buffer for the subset of segments:
-  //     segments_temp.clear();
-  //     // build the subset of segments:
-  //     this->buildSegments(ensemble, (*sub_rechits), segments_temp);
-  //     // add the found subset of segments to the collection of all segments in this chamber:
-  //     segments.insert( segments.end(), segments_temp.begin(), segments_temp.end() );
-  //   }
-  
-
-  //   return segments;
-  // }
-  // else {
-  //   this->buildSegments(ensemble, rechits, segments);
-  //   return segments;
-  // }
+  }
 }
 
 
@@ -330,13 +328,7 @@ void GEMSegmentAlgorithm::buildSegments(const GEMEnsemble& ensemble, const Ensem
     newRH->setPosition(lp);
     MuonSegFit::MuonRecHitPtr trkRecHit(newRH);
     muonRecHits.push_back(trkRecHit);
-    auto rhLP = newRH->localPosition();    
-    auto gemid = (*rh)->gemId();
-    edm::LogVerbatim("GEMSegmentAlgorithm") << "[RecHit :: Loc x = "<<std::showpos<<std::setw(9)<<rhLP.x()<<" Loc z = "<<std::showpos<<std::setw(9)<<rhLP.z()
-					    <<" BX = "<<std::showpos<<(*rh)->BunchX()<<" -- "<<gemid.rawId()<<" = "<<gemid<<" ]";
   }
-  std::sort(muonRecHits.begin(), muonRecHits.end(), sortMuRecHits);
-
   
   #ifdef EDM_ML_DEBUG // have lines below only compiled when in debug mode 
   edm::LogVerbatim("GEMSegmentAlgorithm") << "[GEMSegmentAlgorithm::buildSegments] will now try to fit a GEMSegment from collection of "<<rechits.size()<<" GEM RecHits";

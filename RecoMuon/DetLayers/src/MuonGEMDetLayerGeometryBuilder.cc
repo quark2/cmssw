@@ -2,7 +2,7 @@
 
 #include <DataFormats/MuonDetId/interface/GEMDetId.h>
 #include <Geometry/CommonDetUnit/interface/GeomDet.h>
-#include <RecoMuon/DetLayers/interface/MuRingForwardDoubleLayer.h>
+#include <RecoMuon/DetLayers/interface/MuRingForwardLayer.h>
 #include <RecoMuon/DetLayers/interface/MuRodBarrelLayer.h>
 #include <RecoMuon/DetLayers/interface/MuDetRing.h>
 #include <RecoMuon/DetLayers/interface/MuDetRod.h>
@@ -45,7 +45,7 @@ MuonGEMDetLayerGeometryBuilder::buildEndcapLayers(const GEMGeometry& geo) {
 	  chambers.push_back(chamber);
 	}
 
-	MuRingForwardDoubleLayer* ringLayer = buildLayer(endcap, rings, station, layer, chambers, rolls, geo);          
+	MuRingForwardLayer* ringLayer = buildLayer(endcap, rings, station, layer, chambers, rolls, geo);          
 
 	if (ringLayer) result[iendcap].push_back(ringLayer);
 
@@ -63,7 +63,7 @@ MuonGEMDetLayerGeometryBuilder::buildEndcapLayers(const GEMGeometry& geo) {
 
 
 
-MuRingForwardDoubleLayer* 
+MuRingForwardLayer* 
 MuonGEMDetLayerGeometryBuilder::buildLayer(int endcap,vector<int>& rings, int station,
 					   int layer,
 					   vector<int>& chambers,
@@ -71,7 +71,7 @@ MuonGEMDetLayerGeometryBuilder::buildLayer(int endcap,vector<int>& rings, int st
 					   const GEMGeometry& geo) {
 
   const std::string metname = "Muon|RecoMuon|RecoMuonDetLayers|MuonGEMDetLayerGeometryBuilder";
-  MuRingForwardDoubleLayer * result = 0;
+  MuRingForwardLayer * result = 0;
   vector<const ForwardDetRing*> frontRings, backRings;
 
 
@@ -82,8 +82,8 @@ MuonGEMDetLayerGeometryBuilder::buildLayer(int endcap,vector<int>& rings, int st
       vector<const GeomDet*> frontDets, backDets;
 
       for(std::vector<int>::iterator chamber=chambers.begin()+1; chamber<chambers.end(); chamber++) {
-          GEMDetId gemId(endcap,(*ring), station,layer,(*chamber), (*roll));
-
+	GEMDetId gemId(endcap,(*ring), station,layer,(*chamber), (*roll));
+	
  	  const GeomDet* geomDet = geo.idToDet(gemId);
 	  
 	  if (geomDet !=0) {
@@ -124,7 +124,11 @@ MuonGEMDetLayerGeometryBuilder::buildLayer(int endcap,vector<int>& rings, int st
 
   // How should they be sorted?
   //    precomputed_value_sort(muDetRods.begin(), muDetRods.end(), geomsort::ExtractZ<GeometricSearchDet,float>());                                   
-  if(backRings.size()!=0 && frontRings.size()!=0) result = new MuRingForwardDoubleLayer(frontRings, backRings);
+  LogTrace(metname) << "New MuRingForwardLayer with " << frontRings.size()
+		    << " and " << backRings.size();
+  
+  //  if(backRings.size()!=0 && frontRings.size()!=0) result = new MuRingForwardLayer(frontRings, backRings);
+  if(frontRings.size()!=0) result = new MuRingForwardLayer(frontRings);
     else result = 0;
   if(result != 0){
     LogTrace(metname) << "New MuRingForwardLayer with " << frontRings.size()
@@ -140,13 +144,11 @@ MuonGEMDetLayerGeometryBuilder::buildLayer(int endcap,vector<int>& rings, int st
 
 bool MuonGEMDetLayerGeometryBuilder::isFront(const GEMDetId & gemId)
 {
+  //GEM in Cosmic stand do not currently have an arrangement of which are front and which are back, going to always return true
 
-  bool result = false;
-  int chamber = gemId.chamber();
-
-    if(chamber%2 == 0) result = !result;
-
-    return result;
+  bool result = true;
+  return result;
+    
 }
 
 MuDetRing * MuonGEMDetLayerGeometryBuilder::makeDetRing(vector<const GeomDet*> & geomDets)
