@@ -20,6 +20,7 @@
 class DirectMuonNavigation{
 
   public:
+  static bool sortDetLayer(const DetLayer* i,const DetLayer* j) { return (i->position().y()<j->position().y()); }
 
     /* Constructor */ 
     DirectMuonNavigation(const edm::ESHandle<MuonDetLayerGeometry>&);

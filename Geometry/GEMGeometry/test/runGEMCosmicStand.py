@@ -120,6 +120,13 @@ process.simHcalUnsuppressedDigis = cms.EDAlias()
 process.simSiPixelDigis = cms.EDAlias()
 process.simSiStripDigis = cms.EDAlias()
 
+
+process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
+                                       gemRecHitLabel = cms.InputTag("gemRecHits"),
+                                       #ServiceParameters =
+                                       #MuonSmootherParameters =
+                                       )
+
 process.CosmicMuonSeed.EnableCSCMeasurement = cms.bool(False)
 process.CosmicMuonSeed.EnableDTMeasurement = cms.bool(False)
 process.CosmicMuonSeed.EnableGEMMeasurement = cms.bool(True)
@@ -198,6 +205,7 @@ process.MessageLogger.categories.append("CosmicMuonTrajectoryBuilder")
 process.MessageLogger.categories.append("MuonTrackLoader")
 process.MessageLogger.categories.append("MuonGEMDetLayerGeometryBuilder")
 process.MessageLogger.categories.append("CosmicMuonProducer")
+process.MessageLogger.categories.append("MuonDetLayerGeometry")
 process.MessageLogger.debugModules = cms.untracked.vstring("*")
 process.MessageLogger.destinations = cms.untracked.vstring("cout","junk")
 process.MessageLogger.cout = cms.untracked.PSet(
@@ -209,6 +217,7 @@ process.MessageLogger.cout = cms.untracked.PSet(
     MuonTrackLoader = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     CosmicMuonProducer = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     MuonGEMDetLayerGeometryBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    MuonDetLayerGeometry = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     ## MuonSegFit = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     ## GEMGeometryBuilderFromDDD = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
     #GEMSegmentBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
