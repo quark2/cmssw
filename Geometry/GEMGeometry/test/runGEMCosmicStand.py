@@ -32,8 +32,6 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
-process.load('RecoMuon.MuonSeedGenerator.CosmicMuonSeedProducer_cfi')
-process.load('RecoMuon.CosmicMuonProducer.cosmicMuons_cff')
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
 
@@ -120,26 +118,22 @@ process.simHcalUnsuppressedDigis = cms.EDAlias()
 process.simSiPixelDigis = cms.EDAlias()
 process.simSiStripDigis = cms.EDAlias()
 
+process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
+process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
+                                       process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
-                                       #ServiceParameters =
-                                       #MuonSmootherParameters =
+                                       MuonSmootherParameters = cms.PSet(
+                                           PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
+                                           PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
+                                           RescalingFactor = cms.double(5.0)
+                                           ),
                                        )
-
-process.CosmicMuonSeed.EnableCSCMeasurement = cms.bool(False)
-process.CosmicMuonSeed.EnableDTMeasurement = cms.bool(False)
-process.CosmicMuonSeed.EnableGEMMeasurement = cms.bool(True)
-#process.CosmicMuonSeed.GEMRecSegmentLabel = cms.InputTag("gemSegments")
-process.CosmicMuonSeed.GEMRecSegmentLabel = cms.InputTag("gemRecHits")
-process.cosmicMuons.ServiceParameters.CSCLayers = cms.untracked.bool(False)
-process.cosmicMuons.ServiceParameters.RPCLayers = cms.bool(False)
-process.cosmicMuons.ServiceParameters.GEMLayers = cms.untracked.bool(True)
-process.cosmicMuons.TrajectoryBuilderParameters.EnableCSCMeasurement = cms.bool(False)
-process.cosmicMuons.TrajectoryBuilderParameters.EnableDTMeasurement = cms.bool(False)
-process.cosmicMuons.TrajectoryBuilderParameters.EnableRPCMeasurement = cms.bool(False)
-process.cosmicMuons.TrajectoryBuilderParameters.EnableGEMMeasurement = cms.bool(True)
-process.cosmicMuons.TrajectoryBuilderParameters.GEMRecSegmentLabel = process.CosmicMuonSeed.GEMRecSegmentLabel
+process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
+process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
+process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
 # Path and EndPath definitions
 process.generation_step = cms.Path(process.pgen)
@@ -151,7 +145,7 @@ process.simulation_step = cms.Path(process.psim)
 process.digitisation_step = cms.Path(process.pdigi)
 #process.reconstruction_step = cms.Path(process.reconstruction)
 #process.digitisation_step = cms.Path(process.muonGEMDigi)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.CosmicMuonSeed+process.cosmicMuons)
+process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
@@ -196,16 +190,14 @@ process.gemSegments.preClusteringUseChaining = cms.bool(False)
 
 
 process.MessageLogger.categories.append("GEMGeometryBuilderFromDDD")
-process.MessageLogger.categories.append("CosmicMuonSeedGenerator")
 process.MessageLogger.categories.append("GEMSegmentBuilder")
 process.MessageLogger.categories.append("GEMSegmentAlgorithm")
 process.MessageLogger.categories.append("MuonSegFit")
 process.MessageLogger.categories.append("MuonTrackFinder")
-process.MessageLogger.categories.append("CosmicMuonTrajectoryBuilder")
 process.MessageLogger.categories.append("MuonTrackLoader")
-process.MessageLogger.categories.append("MuonGEMDetLayerGeometryBuilder")
-process.MessageLogger.categories.append("CosmicMuonProducer")
-process.MessageLogger.categories.append("MuonDetLayerGeometry")
+process.MessageLogger.categories.append("SteppingHelixPropagatorESProducer")
+process.MessageLogger.categories.append("CosmicMuonSmoother")
+process.MessageLogger.categories.append("SteppingHelixPropagator")
 process.MessageLogger.debugModules = cms.untracked.vstring("*")
 process.MessageLogger.destinations = cms.untracked.vstring("cout","junk")
 process.MessageLogger.cout = cms.untracked.PSet(
@@ -213,16 +205,14 @@ process.MessageLogger.cout = cms.untracked.PSet(
     default   = cms.untracked.PSet( limit = cms.untracked.int32(0)  ),
     FwkReport = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
     MuonTrackFinder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    CosmicMuonTrajectoryBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    CosmicMuonSmoother = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     MuonTrackLoader = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    CosmicMuonProducer = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    MuonGEMDetLayerGeometryBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    MuonDetLayerGeometry = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    SteppingHelixPropagatorESProducer = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    SteppingHelixPropagator = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     ## MuonSegFit = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     ## GEMGeometryBuilderFromDDD = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
     #GEMSegmentBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     ## GEMSegmentAlgorithm = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
-    CosmicMuonSeedGenerator = cms.untracked.PSet( limit = cms.untracked.int32(-1) )
 )
 
 #process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
@@ -232,3 +222,7 @@ process.MessageLogger.cout = cms.untracked.PSet(
 #process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
 
 
+#process.SteppingHelixPropagatorAny.debug = cms.bool(True)
+#process.SteppingHelixPropagatorAny.sendLogWarning = cms.bool(True)
+#process.SteppingHelixPropagatorAny.useInTeslaFromMagField = cms.bool(False)
+#process.SteppingHelixPropagatorAny.useMagVolumes = cms.bool(False)

@@ -24,7 +24,6 @@
 <use   name="RecoMuon/Records"/>
 <use   name="RecoMuon/TrackingTools"/>
 <use   name="RecoMuon/TransientTrackingRecHit"/>
-<use   name="RecoMuon/CosmicMuonProducer"/>
 <use   name="SimDataFormats/TrackingHit"/>
 <use   name="TrackPropagation/SteppingHelixPropagator"/>
 <use   name="TrackingTools/DetLayers"/>
