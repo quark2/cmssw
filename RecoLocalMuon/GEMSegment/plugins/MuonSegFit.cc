@@ -14,18 +14,22 @@
 bool MuonSegFit::fit(void) {
   if ( fitdone() ) return fitdone_; // don't redo fit unnecessarily
   short n = nhits();
-  if (n==1){
+  switch ( n ) {
+  case 1:
     edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit just 1 hit!!";
-  }
-  else if (n==2){
+    break;
+  case 2:
     fit2();
-  }
-  else if (n < 11){
+    break;
+  case 3:
+  case 4:
+  case 5:
+  case 6:
     fitlsq();
-  }
-  else {
-    edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit more than 10 hits!!"; // should make this :: "cannot fit more than 4 hits!!"
-  }
+    break;
+  default:
+    edm::LogVerbatim("MuonSegFit") << "[MuonSegFit::fit] - cannot fit more than 6 hits!!"; // should make this :: "cannot fit more than 4 hits!!"
+  }  
   return fitdone_;
 }
 
@@ -293,11 +297,11 @@ void MuonSegFit::setChi2(void) {
 #endif
 }
 
-MuonSegFit::SMatrixSym20 MuonSegFit::weightMatrix() {
+MuonSegFit::SMatrixSym12 MuonSegFit::weightMatrix() {
   
   bool ok = true;
 
-  SMatrixSym20 matrix = ROOT::Math::SMatrixIdentity(); // 20x20, init to 1's on diag
+  SMatrixSym12 matrix = ROOT::Math::SMatrixIdentity(); // 12x12, init to 1's on diag
 
   int row = 0;
   
@@ -322,9 +326,9 @@ MuonSegFit::SMatrixSym20 MuonSegFit::weightMatrix() {
 }
 
 
-MuonSegFit::SMatrix20by4 MuonSegFit::derivativeMatrix() {
+MuonSegFit::SMatrix12by4 MuonSegFit::derivativeMatrix() {
   
-  SMatrix20by4 matrix; // 20x4, init to 0
+  SMatrix12by4 matrix; // 12x4, init to 0
   int row = 0;
   
   for( MuonRecHitContainer::const_iterator it = hits_.begin(); it != hits_.end(); ++it) {
@@ -366,8 +370,8 @@ void MuonSegFit::setOutFromIP() {
 
 AlgebraicSymMatrix MuonSegFit::covarianceMatrix() {
   
-  SMatrixSym20 weights = weightMatrix();
-  SMatrix20by4 A = derivativeMatrix();
+  SMatrixSym12 weights = weightMatrix();
+  SMatrix12by4 A = derivativeMatrix();
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("MuonSegFitMatrixDetails") << "[MuonSegFit::covarianceMatrix] weights matrix W: \n" << weights;      
   edm::LogVerbatim("MuonSegFitMatrixDetails") << "[MuonSegFit::covarianceMatrix] derivatives matrix A: \n" << A;      

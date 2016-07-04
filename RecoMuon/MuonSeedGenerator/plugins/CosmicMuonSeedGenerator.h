@@ -101,18 +101,12 @@ class CosmicMuonSeedGenerator: public edm::stream::EDProducer<> {
   /// enable CSCSegment Flag
   bool theEnableCSCFlag;
 
-  /// enable GEM Segment Flag
-  bool theEnableGEMFlag;
-
   /// the name of the DT rec hits collection
   edm::InputTag theDTRecSegmentLabel;
 
   /// the name of the CSC rec hits collection
   edm::InputTag theCSCRecSegmentLabel;
 
-  /// the name of the GEM rec hits collection
-  edm::InputTag theGEMRecSegmentLabel;
-  
   /// the maximum number of Seeds
   unsigned int theMaxSeeds;
   

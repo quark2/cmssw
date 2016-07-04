@@ -41,11 +41,11 @@ class MuonSegFit {
   typedef std::shared_ptr<TrackingRecHit> MuonRecHitPtr;
   typedef std::vector<MuonRecHitPtr> MuonRecHitContainer;
   
-  // 20 x20 Symmetric
-  typedef ROOT::Math::SMatrix<double,20,20,ROOT::Math::MatRepSym<double,20> > SMatrixSym20;
+  // 12 x12 Symmetric
+  typedef ROOT::Math::SMatrix<double,12,12,ROOT::Math::MatRepSym<double,12> > SMatrixSym12;
 
-  // 20 x 4
-  typedef ROOT::Math::SMatrix<double,20,4 > SMatrix20by4;
+  // 12 x 4
+  typedef ROOT::Math::SMatrix<double,12,4 > SMatrix12by4;
 
   // 4 x 4 General + Symmetric
   typedef ROOT::Math::SMatrix<double, 4 > SMatrix4;
@@ -111,8 +111,8 @@ class MuonSegFit {
   // Set segment direction 'out' from IP
   void setOutFromIP(void); // fill localdir_  @@ FKA fillLocalDirection()
 
-  SMatrix20by4 derivativeMatrix(void);
-  SMatrixSym20 weightMatrix(void);
+  SMatrix12by4 derivativeMatrix(void);
+  SMatrixSym12 weightMatrix(void);
   AlgebraicSymMatrix flipErrors(const SMatrixSym4&);
   
   // PROTECTED MEMBER VARIABLES - derived class needs access

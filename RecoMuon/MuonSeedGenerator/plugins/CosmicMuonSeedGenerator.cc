@@ -49,15 +49,10 @@ CosmicMuonSeedGenerator::CosmicMuonSeedGenerator(const edm::ParameterSet& pset){
   // enable the CSC chamber
   theEnableCSCFlag = pset.getParameter<bool>("EnableCSCMeasurement");
 
-  // enable the GEM chamber
-  theEnableGEMFlag = pset.getParameter<bool>("EnableGEMMeasurement");
-  
   theDTRecSegmentLabel = pset.getParameter<InputTag>("DTRecSegmentLabel");
 
   theCSCRecSegmentLabel = pset.getParameter<InputTag>("CSCRecSegmentLabel");
 
-  theGEMRecSegmentLabel = pset.getParameter<InputTag>("GEMRecSegmentLabel");
-  
   // the maximum number of TrajectorySeed
   theMaxSeeds = pset.getParameter<int>("MaxSeeds");
 
@@ -77,15 +72,15 @@ CosmicMuonSeedGenerator::CosmicMuonSeedGenerator(const edm::ParameterSet& pset){
   theParameters["bottommb31"] = 0.77;
   theParameters["topmb32"] = 0.35;
   theParameters["bottommb32"] = 0.55;
-  theParameters["topmb54"] = 0.21;
-  theParameters["bottommb54"] = 0.31;
+  theParameters["topmb21"] = 0.21;
+  theParameters["bottommb21"] = 0.31;
 
 
   edm::ConsumesCollector iC = consumesCollector();
   muonMeasurements = new MuonDetLayerMeasurements(theDTRecSegmentLabel,theCSCRecSegmentLabel,
 
-						  InputTag(),theGEMRecSegmentLabel,InputTag(),iC,
-						  theEnableDTFlag,theEnableCSCFlag,false,theEnableGEMFlag,false);
+						  InputTag(),InputTag(),InputTag(),iC,
+						  theEnableDTFlag,theEnableCSCFlag,false,false,false);
 
 
 
@@ -119,8 +114,7 @@ void CosmicMuonSeedGenerator::produce(edm::Event& event, const edm::EventSetup& 
   vector<const DetLayer*> cscForwardLayers = theMuonLayers->forwardCSCLayers();
   vector<const DetLayer*> cscBackwardLayers = theMuonLayers->backwardCSCLayers();
 
-  // get the GEM layers
-  vector<const DetLayer*> gemLayers = theMuonLayers->allGEMLayers();
+
 
   muonMeasurements->setEvent(event);
 
@@ -158,24 +152,9 @@ void CosmicMuonSeedGenerator::produce(edm::Event& event, const edm::EventSetup& 
 
   }
 
-  // for gem cosmic ray stand analysis
-  for (vector<const DetLayer*>::reverse_iterator igemlayer = gemLayers.rbegin();
-       igemlayer != gemLayers.rend(); ++igemlayer) {
-       MuonRecHitContainer RHMB = muonMeasurements->recHits(*igemlayer);
-       RHMBs.push_back(RHMB);
-       if ( igemlayer != gemLayers.rbegin() ) allHits.insert(allHits.end(),RHMB.begin(),RHMB.end());
-  }
-  
-  stable_sort(allHits.begin(),allHits.end(),DecreasingGlobalY());
+//  stable_sort(allHits.begin(),allHits.end(),DecreasingGlobalY());
 
   LogTrace(category)<<"all RecHits: "<<allHits.size();
-  LogTrace(category)<<"RHMBs: "<<RHMBs.size();
-  LogTrace(category)<<"RHMBs[0]: "<<RHMBs[0].size();
-  LogTrace(category)<<"RHMBs[1]: "<<RHMBs[1].size();
-  LogTrace(category)<<"RHMBs[2]: "<<RHMBs[2].size();
-  LogTrace(category)<<"RHMBs[3]: "<<RHMBs[3].size();
-  LogTrace(category)<<"RHMBs[4]: "<<RHMBs[4].size();
-  LogTrace(category)<<"RHMBs[5]: "<<RHMBs[5].size();
 
 //  CosmicMuonSeedGenerator::MuonRecHitPairVector mb41 = makeSegPairs(RHMBs[0], RHMBs[3], "mb41");
 //  createSeeds(seeds, mb41, eSetup);
@@ -183,34 +162,34 @@ void CosmicMuonSeedGenerator::produce(edm::Event& event, const edm::EventSetup& 
 //  CosmicMuonSeedGenerator::MuonRecHitPairVector mb43 = makeSegPairs(RHMBs[0],RHMBs[1], "mb43");
 //  createSeeds(seeds, mb43, eSetup);
 
-  // CosmicMuonSeedGenerator::MuonRecHitPairVector mb42 = makeSegPairs(RHMBs[0],RHMBs[2], "mb42");
-  // createSeeds(seeds, mb42, eSetup);
+  CosmicMuonSeedGenerator::MuonRecHitPairVector mb42 = makeSegPairs(RHMBs[0],RHMBs[2], "mb42");
+  createSeeds(seeds, mb42, eSetup);
 
 //  CosmicMuonSeedGenerator::MuonRecHitPairVector mb32 = makeSegPairs(RHMBs[1], RHMBs[2], "mb32");
 //  createSeeds(seeds, mb32, eSetup);
 
-  // CosmicMuonSeedGenerator::MuonRecHitPairVector mb31 = makeSegPairs(RHMBs[1], RHMBs[3], "mb31");
-  // createSeeds(seeds, mb31, eSetup);
+  CosmicMuonSeedGenerator::MuonRecHitPairVector mb31 = makeSegPairs(RHMBs[1], RHMBs[3], "mb31");
+  createSeeds(seeds, mb31, eSetup);
 
-  CosmicMuonSeedGenerator::MuonRecHitPairVector mb54 = makeSegPairs(RHMBs[4], RHMBs[5], "mb54");
-  createSeeds(seeds, mb54, eSetup);
+//  CosmicMuonSeedGenerator::MuonRecHitPairVector mb21 = makeSegPairs(RHMBs[2], RHMBs[3], "mb21");
+//  createSeeds(seeds, mb21, eSetup);
 
-  // if ( !allHits.empty() ) {
+  if ( !allHits.empty() ) {
 
-  //   MuonRecHitContainer goodhits = selectSegments(allHits);
-  //   LogTrace(category)<<"good RecHits: "<<goodhits.size();
+    MuonRecHitContainer goodhits = selectSegments(allHits);
+    LogTrace(category)<<"good RecHits: "<<goodhits.size();
 
-  //   if ( goodhits.empty() ) {
-  //     LogTrace(category)<<"No qualified Segments in Event! ";
-  //     LogTrace(category)<<"Use 2D RecHit";
+    if ( goodhits.empty() ) {
+      LogTrace(category)<<"No qualified Segments in Event! ";
+      LogTrace(category)<<"Use 2D RecHit";
 
-  //     createSeeds(seeds,allHits,eSetup);
+      createSeeds(seeds,allHits,eSetup);
 
-  //   } 
-  //   else {
-  //     createSeeds(seeds,goodhits,eSetup);
-  //   }
-  // }
+    } 
+    else {
+      createSeeds(seeds,goodhits,eSetup);
+    }
+  }
 
   LogTrace(category)<<"Seeds built: "<<seeds.size();
 
@@ -232,11 +211,6 @@ bool CosmicMuonSeedGenerator::checkQuality(const MuonRecHitPointer& hit) const {
   // only use 4D segments
   if ( !hit->isValid() ) return false;
 
-  if (hit->isGEM() ) {
-    //use gem hits for cosmic stand
-    return true;
-  }
-  
   if (hit->dimension() < 4) {
     LogTrace(category)<<"dim < 4";
     return false;
@@ -348,13 +322,9 @@ std::vector<TrajectorySeed> CosmicMuonSeedGenerator::createSeed(const MuonRecHit
   // Fill the LocalTrajectoryParameters
   LocalPoint segPos=hit->localPosition();
   
-  // GlobalVector polar(GlobalVector::Spherical(hit->globalDirection().theta(),
-  //                                            hit->globalDirection().phi(),
-  //                                            1.));
   GlobalVector polar(GlobalVector::Spherical(hit->globalDirection().theta(),
-					     hit->globalDirection().phi(),
-					     1.));
-  
+                                             hit->globalDirection().phi(),
+                                             1.));
   // Force all track downward for cosmic, not beam-halo
   if(theForcePointDownFlag){
     if (hit->geographicalId().subdetId() == MuonSubdetId::DT && fabs(hit->globalDirection().eta()) < 4.0 && hit->globalDirection().phi() > 0 ) 
@@ -364,11 +334,7 @@ std::vector<TrajectorySeed> CosmicMuonSeedGenerator::createSeed(const MuonRecHit
       polar = - polar;
   }
 
-  polar = - polar;
   polar *=fabs(pt)/polar.perp();
-  LogTrace(category)<<"pt " << pt; 
-  LogTrace(category)<<"polar.perp() " << polar.perp(); 
-  LogTrace(category)<<"polar " << polar; 
 
   LocalVector segDir =hit->det()->toLocal(polar);
 
@@ -461,18 +427,18 @@ CosmicMuonSeedGenerator::makeSegPairs(const MuonTransientTrackingRecHit::MuonRec
      for (MuonRecHitContainer::const_iterator ihit2 = hits2.begin(); ihit2 != hits2.end(); ihit2++) {
         if ( !checkQuality(*ihit2) ) continue;
 
-        //float dphi = deltaPhi((*ihit1)->globalPosition().barePhi(), (*ihit2)->globalPosition().barePhi());
-        //if ( dphi < 0.5 ) {
-	   if ( (*ihit1)->globalPosition().y()  > (*ihit2)->globalPosition().y() ) { 
+        float dphi = deltaPhi((*ihit1)->globalPosition().barePhi(), (*ihit2)->globalPosition().barePhi());
+        if ( dphi < 0.5 ) {
+	   if ((*ihit1)->globalPosition().y() > 0.0 && ( (*ihit1)->globalPosition().y()  > (*ihit2)->globalPosition().y() ) ) { 
               std::string tag2 = "top"+tag;
 
               result.push_back(MuonRecHitPair(*ihit1, *ihit2, tag2));
-           } else {
+           } else if ((*ihit1)->globalPosition().y() < 0.0 && ( (*ihit1)->globalPosition().y()  < (*ihit2)->globalPosition().y() ) ) {
               std::string tag2 = "bottom"+tag;
               result.push_back(MuonRecHitPair(*ihit2, *ihit1, tag2));
 
            }
-	   //}
+        }
      }
    }
 
@@ -512,23 +478,14 @@ std::vector<TrajectorySeed> CosmicMuonSeedGenerator::createSeed(const CosmicMuon
   AlgebraicSymMatrix mat(5,0) ;
 
   MuonTransientTrackingRecHit::MuonRecHitPointer hit = hitpair.first;
-  MuonTransientTrackingRecHit::MuonRecHitPointer hit2 = hitpair.second;
-  if ( hit->dimension() < (hitpair.second)->dimension() ){
-    hit = hitpair.second;
-    hit2 = hitpair.first;
-  }
+  if ( hit->dimension() < (hitpair.second)->dimension() ) hit = hitpair.second;
 
   // Fill the LocalTrajectoryParameters
   LocalPoint segPos=hit->localPosition();
   
-  // GlobalVector polar(GlobalVector::Spherical(hit->globalDirection().theta(),
-  //                                            hit->globalDirection().phi(),
-  //                                            1.));
-  GlobalVector gdir(hit->globalPosition().x() - hit2->globalPosition().x(),
-		    hit->globalPosition().y() - hit2->globalPosition().y(),
-		    hit->globalPosition().z() - hit2->globalPosition().z() );
-  GlobalVector polar(GlobalVector::Spherical(gdir.theta(), gdir.phi(), 1));
-  
+  GlobalVector polar(GlobalVector::Spherical(hit->globalDirection().theta(),
+                                             hit->globalDirection().phi(),
+                                             1.));
   // Force all track downward for cosmic, not beam-halo
   if(theForcePointDownFlag){
     if (hit->geographicalId().subdetId() == MuonSubdetId::DT && fabs(hit->globalDirection().eta()) < 4.0 && hit->globalDirection().phi() > 0 ) 
@@ -556,8 +513,6 @@ std::vector<TrajectorySeed> CosmicMuonSeedGenerator::createSeed(const CosmicMuon
   TrajectoryStateOnSurface tsos(param, error, hit->det()->surface(), &*theField);
 
   LogTrace(category)<<"Trajectory State on Surface of Seed";
-  LogTrace(category)<<"Hit 1"<< hit->globalPosition();
-  LogTrace(category)<<"Hit 2"<< hit2->globalPosition();
   LogTrace(category)<<"mom: "<<tsos.globalMomentum()<<" phi: "<<tsos.globalMomentum().phi();
   LogTrace(category)<<"pos: " << tsos.globalPosition(); 
   LogTrace(category) << "The RecSegment relies on: ";
