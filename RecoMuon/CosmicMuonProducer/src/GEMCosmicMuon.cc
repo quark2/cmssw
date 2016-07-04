@@ -59,15 +59,26 @@ GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
   theService = new MuonServiceProxy(serviceParameters);
   edm::ParameterSet smootherPSet = ps.getParameter<edm::ParameterSet>("MuonSmootherParameters");
   theSmoother = new CosmicMuonSmoother(smootherPSet,theService);
-  produces<vector<reco::Track> >();
-  produces<vector<Trajectory> >();
+  produces<reco::TrackCollection>();
+  produces<TrackingRecHitCollection>();
+  produces<reco::TrackExtraCollection>();
+  produces<std::vector<Trajectory> >();
+  produces<std::vector<TrajectorySeed> >();
 }
 
 void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   cout << "GEMCosmicMuon::start producing segments for " << ++iev << "th event with gem data" << endl;
-  std::auto_ptr<vector<reco::Track> > oc( new vector<reco::Track> );
-  std::auto_ptr<vector<Trajectory> > ocTra( new vector<Trajectory> );
-
+  
+  std::auto_ptr<reco::TrackCollection >          trackCollection( new reco::TrackCollection() );
+  std::auto_ptr<TrackingRecHitCollection >       trackingRecHitCollection( new TrackingRecHitCollection() );
+  std::auto_ptr<reco::TrackExtraCollection >     trackExtraCollection( new reco::TrackExtraCollection() );
+  std::auto_ptr<vector<Trajectory> >             trajectorys( new vector<Trajectory>() );
+  std::auto_ptr<vector<TrajectorySeed> >         trajectorySeeds( new vector<TrajectorySeed>() );
+  TrackingRecHitRef::key_type recHitsIndex = 0;
+  TrackingRecHitRefProd recHitCollectionRefProd = ev.getRefBeforePut<TrackingRecHitCollection>();
+  reco::TrackExtraRef::key_type trackExtraIndex = 0;
+  reco::TrackExtraRefProd trackExtraCollectionRefProd = ev.getRefBeforePut<reco::TrackExtraCollection>();
+  
   theService->update(setup);
 
   edm::ESHandle<MagneticField> theField;  
@@ -84,8 +95,11 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   ev.getByToken(theGEMRecHitToken,gemRecHits);
 
   if (gemRecHits->size() <3){
-     ev.put(oc);
-     return;
+    ev.put(trackCollection);
+    ev.put(trackingRecHitCollection);
+    ev.put(trackExtraCollection);
+    ev.put(trajectorys);
+    return;
   }
     
   cout << "GEMCosmicMuon::gemRecHits " << gemRecHits->size() << endl;
@@ -133,8 +147,10 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   // //if (!gemHit) return;
   
   if (ovTrackRecHits.size() < 3){
-    ev.put(ocTra);
-    ev.put(oc);
+    ev.put(trackCollection);
+    ev.put(trackingRecHitCollection);
+    ev.put(trackExtraCollection);
+    ev.put(trajectorys);
     return;
   }
   
@@ -173,13 +189,25 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
    
   PTrajectoryStateOnDet const & seedTSOS = trajectoryStateTransform::persistentState(tsos, id);
   TrajectorySeed seed(seedTSOS,ovTrackRecHits,alongMomentum);
+  trajectorySeeds->push_back(seed);
   
   vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
+  cout << "GEMCosmicMuon::fitted.size() " << fitted.size() << endl;
 
-  if (fitted.empty()) return;
+  if (fitted.empty()){
+    ev.put(trackCollection);
+    ev.put(trackingRecHitCollection);
+    ev.put(trackExtraCollection);
+    ev.put(trajectorys);
+    return;
+  }
+  
   Trajectory smoothed = fitted.front();
   cout << "GEMCosmicMuon::Trajectory " << smoothed.foundHits() << endl;
-  
+  cout << "GEMCosmicMuon::Trajectory chiSquared       " << smoothed.chiSquared() << endl;
+  cout << "GEMCosmicMuon::Trajectory ndof             " << smoothed.ndof() << endl;
+  cout << "GEMCosmicMuon::Trajectory chiSquared/ ndof " << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
+
   if (smoothed.foundHits() < 3) return;
   
   const FreeTrajectoryState* ftsAtVtx = smoothed.geometricalInnermostState().freeState();
@@ -200,14 +228,44 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   cout << "GEMCosmicMuon::track " << track.pt() << endl;
 
 
-  ocTra->push_back(smoothed);
-  oc->push_back(track);
+  trajectorys->push_back(smoothed);
+  
+  cout << "GEMCosmicMuon::TrackExtra 1 "<< endl;
+  reco::TrackExtra tx(track.outerPosition(), track.outerMomentum(), track.outerOk(),
+		      track.innerPosition(), track.innerMomentum(), track.innerOk(),
+		      track.outerStateCovariance(), track.outerDetId(),
+		      track.innerStateCovariance(), track.innerDetId(),
+		      track.seedDirection());
+		      //, smoothed.seedRef() );
+  cout << "GEMCosmicMuon::TrackExtra 2 "<< endl;
+  //tx.setResiduals(track.residuals());
+  //adding rec hits
+  Trajectory::RecHitContainer transHits = smoothed.recHits();
+  unsigned int nHitsAdded = 0;
+  for (Trajectory::RecHitContainer::const_iterator recHit = transHits.begin(); recHit != transHits.end(); ++recHit) {
+    TrackingRecHit *singleHit = (**recHit).hit()->clone();
+    trackingRecHitCollection->push_back( singleHit );  
+    ++nHitsAdded;
+  }
+  cout << "GEMCosmicMuon::TrackExtra 3 "<< endl;
+  tx.setHits(recHitCollectionRefProd, recHitsIndex, nHitsAdded);
+  recHitsIndex +=nHitsAdded;
+  cout << "GEMCosmicMuon::TrackExtra 4 "<< endl;
+
+  trackExtraCollection->push_back(tx );
+  cout << "GEMCosmicMuon::TrackExtra 5 "<< endl;
+
+  reco::TrackExtraRef trackExtraRef(trackExtraCollectionRefProd, trackExtraIndex++ );
+  track.setExtra(trackExtraRef);
+  trackCollection->push_back(track);
+  
+  
   // fill the collection
   // put collection in event
-  ev.put(ocTra);
-  ev.put(oc);
+  ev.put(trackCollection);
+  ev.put(trackingRecHitCollection);
+  ev.put(trackExtraCollection);
+  ev.put(trajectorys);
 }
-
-
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(GEMCosmicMuon);
