@@ -71,7 +71,7 @@ GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
 }
 
 void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
-  cout << "GEMCosmicMuon::start producing segments for " << ++iev << "th event with gem data" << endl;
+  //  cout << "GEMCosmicMuon::start producing segments for " << ++iev << "th event with gem data" << endl;
   
   auto_ptr<reco::TrackCollection >          trackCollection( new reco::TrackCollection() );
   auto_ptr<TrackingRecHitCollection >       trackingRecHitCollection( new TrackingRecHitCollection() );
@@ -102,8 +102,8 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
     ev.put(trajectorys);
     return;
   }
-    
-  cout << "GEMCosmicMuon::gemRecHits " << gemRecHits->size() << endl;
+  
+  //  cout << "GEMCosmicMuon::gemRecHits " << gemRecHits->size() << endl;
   
   MuonTransientTrackingRecHit::MuonRecHitContainer muRecHits;
   vector<const GEMChamber*> gemChambers;
@@ -130,69 +130,15 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
 
 	  //GEMRecHit *newRH = rechit->clone();
 	  //TransientTrackingRecHit::ConstRecHitPointer trkRecHit(newRH);
-	  cout << "GEMCosmicMuon::hit " << muRecHits.back()->globalPosition() << endl;
+	// cout << "GEMCosmicMuon::hit " << muRecHits.back()->globalPosition() << endl;
 	}
       }
     }
   }
   // cout<< "Number of GEM rechits   = " << muRecHits.size()<<endl;
   
-  // // cout << "GEMCosmicMuon::gemRecHits " << gemRecHits->size() << endl;
-  // // GEMRecHit* gemHit = 0;
-  // // for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
-  // //   container.push_back(recHit->clone());
-  // //   gemHit = recHit->clone();
-  // // }
-  // // //if (!gemHit) return;
-  
-  // if (ovTrackRecHits.size() < 3){
-  //   ev.put(trackCollection);
-  //   ev.put(trackingRecHitCollection);
-  //   ev.put(trackExtraCollection);
-  //   ev.put(trajectorys);
-  //   return;
-  // }
-  
-  // MuonTransientTrackingRecHit::MuonRecHitPointer hit = muRecHits[0];
-  // MuonTransientTrackingRecHit::MuonRecHitPointer hit2 = muRecHits[1];
-
-  // // cout << "GEMCosmicMuon::hit " << gemHit->gemId() << endl;
-  // // cout << "GEMCosmicMuon::firstClusterStrip " << gemHit->firstClusterStrip() << endl;
-  // // cout << "GEMCosmicMuon::clusterSize " << gemHit->clusterSize() << endl;
-  // cout << "GEMCosmicMuon::hit " << hit->localPosition() << endl;
-  // cout << "GEMCosmicMuon::hit " << hit->globalPosition() << endl;
-  
-  // LocalPoint segPos = hit->localPosition();
-  // GlobalVector segDirGV(hit2->globalPosition().x() - hit->globalPosition().x(),
-  // 			(hit2->globalPosition().y() - hit->globalPosition().y()),
-  // 			hit2->globalPosition().z() - hit->globalPosition().z());
-
-  // segDirGV *=10;
-  // LocalVector segDir = hit->det()->toLocal(segDirGV);
-  // cout << "GEMCosmicMuon::GlobalVector " << segDirGV << endl;
-  // cout << "GEMCosmicMuon::LocalVector  " << segDir << endl;
-  
-  // int charge= 1;
-  // LocalTrajectoryParameters param(segPos, segDir, charge);
-  
-  // AlgebraicSymMatrix mat(5,0);
-  // mat = hit->parametersError().similarityT( hit->projectionMatrix() );
-  // //float p_err = 0.2;
-  // //mat[0][0]= p_err;
-  // LocalTrajectoryError error(asSMatrix<5>(mat));
-
-  // // get first hit
-  // TrajectoryStateOnSurface tsos(param, error, hit->det()->surface(), &*theField);
-  // //cout << "GEMCosmicMuon::tsos " << tsos << endl;
-  // uint32_t id = hit->rawId();
-   
-  // PTrajectoryStateOnDet const & seedTSOS = trajectoryStateTransform::persistentState(tsos, id);
-  // TrajectorySeed seed(seedTSOS,ovTrackRecHits,alongMomentum);
-  // trajectorySeeds->push_back(seed);
-
   trajectorySeeds =findSeeds(muRecHits);
-  //ev.put(trajectorySeeds);
-  cout << "GEMCosmicMuon::trajectorySeeds->size() " << trajectorySeeds->size() << endl;
+  //  cout << "GEMCosmicMuon::trajectorySeeds->size() " << trajectorySeeds->size() << endl;
 
   // need to loop over seeds, make best track and save only best track
   //TrajectorySeed seed =trajectorySeeds->at(0);
@@ -202,17 +148,24 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
     Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers);
     if (smoothed.isValid()){
       trajectorys->push_back(smoothed);
-      cout << "GEMCosmicMuon::Trajectory " << smoothed.foundHits() << endl;
-      cout << "GEMCosmicMuon::Trajectory chiSquared/ ndof " << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
+      //      cout << "GEMCosmicMuon::Trajectory " << smoothed.foundHits() << endl;
+      //      cout << "GEMCosmicMuon::Trajectory chiSquared/ ndof " << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
       if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
 	maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
 	bestTrajectory = smoothed;
       }
     }
   }
-  if (!bestTrajectory.isValid()) return;
-  cout << "GEMCosmicMuon::bestTrajectory " << bestTrajectory.foundHits() << endl;
-  cout << "GEMCosmicMuon::bestTrajectory chiSquared/ ndof " << bestTrajectory.chiSquared()/float(bestTrajectory.ndof()) << endl;
+  if (!bestTrajectory.isValid()){
+    ev.put(trajectorySeeds);
+    ev.put(trackCollection);
+    ev.put(trackingRecHitCollection);
+    ev.put(trackExtraCollection);
+    ev.put(trajectorys);
+    return;
+  }
+  //cout << "GEMCosmicMuon::bestTrajectory " << bestTrajectory.foundHits() << endl;
+  //cout << "GEMCosmicMuon::bestTrajectory chiSquared/ ndof " << bestTrajectory.chiSquared()/float(bestTrajectory.ndof()) << endl;
 
   // make track
   const FreeTrajectoryState* ftsAtVtx = bestTrajectory.geometricalInnermostState().freeState();
@@ -230,7 +183,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
 		    ftsAtVtx->curvilinearError());
  
   // create empty collection of Segments
-  cout << "GEMCosmicMuon::track " << track.pt() << endl;
+  //cout << "GEMCosmicMuon::track " << track.pt() << endl;
   
   // reco::TrackExtra tx(track.outerPosition(), track.outerMomentum(), track.outerOk(),
   // 		      track.innerPosition(), track.innerMomentum(), track.innerOk(),
@@ -346,7 +299,7 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
     }
     
     if (tmpRecHit){
-      cout << "hit gp "<< tmpRecHit->globalPosition() <<endl;
+      //cout << "hit gp "<< tmpRecHit->globalPosition() <<endl;
       tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
       consRecHits.push_back(tmpRecHit);
     }
