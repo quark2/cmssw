@@ -1,7 +1,7 @@
-/** \class GEMCosmicMuon derived by CSCSegmentProducer 
- * Produces a collection of GEMSegment's in endcap muon GEMs. 
+/** \class GEMCosmicMuon  
+ * Produces a collection of tracks's in GEM cosmic ray stand. 
  *
- * \author Piet Verwilligen
+ * \author Jason Lee
  */
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -30,6 +30,7 @@
 #include "RecoMuon/CosmicMuonProducer/interface/CosmicMuonSmoother.h"
 #include "RecoMuon/StandAloneTrackFinder/interface/StandAloneMuonSmoother.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
+#include "TrackingTools/KalmanUpdators/interface/KFUpdator.h"
 
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 
@@ -49,7 +50,7 @@ private:
   edm::EDGetTokenT<GEMRecHitCollection> theGEMRecHitToken;
   CosmicMuonSmoother* theSmoother;
   MuonServiceProxy* theService;
-
+  KFUpdator* theUpdator;
   auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, vector<const GEMChamber*> gemChambers);
 };
@@ -61,6 +62,7 @@ GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
   theService = new MuonServiceProxy(serviceParameters);
   edm::ParameterSet smootherPSet = ps.getParameter<edm::ParameterSet>("MuonSmootherParameters");
   theSmoother = new CosmicMuonSmoother(smootherPSet,theService);
+  theUpdator = new KFUpdator();
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
   produces<reco::TrackExtraCollection>();
@@ -191,44 +193,37 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   trajectorySeeds =findSeeds(muRecHits);
   //ev.put(trajectorySeeds);
   cout << "GEMCosmicMuon::trajectorySeeds->size() " << trajectorySeeds->size() << endl;
-  
-  TrajectorySeed seed =trajectorySeeds->at(0);
 
-  // PTrajectoryStateOnDet ptsd1(seed.startingState());
-  // DetId did(ptsd1.detId());
-  // const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();
-  // TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(ptsd1,&bp,&*theService->magneticField());
-  
-  //vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
-  // cout << "GEMCosmicMuon::fitted.size() " << fitted.size() << endl;
+  // need to loop over seeds, make best track and save only best track
+  //TrajectorySeed seed =trajectorySeeds->at(0);
+  Trajectory bestTrajectory;
+  float maxChi2 = 1000;
+  for (auto seed : *trajectorySeeds){
+    Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers);
+    if (smoothed.isValid()){
+      trajectorys->push_back(smoothed);
+      cout << "GEMCosmicMuon::Trajectory " << smoothed.foundHits() << endl;
+      cout << "GEMCosmicMuon::Trajectory chiSquared/ ndof " << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
+      if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
+	maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
+	bestTrajectory = smoothed;
+      }
+    }
+  }
+  if (!bestTrajectory.isValid()) return;
+  cout << "GEMCosmicMuon::bestTrajectory " << bestTrajectory.foundHits() << endl;
+  cout << "GEMCosmicMuon::bestTrajectory chiSquared/ ndof " << bestTrajectory.chiSquared()/float(bestTrajectory.ndof()) << endl;
 
-  // if (fitted.empty()){
-  //   ev.put(trackCollection);
-  //   ev.put(trackingRecHitCollection);
-  //   ev.put(trackExtraCollection);
-  //   ev.put(trajectorys);
-  //   return;
-  // }
-  
-  /// Trajectory smoothed = fitted.front();
-  Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers);
-  
-  cout << "GEMCosmicMuon::Trajectory " << smoothed.foundHits() << endl;
-  cout << "GEMCosmicMuon::Trajectory chiSquared       " << smoothed.chiSquared() << endl;
-  cout << "GEMCosmicMuon::Trajectory ndof             " << smoothed.ndof() << endl;
-  cout << "GEMCosmicMuon::Trajectory chiSquared/ ndof " << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
-
-  if (smoothed.foundHits() < 3) return;
-  
-  const FreeTrajectoryState* ftsAtVtx = smoothed.geometricalInnermostState().freeState();
+  // make track
+  const FreeTrajectoryState* ftsAtVtx = bestTrajectory.geometricalInnermostState().freeState();
 
   GlobalPoint pca = ftsAtVtx->position();
   math::XYZPoint persistentPCA(pca.x(),pca.y(),pca.z());
   GlobalVector p = ftsAtVtx->momentum();
   math::XYZVector persistentMomentum(p.x(),p.y(),p.z());
   
-  reco::Track track(smoothed.chiSquared(), 
-		    smoothed.ndof(true),
+  reco::Track track(bestTrajectory.chiSquared(), 
+		    bestTrajectory.ndof(true),
 		    persistentPCA,
 		    persistentMomentum,
 		    ftsAtVtx->charge(),
@@ -236,20 +231,17 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
  
   // create empty collection of Segments
   cout << "GEMCosmicMuon::track " << track.pt() << endl;
-
-
-  trajectorys->push_back(smoothed);
   
   // reco::TrackExtra tx(track.outerPosition(), track.outerMomentum(), track.outerOk(),
   // 		      track.innerPosition(), track.innerMomentum(), track.innerOk(),
   // 		      track.outerStateCovariance(), track.outerDetId(),
   // 		      track.innerStateCovariance(), track.innerDetId(),
   // 		      track.seedDirection(), edm::RefToBase<TrajectorySeed>());
-  // 		      //, smoothed.seedRef() );
+  // 		      //, bestTrajectory.seedRef() );
   reco::TrackExtra tx;
   //tx.setResiduals(track.residuals());
   //adding rec hits
-  Trajectory::RecHitContainer transHits = smoothed.recHits();
+  Trajectory::RecHitContainer transHits = bestTrajectory.recHits();
   unsigned int nHitsAdded = 0;
   for (Trajectory::RecHitContainer::const_iterator recHit = transHits.begin(); recHit != transHits.end(); ++recHit) {
     TrackingRecHit *singleHit = (**recHit).hit()->clone();
@@ -330,18 +322,21 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
   TransientTrackingRecHit::ConstRecHitContainer consRecHits;
   for (auto ch : gemChambers){
     //const DetLayer* layer = theService->detLayerGeometry()->idToLayer( ch->id().rawId() );
-    tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch->surface());
-    GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
-
     std::shared_ptr<MuonTransientTrackingRecHit> tmpRecHit;
+    tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch->surface());
+    if (!tsosCurrent.isValid()) continue;
+    GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
+   
     //TrackingRecHit *tmpRecHit = new TrackingRecHit(ch);
-    cout << "tsosGP "<< tsosGP <<endl;
+    //cout << "tsosGP "<< tsosGP <<endl;
     float maxR = 9999;
     for (auto hit : muRecHits){
       GEMDetId hitID(hit->rawId());
       if (hitID.chamberId() == ch->id() ){
-	// need to find best hits per chamber
 	GlobalPoint hitGP = hit->globalPosition();
+	// cut is deltaX is too big - can be tighter?
+	if (abs(hitGP.x() - tsosGP.x()) > 5) continue;
+	// need to find best hits per chamber
 	float deltaR = (hitGP - tsosGP).mag();
 	if (maxR > deltaR){
 	  tmpRecHit = hit;
@@ -349,10 +344,14 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
 	}
       }
     }
-    if (tmpRecHit)
-      consRecHits.push_back(tmpRecHit);
     
+    if (tmpRecHit){
+      cout << "hit gp "<< tmpRecHit->globalPosition() <<endl;
+      tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
+      consRecHits.push_back(tmpRecHit);
+    }
   }
+  if (consRecHits.size() <3) return Trajectory();
   vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
   
   return fitted.front();

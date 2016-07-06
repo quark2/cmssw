@@ -133,7 +133,7 @@ process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
 process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
 process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
 process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
-process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
+#process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
 # Path and EndPath definitions
 process.generation_step = cms.Path(process.pgen)
@@ -215,12 +215,12 @@ process.MessageLogger.cout = cms.untracked.PSet(
     ## GEMSegmentAlgorithm = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
 )
 
-process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
-process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
-process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
-process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
-process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
-
+#process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
+#process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
+#process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
+#process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
+#process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
+#
 
 #process.SteppingHelixPropagatorAny.debug = cms.bool(True)
 #process.SteppingHelixPropagatorAny.sendLogWarning = cms.bool(True)
