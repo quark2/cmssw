@@ -234,27 +234,8 @@ def draw_plot( file, tDir,oDir ) :
   for x in tlist :
     key_list.append(x.GetName())
   for hist in key_list :
-    if hist.find("track_") != -1 :
+    if hist.find("dafdsadsfatrack_") != -1 :
       draw_occ( oDir,d1.Get(hist)) 
-    elif (hist.find("dcEta") !=-1 ) :
-      draw_col_nostat( oDir,d1.Get(hist))
-    elif (hist.find("simple_zr")!= -1 ) :
-      draw_simple_zr( oDir,d1.Get(hist))
-    elif (hist.find("eff_DigiHit") != -1 ) :
-      draw_col_eff( oDir, d1.Get(hist))
-    elif (hist.find("lx") !=-1 or hist.find("ly") != -1 or hist.find("dphi") != -1 or hist.find("_phi_dist") != -1 ) :
-      draw_occ( oDir,d1.Get(hist))
-    #elif ( hist.find("bx") != -1 ) :
-    #  draw_bx( oDir, d1.Get(hist)  )
-    elif ( hist.find("xy") !=-1 or hist.find("zr") !=-1 or hist.find("roll_vs_strip")!= -1 or hist.find("phipad")!=-1 or hist.find("phistrip") != -1 or hist.find("sp")!=-1 or hist.find("sub")!=-1 ) :
-      draw_col( oDir, d1.Get(hist) )
-    elif ( hist.find("phiz") != -1 ) :
-      draw_col_overflow( oDir, d1.Get(hist) )
-    #elif ( hist.find("eff") != -1 ) :
-    #  draw_eff( oDir, d1.Get(hist) )
-      #print "found "
-    elif ( hist.find("geo_phi") != -1) :
-      draw_col_userRange( oDir, d1.Get(hist))
     elif ( hist == "hit_eff"):
       tmp1 = d1.Get("tr_eff")
       tmp2 = d1.Get("hit_eff")
@@ -262,6 +243,14 @@ def draw_plot( file, tDir,oDir ) :
       tmp3 = tmp2.Clone("chamber_eff")
       tmp3.SetTitle("Chamber efficiency fired chamber/track")
       draw_occ(oDir, tmp3)
+      tmp_rec = d1.Get("rec_eff")
+      draw_occ(oDir, tmp_rec)
+      draw_occ(oDir, tmp2)
+      tmp_rec = d1.Get("rec_eff").Clone("tmp_rec_eff")
+      tmp_hit = tmp2.Clone("tmp_hit_eff")
+      tmp_hit.Divide(tmp_rec)
+      tmp_hit.SetTitle("track hit/rec hit")
+      draw_occ(oDir, tmp_hit)
       for x in [1,3,5,7,9]:
         tmp1 = d1.Get("chamber_%d_layer_1_tr_eff"%x)
         tmp2 = d1.Get("chamber_%d_layer_1_ch_eff"%x)
