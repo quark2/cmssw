@@ -66,14 +66,20 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
 
   tr_eff = ibooker.book1D("tr_eff", "track in track/chamber",n_ch,0,n_ch);
   hit_eff = ibooker.book1D("hit_eff", "tracking hit in track/chamber",n_ch,0,n_ch);
-  rec_chamber = ibooker.book1D("rec_eff", "rec hit/chamber",n_ch,0,n_ch); 
+  tr_chamber = ibooker.book1D("tr_eff_ch", "tr /chamber",n_ch,0,n_ch); 
+  th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
+  rh_chamber = ibooker.book1D("rh_eff_ch", "rec hit/chamber",n_ch,0,n_ch); 
+  sh_chamber = ibooker.book1D("sh_eff_ch", "sim hit/chamber",n_ch,0,n_ch); 
   for(int c = 0; c<n_ch; c++){
    cout << gemChambers[c].id() << endl;
    GEMDetId gid = gemChambers[c].id();
    string b_name = "chamber_"+to_string(gid.chamber())+"_layer_"+to_string(gid.layer());
    tr_eff->setBinLabel(c+1,b_name);
    hit_eff->setBinLabel(c+1,b_name);
-   rec_chamber->setBinLabel(c+1,b_name);
+   tr_chamber->setBinLabel(c+1,b_name);
+   th_chamber->setBinLabel(c+1,b_name);
+   rh_chamber->setBinLabel(c+1,b_name);
+   sh_chamber->setBinLabel(c+1,b_name);
   }
   for(int c = 0; c<n_ch;c++){
      GEMDetId gid = gemChambers[c].id();
@@ -132,14 +138,22 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
   }
-  vector<bool> check_rec;
+  vector<bool> checkRH, checkSH, checkTH, checkTR;
   vector<double> tr_hit_x, tr_hit_y, rec_hit_x, rec_hit_y;
   for(int c=0;c<n_ch;c++){
-    check_rec.push_back(0);
+    checkRH.push_back(0);
+    checkSH.push_back(0);
+    checkTH.push_back(0);
+    checkTR.push_back(0);
     tr_hit_x.push_back(-99);
     tr_hit_y.push_back(-99);
     rec_hit_x.push_back(-99);
     rec_hit_y.push_back(-99);
+  }
+  for (edm::PSimHitContainer::const_iterator hits = gemSimHits->begin(); hits!=gemSimHits->end(); ++hits) {
+    const GEMDetId id(hits->detUnitId());
+    int index = findIndex(id);
+    checkSH[index] = 1;    
   }
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
@@ -150,7 +164,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
 
     GEMDetId id((*recHit).gemId());
     int index = findIndex(id);
-    check_rec[index] = 1;
+    checkRH[index] = 1;
     Short_t rh_roll = (Short_t) id.roll();
     LocalPoint recHitLP = recHit->localPosition();
     if ( GEMGeometry_->idToDet((*recHit).gemId()) == nullptr) {
@@ -176,8 +190,8 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       stripsFired.push_back(i);
     }
 
-    //rec_hit_x[index] = rh_g_X;
-    //rec_hit_y[index] = rh_g_Z;
+    rec_hit_x[index] = rh_g_X;
+    rec_hit_y[index] = rh_g_Z;
     
   }
 
@@ -201,24 +215,24 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         check_ch_roll.push_back(-1);
      }
       for(trackingRecHit_iterator hit = tr.recHitsBegin(); hit != tr.recHitsEnd(); hit++){
-        LocalPoint tr_rh_lp = (*hit)->localPosition();
+        //LocalPoint tr_rh_lp = (*hit)->localPosition();
         GEMDetId tid = GEMDetId((*hit)->geographicalId());
         int index = findIndex(tid);
         check_cham[index] = 1;
-        check_tr[index] = 1;
+        checkTH[index] = 1;
         check_ch_roll[index] = tid.roll();
         check_tr_roll[index] = tid.roll();
-        rec_hit_x[index] = tr_rh_lp.x();
-        rec_hit_y[index] = tr_rh_lp.y();
+        //rec_hit_x[index] = tr_rh_lp.x();
+        //rec_hit_y[index] = tr_rh_lp.y();
       }
       for(int c=0; c<n_ch;c++){
         GEMChamber ch = gemChambers[c];
         tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch.surface());
         Global3DPoint gtrp = tsosCurrent.freeTrajectoryState()->position();
         Local3DPoint tlp = ch.surface().toLocal(gtrp);
-        tr_hit_x[c] = tlp.x();
-        tr_hit_y[c] = tlp.y();
-        //if (ch.surface().bounds().inside(tlp)){
+        tr_hit_x[c] = gtrp.x();
+        tr_hit_y[c] = gtrp.z();
+        //if (ch.surface().bounds().inside(tlp)){checkTH[c]=1;}
           int n_roll = ch.nEtaPartitions();
           bool mat_eta = 0;
           for (int r=0;r<n_roll;r++){
@@ -226,7 +240,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
             Local3DPoint rtlp = ch.etaPartition(r+1)->surface().toLocal(gtrp);
             double min_x = ch.etaPartition(r+1)->centreOfStrip(0).x();
             double max_x = ch.etaPartition(r+1)->centreOfStrip(n_strip).x();
-            if ((abs(rtlp.y()) < 0.1) & (rtlp.x()>min_x) & (rtlp.x() < max_x) ){ check_tr_roll[c] = r+1; mat_eta = 1;}
+            if ((abs(rtlp.y()) < 0.1) & (rtlp.x()>min_x) & (rtlp.x() < max_x) &(abs(tr_hit_x[c]-rec_hit_x[c])<5)){ check_tr_roll[c] = r+1; mat_eta = 1;checkTR[c] = 1;}
           }
           if (!mat_eta) {cout << "no mat eta chamber : " << c << " tr x  : " << tlp.x() << ", tr y : " << tlp.y()<<  endl; cout << "rechit roll : " << check_ch_roll[c] << endl;}
 
@@ -236,13 +250,23 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           check_tr[c]=1; 
         }
       }
+      bool checkEv = 1;
       for(int c=0;c<n_ch;c++){
-        if (abs(rec_hit_x[c]-tr_hit_x[c]) >5){continue;}
-        del_rx->Fill(rec_hit_x[c]-tr_hit_x[c]);
+         if (checkTH[c] && !checkTR[c]){checkEv = 0;}
+         //if (rec_hit_x[c] != -99 && tr_hit_x[c] == -99){checkEv = 0;}
+         //if (abs(rec_hit_x[c]-tr_hit_x[c]) > 5){checkEv = 0;}
+      }
+      if (!checkEv){continue;}
+      for(int c=0;c<n_ch;c++){
+        if (checkSH[c]){sh_chamber->Fill(c);}
+        if (checkRH[c]){rh_chamber->Fill(c);}
+        if (checkTH[c]){th_chamber->Fill(c);}
+        if (checkTR[c]){tr_chamber->Fill(c);}
         del_ry->Fill(rec_hit_y[c]-tr_hit_y[c]);
-        if (check_rec[c]){rec_chamber->Fill(c);}
-        if (check_cham[c]) {hit_eff->Fill(c); gem_chamber_ch_eff[c]->Fill(check_tr_roll[c]);}
-        if (check_tr[c]){tr_eff->Fill(c); gem_chamber_tr_eff[c]->Fill(check_tr_roll[c]);}
+        del_rx->Fill(rec_hit_x[c]-tr_hit_x[c]);
+        //if (check_rec[c]){rec_chamber->Fill(c);}
+        //if (check_cham[c]) {hit_eff->Fill(c); gem_chamber_ch_eff[c]->Fill(check_tr_roll[c]);}
+        //if (check_tr[c]){tr_eff->Fill(c); gem_chamber_tr_eff[c]->Fill(check_tr_roll[c]);}
       }
 
     }

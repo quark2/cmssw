@@ -43,7 +43,9 @@ private:
   MonitorElement* tr_hit_size;
 
   MonitorElement* tr_chamber;
-  MonitorElement* rec_chamber;
+  MonitorElement* th_chamber;
+  MonitorElement* rh_chamber;
+  MonitorElement* sh_chamber;
 
   MonitorElement* del_x;
   MonitorElement* del_y;
