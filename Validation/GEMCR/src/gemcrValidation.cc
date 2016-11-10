@@ -280,18 +280,11 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         check_tr_roll[index] = tid.roll();
         numTR += 1;
       }
-      //bool allSC = 1;
-      //for(int c=0;c<n_ch;c+=2){
-      //  if(!checkTR[c] and !checkTR[c+1]){ allSC = 0;continue;}
-      //}
-      //if(!allSC){ continue;}
       for(int c=0;c<n_ch;c++){
-        //if (!checkTR[c] and checkRH[c]) {continue;}
         if (!checkTH[c]) {continue;}
         if(checkRH[c] and !checkTR[c]){
         del_rx->Fill(c);}
         if (checkRH[c]){bEff3->Fill(checkTR[c],c);}
-        //if (abs(rec_hit_y[c] - tr_hit_y[c])> 10.0) {continue;}
         bEff->Fill(checkTR[c],c);
         bEff2->Fill(checkRH[c],c);
         gem_chamber_th2D_eff[c]->Fill(tr_hit_x[c],tr_hit_y[c]);

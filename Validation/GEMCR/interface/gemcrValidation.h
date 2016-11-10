@@ -68,9 +68,6 @@ private:
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_GP;
   
   double numSim1, numRec1, numSim2, numRec2, numSim3, numRec3, numTH, numTR, numTHfp, numTRfp, countNum;
-
-
-  
 };
 
 #endif
