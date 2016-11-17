@@ -143,6 +143,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   // need to loop over seeds, make best track and save only best track
   //TrajectorySeed seed =trajectorySeeds->at(0);
   Trajectory bestTrajectory;
+  TrajectorySeed bestSeed;
   float maxChi2 = 1000;
   for (auto seed : *trajectorySeeds){
     Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers);
@@ -153,6 +154,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
       if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
 	maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
 	bestTrajectory = smoothed;
+        bestSeed = seed;
       }
     }
   }
@@ -213,6 +215,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   
   // fill the collection
   // put collection in event
+  trajectorySeeds->push_back(bestSeed);
   ev.put(trajectorySeeds);
   ev.put(trackCollection);
   ev.put(trackingRecHitCollection);
@@ -279,7 +282,6 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
     tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch->surface());
     if (!tsosCurrent.isValid()) continue;
     GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
-   
     //TrackingRecHit *tmpRecHit = new TrackingRecHit(ch);
     //cout << "tsosGP "<< tsosGP <<endl;
     float maxR = 9999;
@@ -288,8 +290,8 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
       if (hitID.chamberId() == ch->id() ){
 	GlobalPoint hitGP = hit->globalPosition();
 	// cut is deltaX is too big - can be tighter?
-	if (abs(hitGP.x() - tsosGP.x()) > 5) continue;
-	if (abs(hitGP.y() - tsosGP.y()) > 40) continue;
+	if (abs(hitGP.x() - tsosGP.x()) > 7) continue;
+	if (abs(hitGP.z() - tsosGP.z()) > 40) continue;
 	// need to find best hits per chamber
 	float deltaR = (hitGP - tsosGP).mag();
 	if (maxR > deltaR){
@@ -307,7 +309,6 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
   }
   if (consRecHits.size() <3) return Trajectory();
   vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
-  
   return fitted.front();
 }
 
