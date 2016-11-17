@@ -8,6 +8,7 @@
   <Constant name="dxBox"      value="30*cm"/>
   <Constant name="dzBox"      value="65*cm"/>
   <Constant name="dyChamber"      value="3.47*cm"/>
+  <Constant name="dxChamber"      value="56.0*cm"/>
 </ConstantsSection>
 
 <SolidSection label="gembox.xml">
@@ -27,56 +28,162 @@
     <rChild name="gembox:GEMBox"/>
     <Translation x="0*fm" y="0*fm" z="0*fm" />
   </PosPart>
+  
   <PosPart copyNumber="1">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="1*[separation]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="1*[separation]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="3">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="2*[separation]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="2*[separation]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="5">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="3*[separation]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="3*[separation]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="7">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="4*[separation]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="4*[separation]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="9">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="5*[separation]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="5*[separation]" z="0*fm" />
   </PosPart>
 
   <PosPart copyNumber="2">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="1*[separation]+[dyChamber]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="1*[separation]+[dyChamber]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="4">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="2*[separation]+[dyChamber]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="2*[separation]+[dyChamber]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="6">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="3*[separation]+[dyChamber]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="3*[separation]+[dyChamber]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="8">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
-    <Translation x="0*fm" y="4*[separation]+[dyChamber]" z="0*fm" />
+    <Translation x="-1*[dxChamber]*fm" y="4*[separation]+[dyChamber]" z="0*fm" />
   </PosPart>
   <PosPart copyNumber="10">
     <rParent name="gembox:GEMBox"/>
     <rChild name="gem11:GEMBox11L"/>
+    <Translation x="-1*[dxChamber]*fm" y="5*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+
+    <PosPart copyNumber="11">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="1*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="13">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="2*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="15">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="3*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="17">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="4*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="19">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="5*[separation]" z="0*fm" />
+  </PosPart>
+
+  <PosPart copyNumber="12">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="1*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="14">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="2*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="16">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="3*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="18">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="0*fm" y="4*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="20">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
     <Translation x="0*fm" y="5*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+
+
+    <PosPart copyNumber="21">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="1*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="23">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="2*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="25">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="3*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="27">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="4*[separation]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="29">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="5*[separation]" z="0*fm" />
+  </PosPart>
+
+  <PosPart copyNumber="22">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="1*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="24">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="2*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="26">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="3*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="28">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="4*[separation]+[dyChamber]" z="0*fm" />
+  </PosPart>
+  <PosPart copyNumber="30">
+    <rParent name="gembox:GEMBox"/>
+    <rChild name="gem11:GEMBox11L"/>
+    <Translation x="[dxChamber]*fm" y="5*[separation]+[dyChamber]" z="0*fm" />
   </PosPart>
   
 </PosPartSection>
