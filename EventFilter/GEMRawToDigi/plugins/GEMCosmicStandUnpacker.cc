@@ -162,39 +162,10 @@ GEMCosmicStandUnpacker::beginRun(const edm::Run &run, const edm::EventSetup& iSe
                 edm::LogError("") << "\nThe GEM file: " << inputFileName_.c_str() << " is missing.\n";
         };
 
-/*
-        std::vector<uint64_t> vfatsTest(1,0x0);
-        std::vector<int> slotTest(1,-1);
-
-
-        slotTest.push_back(0);   vfatsTest.push_back(0xfa20);
-        slotTest.push_back(1);   vfatsTest.push_back(0xff48);
-        slotTest.push_back(2);   vfatsTest.push_back(0xffcb);
-        slotTest.push_back(3);   vfatsTest.push_back(0xffec);
-        slotTest.push_back(4);   vfatsTest.push_back(0xfa40);
-        slotTest.push_back(5);   vfatsTest.push_back(0xffdc);
-        slotTest.push_back(6);   vfatsTest.push_back(0xf747);
-        slotTest.push_back(7);   vfatsTest.push_back(0xff40);
-        slotTest.push_back(8);   vfatsTest.push_back(0xfffc);
-        slotTest.push_back(9);   vfatsTest.push_back(0xffe7);
-        slotTest.push_back(10);   vfatsTest.push_back(0xdead);
-        slotTest.push_back(11);   vfatsTest.push_back(0xff83);
-        slotTest.push_back(12);   vfatsTest.push_back(0xff87);
-        slotTest.push_back(13);   vfatsTest.push_back(0xf6bc);
-        slotTest.push_back(14);   vfatsTest.push_back(0xf75b);
-        slotTest.push_back(15);   vfatsTest.push_back(0xff4c);
-        slotTest.push_back(16);   vfatsTest.push_back(0xf99b);
-        slotTest.push_back(17);   vfatsTest.push_back(0xff24);
-        slotTest.push_back(18);   vfatsTest.push_back(0xff9b);
-        slotTest.push_back(19);   vfatsTest.push_back(0xff2c);
-        slotTest.push_back(20);   vfatsTest.push_back(0xfa28);
-        slotTest.push_back(21);   vfatsTest.push_back(0xfa17);
-        slotTest.push_back(22);   vfatsTest.push_back(0xff6b);
-        slotTest.push_back(23);   vfatsTest.push_back(0xfa2c);
-*/
-
-        if(verbose_) for (unsigned int i=0; i<vfatVector_.size(); i++){
-                std::cout<<std::dec<<i<<"   "<<slotVector_.at(i)<<" ->  "<<std::hex<<vfatVector_.at(i)<<std::endl;
+       std::cout<<"STAND CONFIGURATION - VERIFY!!"<<std::endl;
+       std::cout<<"SLOT - VFAT - LAYER - COLUMN - ROW "<<std::endl;
+       for (unsigned int i=0; i<vfatVector_.size(); i++){
+                std::cout<<std::dec<<"\t"<<slotVector_.at(i)<<"\t"<<std::hex<<vfatVector_.at(i)<<"\t"<<layerVector_.at(i)<<"\t"<<columnVector_.at(i)<<"\t"<<rowVector_.at(i)<<std::endl;
         }
 
         filledDB=false;
@@ -206,9 +177,7 @@ GEMCosmicStandUnpacker::beginRun(const edm::Run &run, const edm::EventSetup& iSe
                 romap = eMap->convertCS();
                 std::cout <<" GEM READOUT MAP VERSION: " << eMap->version() << std::endl;
                 filledDB=true;
-
                 romapV2 = eMap->convertCSConfigurable(&vfatVector_,&slotVector_);
-
 
         }
 
@@ -226,7 +195,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
         AMCGEMData  gem;
         AMCGEBData  geb;
-        AMCVFATData vfat;
+        //AMCVFATData vfat;
 
         //uint64_t ui64bits = 0;
 
@@ -277,6 +246,8 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                 GEMCosmicStandUnpacker::ByteVector(byteVec, m_word);
                 m_AMC13Event->addAMCheader(m_word);
         }
+
+
         // Readout out AMC payloads
         for (unsigned short i = 0; i < m_AMC13Event->nAMC(); i++){
                 AMCdata * m_amcdata = new AMCdata();
@@ -298,6 +269,9 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                 GEMCosmicStandUnpacker::ByteVector(byteVec, m_word);
                 if(verbose_)  std::cout<<"  --->"<<m_amcdata->BX()<<"   "<<m_amcdata->BID()<<std::endl;
 
+                //std::cout<<std::dec<<m_amcdata->BX()<<"    "<<std::dec<<m_amcdata->L1A()<<std::endl;
+                //L1A could be used for the event number. BX is dummy. 
+
                 // fill the geb data here
                 for (unsigned short j = 0; j < m_amcdata->GDcount(); j++){
                         GEBdata * m_gebdata = new GEBdata();
@@ -311,6 +285,8 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                         if(verbose_)  std::cout << "Number of VFAT words " << m_gebdata->Vwh() << std::endl;
                         int m_nvb = m_gebdata->Vwh() / 3; // number of VFAT2 blocks. Eventually add here sanity check
                         if(verbose_)  std::cout << "Number of VFAT blocks " << m_nvb << std::endl;
+
+
 
                         for (unsigned short k = 0; k < m_nvb; k++){
                                 VFATdata * m_vfatdata = new VFATdata();
@@ -351,7 +327,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                                 uint8_t b1100=m_vfatdata->b1100();
                                 uint8_t b1110=m_vfatdata->b1110();
                                 uint16_t  ChipID=m_vfatdata->ChipID();
-                                int slot=m_vfatdata->SlotNumber(); 
+                                //int slot=m_vfatdata->SlotNumber(); 
 
                                 bool Quality = (b1010==10) && (b1100==12) && (b1110==14) ;      // add CRC? 
 
@@ -360,12 +336,12 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                                 int column=1;
                                 int row=0;
                                 int chamberPosition=0;
-                                for(int i=0; i<24; i++) { 
+                                for(unsigned int i=0; i<vfatVector_.size(); i++) { 
                                     if( converted == vfatVector_[i]) {
                                                             foundChip=true; 
                                                             column=columnVector_[i]; 
                                                             row=rowVector_[i]; 
-                                                             chamberPosition=layerVector_[i]; 
+                                                            chamberPosition=layerVector_[i]; 
                                     }}
                                 int schamberPosition=1+2*(row-1)+10*(column-1);
                                 if (!foundChip) LogTrace("")<<"Unpacked VFAT not in the configuration - double check the settings";

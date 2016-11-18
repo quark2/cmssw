@@ -116,7 +116,7 @@ GEMROmap* GEMEMap::convertCSConfigurable(std::vector<unsigned long long>* vfats,
         for (unsigned int i=0; i<slot->size(); i++){
                 int position=slot->at(i);
                 if(position==-1) continue;
-                std::cout<<position<<"    "<<vfats->at(i)<<std::endl;
+//                std::cout<<position<<"    "<<vfats->at(i)<<std::endl;
 
                 std::vector<GEMEMap::GEMVFatMaptype>::const_iterator imap;
 
@@ -133,8 +133,8 @@ GEMROmap* GEMEMap::convertCSConfigurable(std::vector<unsigned long long>* vfats,
                                 dc.stripId = imap->strip_number[ix]+(sPhi-1)*128;
                                 romap->add(ec,dc);
 
-                                //                                std::cout <<"Chamber "<<ec.chamberId<<" vfat 0x"<<std::hex<<ec.vfatId<<std::dec<<" chan="<<ec.channelId
-                                //                                        <<" correspond to eta="<<dc.etaId<<" strip="<<dc.stripId<<std::endl;
+//                                                            if(ec.vfatId==0xf9e8)    std::cout <<"Chamber "<<ec.chamberId<<" vfat 0x"<<std::hex<<ec.vfatId<<std::dec<<" chan="<<ec.channelId
+//                                                                        <<" correspond to eta="<<dc.etaId<<" strip="<<dc.stripId<<std::endl;
 
 
 
