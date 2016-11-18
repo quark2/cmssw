@@ -10,7 +10,17 @@ import os
 import sys
 #sys.argv.append( '-b' )
 import ROOT
+from array import array
 ROOT.gROOT.SetBatch(1)
+
+ablue = array("d", [0.51, 1.00, 0.12, 0.00, 0.00])
+ared = array("d", [0.00, 0.00, 0.87, 1.00, 0.51])
+agreen = array("d", [0.00, 0.81, 1.00, 0.20, 0.00])
+astop = array("d", [0.00, 0.34, 0.61, 0.84, 1.00])
+myPalette = []
+fi = ROOT.TColor.CreateGradientColorTable(5, astop, ared, agreen, ablue, 100 )
+for x in xrange(100): myPalette.append(fi+x)
+ROOT.gStyle.SetPalette(100, array("i", myPalette))
 
 import optparse
 def getEtaRange( station ) :
@@ -234,41 +244,102 @@ def draw_plot( file, tDir,oDir ) :
   for x in tlist :
     key_list.append(x.GetName())
   for hist in key_list :
-    if hist.find("dafdsadsfatrack_") != -1 :
+    if hist.find("track_") != -1 :
       draw_occ( oDir,d1.Get(hist)) 
-    elif ( hist == "sh_eff_ch"):
-      tmpSH = d1.Get("sh_eff_ch")
-      tmpRH = d1.Get("rh_eff_ch")
-      tmpTH = d1.Get("th_eff_ch")
-      tmpTR = d1.Get("tr_eff_ch")
-      draw_occ(oDir, tmpSH)
-      draw_occ(oDir, tmpRH)
-      draw_occ(oDir, tmpTH)
-      draw_occ(oDir, tmpTR)
-      tmp1 = tmpRH.Clone("eff_draw_rec_sim")
-      tmp1.SetTitle("recHit/simHit True efficiency")
-      tmp1.Divide(tmpSH)
-      draw_occ(oDir, tmp1)
-      tmp2 = tmpSH.Clone("eff_draw_sim_tr") 
-      tmp2.SetTitle("simHit/TrackIn")
-      tmp2.Divide(tmpTR)
-      draw_occ(oDir, tmp2)
-      tmp3 = tmpTH.Clone("eff_draw_th_tr")
-      tmp3.SetTitle("trHit/TrackIn Chamber efficiency")
-      tmp3.Divide(tmpTR)
-      draw_occ(oDir, tmp3) 
-      tmp4 = tmpTH.Clone("eff_draw_th_sim")
-      tmp4.SetTitle("trHit/simHit")
-      tmp4.Divide(tmpSH)
-      draw_occ(oDir, tmp4)
-      tmp5 = tmpTH.Clone("eff_draw_th_rh")
-      tmp5.SetTitle("trHit/recHit")
-      tmp5.Divide(tmpRH)
-      draw_occ(oDir, tmp5)
-      tmp6 = tmpTH.Clone("eff_draw_th_sim")
-      tmp6.SetTitle("thHit/simHit")
-      tmp6.Divide(tmpSH)
-      draw_occ(oDir, tmp6)
+    elif (hist.find("dcEta") !=-1 ) :
+      draw_col_nostat( oDir,d1.Get(hist))
+    elif (hist.find("simple_zr")!= -1 ) :
+      draw_simple_zr( oDir,d1.Get(hist))
+    elif (hist.find("eff_DigiHit") != -1 ) :
+      draw_col_eff( oDir, d1.Get(hist))
+    elif (hist.find("lx") !=-1 or hist.find("ly") != -1 or hist.find("dphi") != -1 or hist.find("_phi_dist") != -1 ) :
+      draw_occ( oDir,d1.Get(hist))
+    #elif ( hist.find("bx") != -1 ) :
+    #  draw_bx( oDir, d1.Get(hist)  )
+    elif ( hist.find("xy") !=-1 or hist.find("zr") !=-1 or hist.find("roll_vs_strip")!= -1 or hist.find("phipad")!=-1 or hist.find("phistrip") != -1 or hist.find("sp")!=-1 or hist.find("sub")!=-1 ) :
+      draw_col( oDir, d1.Get(hist) )
+    elif ( hist.find("phiz") != -1 ) :
+      draw_col_overflow( oDir, d1.Get(hist) )
+    #elif ( hist.find("eff") != -1 ) :
+    #  draw_eff( oDir, d1.Get(hist) )
+      #print "found "
+    elif ( hist.find("geo_phi") != -1) :
+      draw_col_userRange( oDir, d1.Get(hist))
+    elif ( hist == "th_eff_ch"):
+      tmp1 = d1.Get("th_eff_ch")
+      tmp2 = d1.Get("tr_eff_ch")
+      tmp2.Divide(tmp1)
+      tmp3 = tmp2.Clone("chamber_eff")
+      tmp3.SetTitle("Chamber efficiency fired chamber/track")
+      draw_occ(oDir, tmp3)
+    elif (hist == "chamber_1_layer_1_th_eff"):
+      for x in [1,3,5,7,9]:
+        for y in [1,2]:
+          tmp1 = d1.Get("chamber_%d_layer_%d_th_eff"%(x,y))
+          tmp2 = d1.Get("chamber_%d_layer_%d_tr_eff"%(x,y))
+          tmp2 = tmp2.Clone("chamber_%d_layer_%d_tr_efficiency"%(x,y))
+          tmp2.Divide(tmp1)
+          tmp2.SetTitle("Chamber %d layer %d Efficiency"%(x,y))
+          tmp2.SetStats(0)
+          tmp2.SetXTitle("Roll Number (iEta)")
+          tmp2.SetYTitle("Efficiency")
+          draw_occ(oDir, tmp2)
+          tmp12 = d1.Get("chamber_%d_layer_%d_th2D_eff"%(x,y))
+          tmp22 = d1.Get("chamber_%d_layer_%d_tr2D_eff"%(x,y))
+          tmp22 = tmp22.Clone("chamber_%d_layer_%d_tr2D_efficiency"%(x,y))
+          tmp22.Divide(tmp12)
+          tmp22.SetTitle("Chamber %d layer %d 2D Efficiency"%(x,y))
+          tmp22.SetStats(0)
+          tmp22.SetXTitle("track hit x position (cm)")
+          tmp22.SetYTitle("track hit y position (cm)")
+          draw_occ(oDir, tmp22)
+          for r in xrange(1,9):
+            print "chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r) 
+            tmp1r = d1.Get("chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r))
+            tmp2r = d1.Get("chamber_%d_layer_%d_roll_%d_tr_eff"%(x,y,r))
+            tmp2r = tmp2r.Clone("chamber_%d_layer_%d_roll_%d_tr_efficiency"%(x,y,r))
+            tmp2r.Divide(tmp1r)
+            tmp2r.SetTitle("Chamber %d layer %d roll %d Efficiency"%(x,y,r))
+            tmp2r.SetStats(0)
+            tmp2r.SetXTitle("y position (cm)")
+            tmp2r.SetYTitle("Efficiency")
+            draw_occ(oDir, tmp2r)
+    elif ( hist.startswith("chamber") and hist.endswith("bx")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("BX [ns]")
+      tmph.SetYTitle("Roll Number (iEta)") 
+      draw_occ(oDir, tmph)
+    elif ( hist.startswith("chamber") and hist.endswith("cl_size")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("Cluster size")
+      tmph.SetYTitle("Roll Number (iEta)") 
+      draw_occ(oDir, tmph)
+    elif ( hist.startswith("chamber") and hist.endswith("firedStrip")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("Strip")
+      tmph.SetYTitle("Roll Number (iEta)") 
+      draw_occ(oDir, tmph)
+    elif ( hist.startswith("chamber") and hist.endswith("x_roll")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("x [cm]")
+      tmph.SetYTitle("Roll Number (iEta)") 
+      draw_occ(oDir, tmph)
+    elif ( hist == "cluster_size"):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("cluster size")
+      tmph.SetYTitle("count")
+      draw_occ(oDir, tmph)
+    elif ( hist == "bx"):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("bx [ns]")
+      tmph.SetYTitle("count")
+      draw_occ(oDir, tmph)
+
+
+    else :
+      draw_occ( oDir, d1.Get(hist) )
+
+ 
 
 if __name__ == '__main__' :
   usage = ": %prog [option] DQM_filename.root\negs) ./%prog -a DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root"
