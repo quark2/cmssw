@@ -32,8 +32,13 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
+#process.load('Configuration.StandardSequences.Validation_cff')
+process.load('Configuration.StandardSequences.Harvesting_cff')
+process.load('Configuration.StandardSequences.DQMSaverAtRunEnd_cff')
+process.load('DQMServices.Components.EDMtoMEConverter_cff')
 
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
+#process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -68,31 +73,31 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
 # Cosmic Muon generator
 process.load("GeneratorInterface.CosmicMuonGenerator.CMSCGENproducer_cfi")
+process.generator.MaxTheta = 84.
+process.generator.ElossScaleFactor = 0.0
+process.generator.TrackerOnly = True
+process.generator.MinP = 100
 process.RandomNumberGeneratorService.generator = cms.PSet(
         initialSeed = cms.untracked.uint32(123456789),
         engineName = cms.untracked.string('HepJamesRandom')
     )
 
-process.generator.MaxTheta = 84.
-process.generator.ElossScaleFactor = 0.0
-process.generator.TrackerOnly = True
-
-## process.genstepfilter.triggerConditions=cms.vstring("generation_step")
-## process.generator = cms.EDProducer("FlatRandomPtGunProducer",
-##     AddAntiParticle = cms.bool(True),
-##     PGunParameters = cms.PSet(
-##         MaxEta = cms.double(0.1),
-##         MaxPhi = cms.double(3.14159265359),
-##         MaxPt = cms.double(100.01),
-##         MinEta = cms.double(-0.1),
-##         MinPhi = cms.double(-3.14159265359),
-##         MinPt = cms.double(99.99),
-##         PartID = cms.vint32(-13)
-##     ),
-##     Verbosity = cms.untracked.int32(0),
-##     firstRun = cms.untracked.uint32(1),
-##     psethack = cms.string('single mu pt 100')
-## )
+#process.genstepfilter.triggerConditions=cms.vstring("generation_step")
+process.generator = cms.EDProducer("FlatRandomPtGunProducer",
+    AddAntiParticle = cms.bool(True),
+    PGunParameters = cms.PSet(
+        MaxEta = cms.double(0.1),
+        MaxPhi = cms.double(3.14159265359),
+        MaxPt = cms.double(100.01),
+        MinEta = cms.double(-0.1),
+        MinPhi = cms.double(-3.14159265359),
+        MinPt = cms.double(99.99),
+        PartID = cms.vint32(-13)
+    ),
+    Verbosity = cms.untracked.int32(0),
+    firstRun = cms.untracked.uint32(1),
+    psethack = cms.string('single mu pt 100')
+)
 
 process.mix = cms.EDProducer("MixingModule",
     LabelPlayback = cms.string(''),
@@ -144,8 +149,25 @@ process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
 process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
 #process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
+process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
+    process.MuonServiceProxy,
+    verboseSimHit = cms.untracked.int32(1),
+    simInputLabel = cms.InputTag('g4SimHits',"MuonGEMHits"),
+    recHitsInputLabel = cms.InputTag('gemRecHits'),
+    tracksInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
+    seedInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
+    genParticleLabel = cms.InputTag('genParticles','','RECO'),
+    # st1, st2_short, st2_long of xbin, st1,st2_short,st2_long of ybin
+    nBinGlobalZR = cms.untracked.vdouble(200,200,200,150,180,250),
+    # st1 xmin, xmax, st2_short xmin, xmax, st2_long xmin, xmax, st1 ymin, ymax...
+    RangeGlobalZR = cms.untracked.vdouble(564,572,786,794,786,802,110,260,170,350,100,350),
+    #nBinGlobalXY = cms.untracked.int32(720),
+    #detailPlot = cms.bool(True),
+    #detailPlot = cms.bool(False),
+)
+
 # Path and EndPath definitions
-process.generation_step = cms.Path(process.pgen)
+process.generation_step = cms.Path(process.generator+process.pgen)
 process.simulation_step = cms.Path(process.psim)
 #process.L1simulation_step = cms.Path(process.SimL1Emulator)
 #process.digi2raw_step = cms.Path(process.DigiToRaw)
@@ -158,6 +180,14 @@ process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmic
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
+
+process.validation_step = cms.Path(process.gemcrValidation)
+process.dqmsave_step = cms.Path(process.EDMtoMEConverter*
+                                process.MuonGEMHitsPostProcessors*
+                                process.MuonGEMDigisPostProcessors*
+                                process.MuonGEMRecHitsPostProcessors*
+                                process.DQMSaver)
+
 
 process.digitisation_step.remove(process.simMuonME0Digis)
 process.digitisation_step.remove(process.simEcalTriggerPrimitiveDigis)
@@ -176,10 +206,14 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
                                 process.digitisation_step,#process.L1simulation_step,
                                 #process.digi2raw_step,process.raw2digi_step,#process.L1Reco_step,
                                 process.reconstruction_step,
-                                process.endjob_step,process.FEVTDEBUGHLToutput_step)
+                                process.validation_step,
+                                process.endjob_step,
+                                #process.genHarvesting,
+                                process.dqmsave_step,
+                                process.FEVTDEBUGHLToutput_step)
 # filter all path with the production filter sequence
-for path in process.paths:
-	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
+#for path in process.paths:
+#	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
 
 
 process.RandomNumberGeneratorService.simMuonGEMDigis = cms.PSet(
@@ -196,33 +230,6 @@ process.gemSegments.dXclusBoxMax = cms.double(10.0)
 process.gemSegments.dYclusBoxMax = cms.double(50.0)
 process.gemSegments.preClustering = cms.bool(False)
 process.gemSegments.preClusteringUseChaining = cms.bool(False)
-
-
-process.MessageLogger.categories.append("GEMGeometryBuilderFromDDD")
-process.MessageLogger.categories.append("GEMSegmentBuilder")
-process.MessageLogger.categories.append("GEMSegmentAlgorithm")
-process.MessageLogger.categories.append("MuonSegFit")
-process.MessageLogger.categories.append("MuonTrackFinder")
-process.MessageLogger.categories.append("MuonTrackLoader")
-process.MessageLogger.categories.append("SteppingHelixPropagatorESProducer")
-process.MessageLogger.categories.append("CosmicMuonSmoother")
-process.MessageLogger.categories.append("SteppingHelixPropagator")
-process.MessageLogger.debugModules = cms.untracked.vstring("*")
-process.MessageLogger.destinations = cms.untracked.vstring("cout","junk")
-process.MessageLogger.cout = cms.untracked.PSet(
-    threshold = cms.untracked.string("DEBUG"),
-    default   = cms.untracked.PSet( limit = cms.untracked.int32(0)  ),
-    FwkReport = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
-    MuonTrackFinder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    CosmicMuonSmoother = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    MuonTrackLoader = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    SteppingHelixPropagatorESProducer = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    SteppingHelixPropagator = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    ## MuonSegFit = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    ## GEMGeometryBuilderFromDDD = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
-    #GEMSegmentBuilder = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
-    ## GEMSegmentAlgorithm = cms.untracked.PSet( limit = cms.untracked.int32(-1) ),
-)
 
 process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
 process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
