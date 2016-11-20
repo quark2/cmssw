@@ -18,6 +18,8 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     rowStand=[]
     layerSC=[]
    
+    #Configuration of the Stand: write down every VFAT
+    #The ones below are a editted version with respect to what is there in the elog
 
     schamber.append("GE1/1-SCL02")
     chamber.append("GE1/1-VII-L-CERN-0001")
@@ -91,7 +93,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     
    
 
-    for i in range(0,len(VFATHEX)):
-            print "%s %d %s" %(VFATHEX[i] ,SLOTLIST[i] , BARCODE[i])
+#    for i in range(0,len(VFATHEX)):
+#            print "%s %d %s" %(VFATHEX[i] ,SLOTLIST[i] , BARCODE[i])
 
  
