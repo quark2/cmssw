@@ -1,11 +1,6 @@
 #Configuration for unpacker
 import csv,os
 
-#RAWFileName="test.dat"
-#RAWFileName="run000003_Cosmics_TIF_2016-11-17.dat"
-#RAWFileName="/data/bigdisk/GEM-Data-Taking/GE11_QC8/run000005_LatencyScan_TIF_2016-11-19_chunk_631.dat"
-#"/data/bigdisk/GEM-Data-Taking/GE11_QC8/run000003_Cosmics_TIF_2016-11-17.dat"
-#RAWFileName="/data/bigdisk/GEM-Data-Taking/GE11_QC8/run000004_Cosmics_TIF_2016-11-18_chunk_1.dat"
 RAWFileName="/data/bigdisk/GEM-Data-Taking/GE11_QC8/run000006_Cosmics_TIF_2016-11-20.dat"
 RunNumber=6
 MaxEvents=1000
