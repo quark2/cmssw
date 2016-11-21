@@ -48,7 +48,7 @@ COLUMNLIST=[]
 ROWLIST=[]
 LAYERLIST=[]
 
-import configureRun_cfi
+import Validation.GEMCR.configureRun_cfi
 configureRun_cfi.configureRun(SLOTLIST,VFATLIST,COLUMNLIST,ROWLIST,LAYERLIST)
 process.source = cms.Source("EmptySource",
       firstEvent = cms.untracked.uint32(1),
