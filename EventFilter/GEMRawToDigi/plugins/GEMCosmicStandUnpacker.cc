@@ -384,6 +384,14 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
                                 for(int chan = 0; chan < 128; ++chan) {
 
+                                        if(chan < 64){
+                                                chan0xf = ((m_vfatdata->lsData() >> chan) & 0x1);
+                                        } else {
+                                                chan0xf = ((m_vfatdata->msData() >> (chan-64)) & 0x1);
+                                        }
+
+                                        if(chan0xf==0) continue;  
+
                                         GEMROmap::eCoord ec;
                                         ec.chamberId=31;
                                         ec.vfatId = ChipID+0xf000;
