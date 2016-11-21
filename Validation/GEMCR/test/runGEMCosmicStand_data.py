@@ -52,9 +52,8 @@ layerSC=[]
 import configureRun_cfi as runConfig
 runConfig.configureRun(SLOTLIST,VFATLIST,COLUMNLIST,ROWLIST,LAYERLIST,chamberName,columnStand, rowStand, layerSC)
 
-print len(chamberName)
+#adding in custom geometry
 for i in range(len(chamberName)):
-    print i
     if layerSC[i] == 2: continue
     row = rowStand[i]
     column = columnStand[i]
