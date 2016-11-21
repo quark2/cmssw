@@ -67,7 +67,7 @@ class GEMCosmicStandUnpacker : public edm::EDProducer {
                 int GetStripFromChannel(uint16_t ChipID, int chan);  
                 int GetIEtaFromChipID(uint16_t ChipID);
 
-                //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
+                virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
                 //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
                 //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
 
@@ -86,6 +86,10 @@ class GEMCosmicStandUnpacker : public edm::EDProducer {
                 std::vector<int> rowVector_;
                 std::vector<int> columnVector_;
                 std::vector<int> layerVector_;
+                std::vector<int> hitsVector_;
+                std::vector<unsigned long long> missingVector_; 
+                //std::vector<unsigned long long> missingPositionInVector_; // not useful
+
 
                 bool checkQualityEvent_;
                 bool verbose_;
@@ -122,6 +126,7 @@ GEMCosmicStandUnpacker::GEMCosmicStandUnpacker(const edm::ParameterSet& iConfig)
         //register your products if do put with a label
         produces<FEDRawDataCollection>("GEMTBData");
         produces<GEMDigiCollection>();
+        produces<GEMDigiCollection>("WrongGEMDigis");
 
         inputFileName_ = iConfig.getParameter<std::string>("inputFileName");
 
@@ -130,13 +135,13 @@ GEMCosmicStandUnpacker::GEMCosmicStandUnpacker(const edm::ParameterSet& iConfig)
         m_file = std::fopen(inputFileName_.c_str(), "rb");
 
         FedKit_ = iConfig.getUntrackedParameter<std::string>("FedKit","sdram");
- 
+
         slotVector_ = iConfig.getParameter<std::vector<int> >("slotVector");  
         vfatVector_ = iConfig.getParameter<std::vector<unsigned long long> >("vfatVector");
         rowVector_ = iConfig.getParameter<std::vector<int> >("rowVector");     
         columnVector_ = iConfig.getParameter<std::vector<int> >("columnVector");     
         layerVector_ = iConfig.getParameter<std::vector<int> >("layerVector");
- 
+
         verbose_ = iConfig.getUntrackedParameter<bool>("verbose",false);
         checkQualityEvent_ = iConfig.getUntrackedParameter<bool>("checkQualityEvent",true);
 
@@ -162,10 +167,13 @@ GEMCosmicStandUnpacker::beginRun(const edm::Run &run, const edm::EventSetup& iSe
                 edm::LogError("") << "\nThe GEM file: " << inputFileName_.c_str() << " is missing.\n";
         };
 
-       std::cout<<"STAND CONFIGURATION - VERIFY!!"<<std::endl;
-       std::cout<<"SLOT - VFAT - LAYER - COLUMN - ROW "<<std::endl;
-       for (unsigned int i=0; i<vfatVector_.size(); i++){
-                std::cout<<std::dec<<"\t"<<slotVector_.at(i)<<"\t"<<std::hex<<vfatVector_.at(i)<<"\t"<<layerVector_.at(i)<<"\t"<<columnVector_.at(i)<<"\t"<<rowVector_.at(i)<<std::endl;
+        for (unsigned int i=0; i<vfatVector_.size(); i++){
+                hitsVector_.push_back(0);  
+        }
+
+
+        if(slotVector_.size()!=vfatVector_.size() || slotVector_.size()!=layerVector_.size() || slotVector_.size()!=rowVector_.size() || slotVector_.size()!=columnVector_.size() ){
+                edm::LogError("")<<"WRONG CONFIGURATION - arrays should be the same length. Double check the VFAT listing per chamber";
         }
 
         filledDB=false;
@@ -201,6 +209,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
         std::auto_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
         std::auto_ptr<GEMDigiCollection> producedGEMDigis(new GEMDigiCollection);
+        std::auto_ptr<GEMDigiCollection> producedGEMDigisMissing(new GEMDigiCollection);
 
         if(inpf_.eof()) { inpf_.close(); iEvent.put(pOut,"GEMTBData");  std::cout<<"END OF FILE"<<std::endl;  return; } // We should put out a collection even if it is empty
         if(!inpf_.good()) { iEvent.put(pOut,"GEMTBData");  std::cout<<"EMPTY"<<std::endl;  return; }
@@ -289,6 +298,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
 
                         for (unsigned short k = 0; k < m_nvb; k++){
+                                    
                                 VFATdata * m_vfatdata = new VFATdata();
                                 // read 3 vfat block words, totaly 192 bits
                                 std::fread(&m_word, sizeof(uint64_t), 1, m_file);
@@ -334,28 +344,53 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                                 uint64_t converted=ChipID+0xf000;    
                                 bool foundChip=false;
                                 int column=1;
-                                int row=0;
-                                int chamberPosition=0;
+                                int row=1;
+                                int chamberPosition=1;
+                                int slot=0;
                                 for(unsigned int i=0; i<vfatVector_.size(); i++) { 
-                                    if( converted == vfatVector_[i]) {
-                                                            foundChip=true; 
-                                                            column=columnVector_[i]; 
-                                                            row=rowVector_[i]; 
-                                                            chamberPosition=layerVector_[i]; 
-                                    }}
+                                        if( converted == vfatVector_[i]) {
+                                                foundChip=true; 
+                                                column=columnVector_[i]; 
+                                                slot=slotVector_[i];
+                                                row=rowVector_[i]; 
+                                                chamberPosition=layerVector_[i]; 
+                                                hitsVector_[i]++;
+                                        }}
                                 int schamberPosition=1+2*(row-1)+10*(column-1);
-                                if (!foundChip) LogTrace("")<<"Unpacked VFAT not in the configuration - double check the settings";
+                                if (!foundChip) {
+                                        bool alreadyin=false;
+                                        for (unsigned int i=0; i<missingVector_.size(); i++) {
+                                                if(converted==missingVector_[i]) alreadyin=true;   
+                                        }
+                                        if(!alreadyin) {
+                                                missingVector_.push_back(converted);
+                                                //missingPositionInVector_.push_back(k);
+                                                std::cout<<"Unpacked VFAT not in the configuration - double check the settings"<<std::endl;
+                                                std::cout<<" ---> VFAT--->"<<converted<<" (will only give this warning once)"<<std::endl;
+                                        }
+                                }
+                  
+                                if(verbose_){
+                                        std::cout<<std::dec<<"  --->"<<m_amcdata->BX()<<"   "<<m_amcdata->BID()<<std::endl;  
+                                        std::cout<<std::dec<<" SLOT? "<<slot<<std::endl;
+                                        std::cout<<std::dec<<" ---> VFAT--->"<<(unsigned)bc<<" -   "<<(unsigned)ec<<" -   "<<std::hex<<(unsigned)ChipID<<std::endl;
+                                        std::cout<<std::dec<<" --> COLUMN = "<<column<<"    ROW  = "<<row<<"     Layer:"<<chamberPosition<<" -->   SC:"<<schamberPosition<<std::endl;
+                                }
 
-                               if(verbose_){std::cout<<" ---> VFAT--->"<<(unsigned)bc<<" -   "<<(unsigned)ec<<" -   "<<(unsigned)ChipID<<std::endl;
-                                            std::cout<<" --> COLUMN = "<<column<<"    ROW  = "<<row<<"     Layer:"<<chamberPosition<<" -->   SC:"<<schamberPosition<<std::endl;
-                                            }
-                              
                                 if(!Quality && checkQualityEvent_) continue;
 
                                 int bx=0;  
                                 uint8_t chan0xf = 0;
 
                                 for(int chan = 0; chan < 128; ++chan) {
+
+                                        if(chan < 64){
+                                                chan0xf = ((m_vfatdata->lsData() >> chan) & 0x1);
+                                        } else {
+                                                chan0xf = ((m_vfatdata->msData() >> (chan-64)) & 0x1);
+                                        }
+
+                                        if(chan0xf==0) continue;  
 
                                         GEMROmap::eCoord ec;
                                         ec.chamberId=31;
@@ -370,13 +405,24 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                                         int strip=dc.stripId;//
                                         int etaP=dc.etaId;
 
-                                        if(strip==0 || etaP == 0) continue;
-
-                                        GEMDigi digi(strip,bx); 
-                                        // bx is a single digi, where we should give 
-                                        // in input the strip and bx relative to trigger that is always 0 for VFAT2 --> To be fixed! 
-                                        producedGEMDigis.get()->insertDigi(GEMDetId(1,1,1,chamberPosition,schamberPosition,etaP),digi); 
-
+                                        if(etaP == 0) {
+                                                if(foundChip){
+                                                std::cout<<"WARNING: wrong digi! DoubleCheck the configuration"<<std::endl;
+                                                std::cout<<std::dec<<" --> COLUMN = "<<column<<"    ROW  = "<<row<<"     Layer:"<<chamberPosition<<" -->   SC:"<<schamberPosition<<std::endl;
+                                                std::cout<<std::hex<<" ---> VFAT--->"<<ec.vfatId<<"   slot="<<slot<<std::endl;
+                                                std::cout<<std::dec<<" chan="<<ec.channelId<<" correspond to eta="<<dc.etaId<<" strip="<<dc.stripId<<std::endl;
+                                                }
+                                                else{
+                                                GEMDigi digi(chan,bx);
+                                                producedGEMDigisMissing.get()->insertDigi(GEMDetId(1,1,1,1,1,0),digi);
+                                                }      
+                                        }
+                                        else{  
+                                                GEMDigi digi(strip,bx); 
+                                                // bx is a single digi, where we should give 
+                                                // in input the strip and bx relative to trigger
+                                                producedGEMDigis.get()->insertDigi(GEMDetId(1,1,1,chamberPosition,schamberPosition,etaP),digi); 
+                                        }
                                 }
                                 delete m_vfatdata;
 
@@ -394,7 +440,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                 std::fread(&m_word, sizeof(uint64_t), 1, m_file);
                 GEMCosmicStandUnpacker::ByteVector(byteVec, m_word);
                 if(verbose_){
-                        printf("AMC TRALIER\n");
+                        printf("AMC TRAILER\n");
                         printf("%016lX\n", m_word);
                 }
                 m_amcdata->setAMCTrailer(m_word);
@@ -426,7 +472,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
         }
 
         if(verbose_) std::cout <<" Run "<< iEvent.eventAuxiliary().run()<<"     "<<iEvent.eventAuxiliary().event()<<std::endl;
-        iEvent.put(pOut,"GEMTBData"); iEvent.put(producedGEMDigis);
+        iEvent.put(pOut,"GEMTBData"); iEvent.put(producedGEMDigis); iEvent.put(producedGEMDigisMissing,"WrongGEMDigis");
 }
 
 // ------------ method called once each 64 Bits data word and keep in vector ------------
@@ -452,12 +498,22 @@ GEMCosmicStandUnpacker::endJob() {
 }
 
 // ------------ method called when ending the processing of a run  ------------
-/*
-   void
-   GEMCosmicStandUnpacker::endRun(edm::Run const&, edm::EventSetup const&)
-   {
-   }
-   */
+        void
+GEMCosmicStandUnpacker::endRun(edm::Run const&, edm::EventSetup const&)
+{
+
+        std::cout<<"FILLED VFATS"<<std::endl;
+        std::cout<<"SLOT - VFAT - LAYER - COLUMN - ROW ---> Number of events with hits"<<std::endl;
+        for (unsigned int i=0; i<vfatVector_.size(); i++){
+                std::cout<<std::dec<<"\t"<<slotVector_.at(i)<<"\t"<<std::hex<<vfatVector_.at(i)<<"\t"<<layerVector_.at(i)<<"\t"<<columnVector_.at(i)<<"\t"<<rowVector_.at(i)<<"  -----> "<<std::dec<<hitsVector_.at(i)<<std::endl;
+        }
+        std::cout<<"MISSING VFATS"<<std::endl;
+        for (unsigned int i=0; i<missingVector_.size(); i++){
+                std::cout<<std::hex<<missingVector_[i]<<std::dec<<std::endl;
+        }
+
+
+}
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
