@@ -34,6 +34,7 @@ def getEtaRange( station ) :
 def draw_occ(target_dir, h, ext =".png", opt = "colz"):
   gStyle.SetStatStyle(0)
   gStyle.SetOptStat(1110)
+  h.SetName("GE11-VII-S-CERN-0005_roll_"+h.GetName())
   c = TCanvas(h.GetTitle(),h.GetName(),600,600)
   c_title = c.GetTitle()
   c.Clear()
@@ -265,55 +266,55 @@ def draw_plot( file, tDir,oDir ) :
       #print "found "
     elif ( hist.find("geo_phi") != -1) :
       draw_col_userRange( oDir, d1.Get(hist))
-    elif ( hist == "th_eff_ch"):
-      tmp1 = d1.Get("th_eff_ch")
-      tmp2 = d1.Get("tr_eff_ch")
-      tmp2.Divide(tmp1)
-      tmp3 = tmp2.Clone("chamber_eff")
-      tmp3.SetTitle("Chamber efficiency fired chamber/track")
-      draw_occ(oDir, tmp3)
-    elif (hist == "chamber_1_layer_1_th_eff"):
-      for x in [1,3,5,7,9]:
-        for y in [1,2]:
-          tmp1 = d1.Get("chamber_%d_layer_%d_th_eff"%(x,y))
-          tmp2 = d1.Get("chamber_%d_layer_%d_tr_eff"%(x,y))
-          tmp2 = tmp2.Clone("chamber_%d_layer_%d_tr_efficiency"%(x,y))
-          tmp2.Divide(tmp1)
-          tmp2.SetTitle("Chamber %d layer %d Efficiency"%(x,y))
-          tmp2.SetStats(0)
-          tmp2.SetXTitle("Roll Number (iEta)")
-          tmp2.SetYTitle("Efficiency")
-          draw_occ(oDir, tmp2)
-          tmp12 = d1.Get("chamber_%d_layer_%d_th2D_eff"%(x,y))
-          tmp22 = d1.Get("chamber_%d_layer_%d_tr2D_eff"%(x,y))
-          tmp22 = tmp22.Clone("chamber_%d_layer_%d_tr2D_efficiency"%(x,y))
-          tmp22.Divide(tmp12)
-          tmp22.SetTitle("Chamber %d layer %d 2D Efficiency"%(x,y))
-          tmp22.SetStats(0)
-          tmp22.SetXTitle("track hit x position (cm)")
-          tmp22.SetYTitle("track hit y position (cm)")
-          draw_occ(oDir, tmp22)
-          for r in xrange(1,9):
-            print "chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r) 
-            tmp1r = d1.Get("chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r))
-            tmp2r = d1.Get("chamber_%d_layer_%d_roll_%d_tr_eff"%(x,y,r))
-            tmp2r = tmp2r.Clone("chamber_%d_layer_%d_roll_%d_tr_efficiency"%(x,y,r))
-            tmp2r.Divide(tmp1r)
-            tmp2r.SetTitle("Chamber %d layer %d roll %d Efficiency"%(x,y,r))
-            tmp2r.SetStats(0)
-            tmp2r.SetXTitle("y position (cm)")
-            tmp2r.SetYTitle("Efficiency")
-            draw_occ(oDir, tmp2r)
-    elif ( hist.startswith("chamber") and hist.endswith("bx")):
-      tmph = d1.Get(hist)
-      tmph.SetXTitle("BX [ns]")
-      tmph.SetYTitle("Roll Number (iEta)") 
-      draw_occ(oDir, tmph)
-    elif ( hist.startswith("chamber") and hist.endswith("cl_size")):
-      tmph = d1.Get(hist)
-      tmph.SetXTitle("Cluster size")
-      tmph.SetYTitle("Roll Number (iEta)") 
-      draw_occ(oDir, tmph)
+#    elif ( hist == "th_eff_ch"):
+#      tmp1 = d1.Get("th_eff_ch")
+#      tmp2 = d1.Get("tr_eff_ch")
+#      tmp2.Divide(tmp1)
+#      tmp3 = tmp2.Clone("chamber_eff")
+#      tmp3.SetTitle("Chamber efficiency fired chamber/track")
+#      draw_occ(oDir, tmp3)
+#    elif (hist == "chamber_1_layer_1_th_eff"):
+#      for x in [1,3,5,7,9]:
+#        for y in [1,2]:
+#          tmp1 = d1.Get("chamber_%d_layer_%d_th_eff"%(x,y))
+#          tmp2 = d1.Get("chamber_%d_layer_%d_tr_eff"%(x,y))
+#          tmp2 = tmp2.Clone("chamber_%d_layer_%d_tr_efficiency"%(x,y))
+#          tmp2.Divide(tmp1)
+#          tmp2.SetTitle("Chamber %d layer %d Efficiency"%(x,y))
+#          tmp2.SetStats(0)
+#          tmp2.SetXTitle("Roll Number (iEta)")
+#          tmp2.SetYTitle("Efficiency")
+#          draw_occ(oDir, tmp2)
+#          tmp12 = d1.Get("chamber_%d_layer_%d_th2D_eff"%(x,y))
+#          tmp22 = d1.Get("chamber_%d_layer_%d_tr2D_eff"%(x,y))
+#          tmp22 = tmp22.Clone("chamber_%d_layer_%d_tr2D_efficiency"%(x,y))
+#          tmp22.Divide(tmp12)
+#          tmp22.SetTitle("Chamber %d layer %d 2D Efficiency"%(x,y))
+#          tmp22.SetStats(0)
+#          tmp22.SetXTitle("track hit x position (cm)")
+#          tmp22.SetYTitle("track hit y position (cm)")
+#          draw_occ(oDir, tmp22)
+#          for r in xrange(1,9):
+#            print "chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r) 
+#            tmp1r = d1.Get("chamber_%d_layer_%d_roll_%d_th_eff"%(x,y,r))
+#            tmp2r = d1.Get("chamber_%d_layer_%d_roll_%d_tr_eff"%(x,y,r))
+#            tmp2r = tmp2r.Clone("chamber_%d_layer_%d_roll_%d_tr_efficiency"%(x,y,r))
+#            tmp2r.Divide(tmp1r)
+#            tmp2r.SetTitle("Chamber %d layer %d roll %d Efficiency"%(x,y,r))
+#            tmp2r.SetStats(0)
+#            tmp2r.SetXTitle("y position (cm)")
+#            tmp2r.SetYTitle("Efficiency")
+#            draw_occ(oDir, tmp2r)
+#    elif ( hist.startswith("chamber") and hist.endswith("bx")):
+#      tmph = d1.Get(hist)
+#      tmph.SetXTitle("BX [ns]")
+#      tmph.SetYTitle("Roll Number (iEta)") 
+#      draw_occ(oDir, tmph)
+#    elif ( hist.startswith("chamber") and hist.endswith("cl_size")):
+#      tmph = d1.Get(hist)
+#      tmph.SetXTitle("Cluster size")
+#      tmph.SetYTitle("Roll Number (iEta)") 
+#      draw_occ(oDir, tmph)
     elif ( hist.startswith("chamber") and hist.endswith("firedStrip")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("Strip")
@@ -329,17 +330,13 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetXTitle("cluster size")
       tmph.SetYTitle("count")
       draw_occ(oDir, tmph)
-    elif ( hist == "bx"):
-      tmph = d1.Get(hist)
-      tmph.SetXTitle("bx [ns]")
-      tmph.SetYTitle("count")
-      draw_occ(oDir, tmph)
-
-
-    else :
-      draw_occ( oDir, d1.Get(hist) )
-
- 
+#    elif ( hist == "bx"):
+#      tmph = d1.Get(hist)
+#      tmph.SetXTitle("bx [ns]")
+#      tmph.SetYTitle("count")
+#      draw_occ(oDir, tmph)
+    else : continue
+    #  draw_occ( oDir, d1.Get(hist) )
 
 if __name__ == '__main__' :
   usage = ": %prog [option] DQM_filename.root\negs) ./%prog -a DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root"
@@ -379,9 +376,9 @@ if __name__ == '__main__' :
     steps.append("GEMRecHits")
 
   for step in steps :
-    tDir = "DQMData/Run 1/Muon%sV/Run summary/%sTask"%(step,step)
+    run = int(args[0].split("_")[2][1:])
+    tDir = "DQMData/Run %d/Muon%sV/Run summary/%sTask"%(run,step,step)
     oDir = options.directory+"_%s"%(step)+'/'
     os.system("mkdir -p "+oDir )
     draw_plot(args[0],tDir,oDir)  
-    #print args[0],tDir, oDir
    
