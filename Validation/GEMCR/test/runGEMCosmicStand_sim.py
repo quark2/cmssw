@@ -33,12 +33,25 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
 #process.load('Configuration.StandardSequences.Validation_cff')
-process.load('Configuration.StandardSequences.Harvesting_cff')
-process.load('Configuration.StandardSequences.DQMSaverAtRunEnd_cff')
-process.load('DQMServices.Components.EDMtoMEConverter_cff')
+
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r1.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r2.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r3.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r4.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r5.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c2_r1.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c2_r2.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c2_r3.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c2_r4.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c2_r5.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r1.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r2.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r3.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r4.xml')
+process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -71,26 +84,26 @@ process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
-# Cosmic Muon generator
-process.load("GeneratorInterface.CosmicMuonGenerator.CMSCGENproducer_cfi")
-process.generator.MaxTheta = 84.
-process.generator.ElossScaleFactor = 0.0
-process.generator.TrackerOnly = True
-process.generator.MinP = 100
-process.RandomNumberGeneratorService.generator = cms.PSet(
-        initialSeed = cms.untracked.uint32(123456789),
-        engineName = cms.untracked.string('HepJamesRandom')
-    )
+## # Cosmic Muon generator
+## process.load("GeneratorInterface.CosmicMuonGenerator.CMSCGENproducer_cfi")
+## process.generator.MaxTheta = 84.
+## process.generator.ElossScaleFactor = 0.0
+## process.generator.TrackerOnly = True
+## process.generator.MinP = 100
+## process.RandomNumberGeneratorService.generator = cms.PSet(
+##         initialSeed = cms.untracked.uint32(123456789),
+##         engineName = cms.untracked.string('HepJamesRandom')
+##     )
 
 #process.genstepfilter.triggerConditions=cms.vstring("generation_step")
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
-        MaxEta = cms.double(0.1),
-        MaxPhi = cms.double(3.14159265359),
+        MaxEta = cms.double(0.3),
+        MaxPhi = cms.double(2.6),
         MaxPt = cms.double(100.01),
-        MinEta = cms.double(-0.1),
-        MinPhi = cms.double(-3.14159265359),
+        MinEta = cms.double(-0.3),
+        MinPhi = cms.double(0.5),
         MinPt = cms.double(99.99),
         PartID = cms.vint32(-13)
     ),
@@ -182,12 +195,6 @@ process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
 
 process.validation_step = cms.Path(process.gemcrValidation)
-process.dqmsave_step = cms.Path(process.EDMtoMEConverter*
-                                process.MuonGEMHitsPostProcessors*
-                                process.MuonGEMDigisPostProcessors*
-                                process.MuonGEMRecHitsPostProcessors*
-                                process.DQMSaver)
-
 
 process.digitisation_step.remove(process.simMuonME0Digis)
 process.digitisation_step.remove(process.simEcalTriggerPrimitiveDigis)
@@ -208,13 +215,11 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
                                 process.reconstruction_step,
                                 process.validation_step,
                                 process.endjob_step,
-                                #process.genHarvesting,
-                                process.dqmsave_step,
-                                process.FEVTDEBUGHLToutput_step)
+                                process.FEVTDEBUGHLToutput_step,
+                                )
 # filter all path with the production filter sequence
 #for path in process.paths:
 #	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
-
 
 process.RandomNumberGeneratorService.simMuonGEMDigis = cms.PSet(
         initialSeed = cms.untracked.uint32(1234567),
