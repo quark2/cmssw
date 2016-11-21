@@ -3,7 +3,7 @@ import csv,os
 
 RAWFileName="/data/bigdisk/GEM-Data-Taking/GE11_QC8/run000006_Cosmics_TIF_2016-11-20.dat"
 RunNumber=6
-MaxEvents=20000
+MaxEvents=1000
 OutputFileName='DigisRun000006.root'
 
 def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=[]):
