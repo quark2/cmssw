@@ -28,7 +28,7 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:validation_VALIDATION.root'),
+    fileNames = cms.untracked.vstring('file:out_reco.root'),
     processingMode = cms.untracked.string('RunsAndLumis'),
     secondaryFileNames = cms.untracked.vstring()
 )
