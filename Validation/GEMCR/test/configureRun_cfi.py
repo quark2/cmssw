@@ -7,16 +7,13 @@ MaxEvents=1000
 OutputFileName='Reco_Run000006.root'
 sqlite_file = os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+'/src/EventFilter/GEMRawToDigi/test/GEMEMap_CosmicStand_8Nov2016.db'
 
-def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=[], chamber=[]):
+def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=[], chamber=[], columnStand=[], rowStand=[], layerSC=[]):
 
     fileVFATS=os.environ.get('CMSSW_BASE')+"/src/EventFilter/GEMRawToDigi/data/VFAT2LIST.csv"
 
     schamber=[]
     slot=[]
     barcode=[]
-    columnStand=[]
-    rowStand=[]
-    layerSC=[]
    
     #Configuration of the Stand: write down every VFAT
     #The ones below are a editted version with respect to what is there in the elog
@@ -55,7 +52,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
 
 
     schamber.append("GE1/1-SCS01")
-    chamber.append("GE11-VII-S-CERN-0006")
+    chamber.append("GE1/1-VII-S-CERN-0006")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
     barcode.append(["#242","#302","#304","#069","#281", "#059", "#283", "#100","#070", "#259","#309","#073","#089","#214","#272","#257","#145","#330","#282","#086","#279","#255","#234", "#246"])
     columnStand.append(2)
@@ -63,7 +60,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     layerSC.append(2)  #Double Check
 
     schamber.append("GE1/1-SCS01")
-    chamber.append("GE11-VII-S-CERN-0005")
+    chamber.append("GE1/1-VII-S-CERN-0005")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
     barcode.append(["#339","#308","#051", "#068", "#322","#337", "#299", "#197", "#056", "#303", "#087", "#301", "#266", "#195", "#270", "#050", "#252", "#135", "#275", "#253", "#061","#140","#329", "#215"])
     columnStand.append(2)

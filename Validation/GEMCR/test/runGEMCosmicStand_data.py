@@ -38,27 +38,41 @@ process.options = cms.untracked.PSet()
 
 # Input source
 process.load("EventFilter.GEMRawToDigi.GEMSQLiteCabling_cfi")
-import os
-sqlite_file = os.environ['SRT_CMSSW_BASE_SCRAMRTDEL'] + '/src/EventFilter/GEMRawToDigi/test/GEMEMap_CosmicStand_8Nov2016.db'
-process.GEMCabling.connect = 'sqlite_file:'+sqlite_file
 
 SLOTLIST=[]
 VFATLIST=[]
 COLUMNLIST=[]
 ROWLIST=[]
 LAYERLIST=[]
+chamberName=[]
+columnStand=[]
+rowStand=[]
+layerSC=[]
+#import Validation.GEMCR.configureRun_cfi
+import configureRun_cfi as runConfig
+runConfig.configureRun(SLOTLIST,VFATLIST,COLUMNLIST,ROWLIST,LAYERLIST,chamberName,columnStand, rowStand, layerSC)
 
-import Validation.GEMCR.configureRun_cfi
-configureRun_cfi.configureRun(SLOTLIST,VFATLIST,COLUMNLIST,ROWLIST,LAYERLIST)
+print len(chamberName)
+for i in range(len(chamberName)):
+    print i
+    if layerSC[i] == 2: continue
+    row = rowStand[i]
+    column = columnStand[i]
+    addChamber = 'gem11{}_c{}_r{}.xml'.format(chamberName[i][10],column,row)
+    print 'adding chamber', addChamber
+    process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/'+addChamber)
+    
+process.GEMCabling.connect = 'sqlite_file:'+runConfig.sqlite_file
+
 process.source = cms.Source("EmptySource",
       firstEvent = cms.untracked.uint32(1),
-      firstRun = cms.untracked.uint32(configureRun_cfi.RunNumber)
+      firstRun = cms.untracked.uint32(runConfig.RunNumber)
 )
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(configureRun_cfi.MaxEvents))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(runConfig.MaxEvents))
 
 process.muonGEMDigis = cms.EDProducer('GEMCosmicStandUnpacker',
-      inputFileName=cms.string(configureRun_cfi.RAWFileName),
+      inputFileName=cms.string(runConfig.RAWFileName),
       slotVector=  cms.vint32(SLOTLIST),
       vfatVector=cms.vuint64(VFATLIST),
       columnVector=cms.vint32(COLUMNLIST),
@@ -81,7 +95,7 @@ process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(10485760),
-    fileName = cms.untracked.string('out_reco.root'),
+    fileName = cms.untracked.string(runConfig.OutputFileName),
     #outputCommands = process.FEVTDEBUGHLTEventContent.outputCommands,
     outputCommands = cms.untracked.vstring( ('keep *')),
     splitLevel = cms.untracked.int32(0)
