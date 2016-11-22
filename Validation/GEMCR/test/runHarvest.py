@@ -23,12 +23,14 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('DQMServices.Components.EDMtoMEConverter_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1)
+    input = cms.untracked.int32(-1)
 )
+
+import configureRun_cfi as runConfig
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:Reco_Run000006.root'),
+    fileNames = cms.untracked.vstring('file:'+runConfig.OutputFileName),
     processingMode = cms.untracked.string('RunsAndLumis'),
     secondaryFileNames = cms.untracked.vstring()
 )

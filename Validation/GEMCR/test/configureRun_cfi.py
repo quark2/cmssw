@@ -3,7 +3,8 @@ import csv,os
 
 RAWFileName="/cms/home/jlee/gemcrs/src/run000006_Cosmics_TIF_2016-11-20.dat"
 RunNumber=6
-MaxEvents=1000
+MaxEvents=-1
+#MaxEvents=1000
 OutputFileName='Reco_Run000006.root'
 sqlite_file = os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+'/src/EventFilter/GEMRawToDigi/test/GEMEMap_CosmicStand_8Nov2016.db'
 

@@ -110,7 +110,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
     
   //for (auto ch : chambers){
   // Create the chamber Id
-  for (int i =0; i < 10; i++){
+  for (int i =1; i < 31; i++){
     for (int j=1; j < 3; j++){
       GEMDetId chamberID(1,1,1, j, i, 0);
       const GEMChamber* ch = mgeom->chamber(chamberID);
@@ -130,7 +130,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
 
 	  //GEMRecHit *newRH = rechit->clone();
 	  //TransientTrackingRecHit::ConstRecHitPointer trkRecHit(newRH);
-	// cout << "GEMCosmicMuon::hit " << muRecHits.back()->globalPosition() << endl;
+	  //cout << "GEMCosmicMuon::hit " << muRecHits.back()->globalPosition() << endl;
 	}
       }
     }
