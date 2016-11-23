@@ -95,7 +95,7 @@ def makeSummary():
 """
   tmp = """
 \\begin{frame}[plain]{%s}
-\imageFour{%s_firedStrip.png}{%s_x_roll.png}{%s_cl_size.png}{%s_tr2D_eff.png}
+\imageFour{%s_gemDigi.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_efficiency.png}
 \end{frame}
 
 """ 
@@ -358,28 +358,28 @@ def draw_plot( file, tDir,oDir ) :
       draw_col_overflow( oDir, d1.Get(hist) )
     elif ( hist.find("geo_phi") != -1) :
       draw_col_userRange( oDir, d1.Get(hist))
-    elif ( hist.startswith("chamber") and hist.endswith("th2D_eff")):
+    elif ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
       tmph = d1.Get(hist)
-      trEff = d1.Get(hist.replace("th2D", "tr2D"))
+      trEff = d1.Get(hist.replace("trecHit_efficiency", "tr2D"))
       
       trEff.Divide(tmph)
       trEff.SetXTitle("vfat number")
       trEff.SetYTitle("roll number")
       draw_occ(oDir, trEff, ".png", "colz text")
    
-    elif ( hist.startswith("chamber") and hist.endswith("firedStrip")):
+    elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("Strip")
       tmph.SetYTitle("Roll Number (iEta)") 
       draw_occ(oDir, tmph)
-    elif ( hist.startswith("chamber") and hist.endswith("x_roll")):
+    elif ( hist.startswith("chamber") and hist.endswith("recHit")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("x [cm]")
       tmph.SetYTitle("Roll Number (iEta)") 
       draw_occ(oDir, tmph)
-    elif ( hist.startswith("chamber") and hist.endswith("cl_size")):
+    elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
-      tmph.SetXTitle("cluster size")
+      tmph.SetXTitle("recHit size")
       tmph.SetYTitle("vfat number")
       draw_occ(oDir, tmph)
     elif ( hist == "cluster_size"):
@@ -434,4 +434,4 @@ if __name__ == '__main__' :
     os.system("mkdir -p "+oDir )
     draw_plot(args[0],tDir,oDir)  
    
-    #makeSummary()
+    makeSummary()

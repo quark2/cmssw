@@ -74,11 +74,11 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   for(int c = 0; c<n_ch;c++){
      GEMDetId gid = gemChambers[c].id();
      string h_name = "chamber_"+to_string(gid.chamber())+"_layer_"+to_string(gid.layer());
-     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_x_roll",h_name+" x vs roll", 500,-25,25,10,0,10));
-     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_cl_size", h_name+" cluster size", 20,0,20,24,0,24));
-     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_firedStrip", h_name+" fired strip", 385,0,385,10,0,10));
+     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,10,0,10));
+     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 20,0,20,24,0,24));
+     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,10,0,10));
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
-     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_tr2D_eff", h_name+"_tr2D_eff", 10,0,5,18,0,9));
+     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 10,0,5,18,0,9));
      gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 10,0,5,18,0,9));
   }
 }
