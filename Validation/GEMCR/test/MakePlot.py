@@ -142,7 +142,6 @@ def makeMapHist(hist):
       tmpV =  hist.GetBinContent(x+1,y+1)
       ent += tmpV
       val += tmpV*(x+1)
-      print y,x,ent,val
     if ent == 0 : mean = 0
     else : mean = val/ent
     h2.SetBinContent(divmod(y,8)[0]+1, 8-divmod(y,8)[1], mean)
