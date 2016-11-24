@@ -74,12 +74,12 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   for(int c = 0; c<n_ch;c++){
      GEMDetId gid = gemChambers[c].id();
      string h_name = "chamber_"+to_string(gid.chamber())+"_layer_"+to_string(gid.layer());
-     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,10,0,10));
-     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 20,0,20,24,0,24));
-     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,10,0,10));
+     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,8,1,9));
+     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 50,0,50,24,0,24));
+     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,8,1,9));
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
-     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 10,0,5,18,0,9));
-     gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 10,0,5,18,0,9));
+     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 3,1,4,8,1,9));
+     gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
   }
 }
 
@@ -92,7 +92,7 @@ int gemcrValidation::findIndex(GEMDetId id_) {
 }
 
 int gemcrValidation::findvfat(float x, float a, float b) {
-  float step = (max(a,b)-min(a,b))/3.0;
+  float step = abs(b-a)/3.0;
   if ( x < (min(a,b)+step) ) { return 1;}
   else if ( x < (min(a,b)+2.0*step) ) { return 2;}
   else { return 3;}
@@ -165,9 +165,9 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     Float_t     rh_g_X = recHitGP.x();
     Float_t     rh_g_Y = recHitGP.y();
     Float_t     rh_g_Z = recHitGP.z();
-    int nVfat = findvfat(firstClusterStrip, 0, 128*3) + (rh_roll-1)*3;
+    int nVfat = 8*(findvfat(firstClusterStrip+clusterSize+1, 1, 128*3)-1) + (8-rh_roll);
     gem_chamber_x_y[index]->Fill(rh_l_x, rh_roll);
-    gem_chamber_cl_size[index]->Fill(clusterSize, nVfat-1);
+    gem_chamber_cl_size[index]->Fill(clusterSize, nVfat);
     gem_chamber_bx[index]->Fill(bx,rh_roll);
     gemcr_g->Fill(rh_g_X,rh_g_Z,rh_g_Y);
     gem_cls_tot->Fill(clusterSize);

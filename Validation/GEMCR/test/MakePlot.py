@@ -79,7 +79,7 @@ def makeSummary():
 
 \\newcommand{\\baseLoc}{./temp_plot_GEMRecHits/}
 
-\\newcommand{\imageFour}[4]{
+\\newcommand{\imageFive}[5]{
 \scalebox{0.2}{
 \includegraphics{\\baseLoc#1}
 \includegraphics{\\baseLoc#2}
@@ -88,6 +88,7 @@ def makeSummary():
 \scalebox{0.2}{
 \includegraphics{\\baseLoc#3}
 \includegraphics{\\baseLoc#4}
+\includegraphics{\\baseLoc#5}
 }
 }
 
@@ -95,7 +96,7 @@ def makeSummary():
 """
   tmp = """
 \\begin{frame}[plain]{%s}
-\imageFour{%s_gemDigi.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_efficiency.png}
+\imageFive{%s_gemDigi.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
 \end{frame}
 
 """ 
@@ -103,13 +104,50 @@ def makeSummary():
   outF.write(head)
   for x in chamber:
     x = x.replace("GE1/1", "GE11")
-    outF.write(tmp%(x,x,x,x,x))
+    outF.write(tmp%(x,x,x,x,x,x))
   outF.write("\end{document}")
   outF.close() 
   import os
   os.system("latex --output-format=pdf "+runConfig.OutputFileName.replace(".root", ".tex"))
 
-  
+def flipHist(hist):
+  fhist = hist.Clone()
+  fhist.Reset()
+  ny = fhist.GetNbinsY()
+  nx = fhist.GetNbinsX()
+  for y in xrange(ny):
+    for x in xrange(nx):
+      tmpV = hist.GetBinContent(x+1,y+1)
+      fhist.SetBinContent(x+1,ny-y,tmpV)
+      fhist.GetYaxis().SetBinLabel(y+1,"{}".format(ny-y))
+  return fhist
+ 
+def setAxiNum(hist,axis,r, offSet=0):
+  for x in xrange(r[0],r[1]+1):
+    if axis == "x" or axis == "X":
+      hist.GetXaxis().SetBinLabel(x,"{}".format(x+offSet))
+    elif axis == "y" or axis == "Y":
+      hist.GetYaxis().SetBinLabel(x,"{}".format(x+offSet))
+
+def makeMapHist(hist):
+  h2 = TH2D(hist.GetName()+"_map", "RecHit size mean value", 3,1,4,8,1,9) 
+  h2.SetXTitle("vfat number")
+  h2.SetYTitle("roll number")
+  ny = hist.GetNbinsY()
+  nx = hist.GetNbinsX()
+  for y in xrange(ny):
+    ent = 0
+    val = 0
+    for x in xrange(nx):
+      tmpV =  hist.GetBinContent(x+1,y+1)
+      ent += tmpV
+      val += tmpV*(x+1)
+      print y,x,ent,val
+    if ent == 0 : mean = 0
+    else : mean = val/ent
+    h2.SetBinContent(divmod(y,8)[0]+1, 8-divmod(y,8)[1], mean)
+  return h2
+
 import optparse
 def getEtaRange( station ) :
   etaRange = [1.55,2.15,1.65,2.05,1.65,2.45]
@@ -221,37 +259,6 @@ def draw_col(target_dir, h, ext =".png", opt = "col"):
   h.Draw(opt)
   c.SaveAs(target_dir + c_title + ext)
 
-def draw_col_userRange( target_dir, h, ext =".png", opt = "col"):
-  gStyle.SetStatStyle(0)
-  c = TCanvas(h.GetTitle(),h.GetName(),1600,1600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.SetLabelSize(0.02,"Y")
-  h.SetLabelOffset(0,"Y")
-  axis_title = h.GetXaxis().GetTitle()
-  axis_title = axis_title+ "/"+str(h.GetXaxis().GetBinWidth(1))
-  h.GetXaxis().SetTitle( axis_title)
-  h.SetAxisRange(14.5,15.5)
-  h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
-  
-
-def draw_col_overflow(target_dir, h, ext =".png", opt = "col"):
-  gStyle.SetStatStyle(0)
-  gStyle.SetOptStat(110200)
-  c = TCanvas(h.GetTitle(),h.GetName(),600,600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
 
 def draw_eff(target_dir, h, ext = ".png", opt = ""):
   c = TCanvas(h.GetTitle(), h.GetName(),600,600)
@@ -360,28 +367,38 @@ def draw_plot( file, tDir,oDir ) :
       draw_col_userRange( oDir, d1.Get(hist))
     elif ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
       tmph = d1.Get(hist)
-      trEff = d1.Get(hist.replace("trecHit_efficiency", "tr2D"))
+      thEff = d1.Get(hist.replace("recHit_efficiency", "th2D_eff"))
       
-      trEff.Divide(tmph)
-      trEff.SetXTitle("vfat number")
-      trEff.SetYTitle("roll number")
-      draw_occ(oDir, trEff, ".png", "colz text")
+      tmph.Divide(thEff)
+      tmph.SetXTitle("vfat number")
+      tmph.SetYTitle("roll number")
+      setAxiNum(tmph,"x",[1,3])
+      setAxiNum(tmph,"y",[1,8])
+      tmpf = flipHist(tmph)
+      draw_occ(oDir, tmpf, ".png", "colz text")
    
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("Strip")
       tmph.SetYTitle("Roll Number (iEta)") 
-      draw_occ(oDir, tmph)
+      tmpf = flipHist(tmph)
+      draw_occ(oDir, tmpf)
     elif ( hist.startswith("chamber") and hist.endswith("recHit")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("x [cm]")
       tmph.SetYTitle("Roll Number (iEta)") 
-      draw_occ(oDir, tmph)
+      tmpf = flipHist(tmph)
+      draw_occ(oDir, tmpf)
     elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
+      h2 = makeMapHist(tmph)
       tmph.SetXTitle("recHit size")
       tmph.SetYTitle("vfat number")
+      setAxiNum(tmph,"y",[1,24],-1)
       draw_occ(oDir, tmph)
+      setAxiNum(h2,"x",[1,3])
+      tmpf = flipHist(h2)
+      draw_occ(oDir, tmpf, ".png", "colz text")
     elif ( hist == "cluster_size"):
       tmph = d1.Get(hist)
       tmph.SetXTitle("cluster size")
