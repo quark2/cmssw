@@ -18,6 +18,8 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
    
     #Configuration of the Stand: write down every VFAT
     #The ones below are a editted version with respect to what is there in the elog
+    
+    NUMBEROFDETECTORS=6
 
     schamber.append("GE1/1-SCL02")
     chamber.append("GE1/1-VII-L-CERN-0001")
@@ -73,7 +75,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     VFATHEX=[] 
     BARCODE=[]   
  
-    for i in range(0,6):
+    for i in range(0,NUMBEROFDETECTORS):
       for item in range(0,len(barcode[i])):
           with open(fileVFATS, 'rt') as f:
                     reader = csv.reader(f, delimiter=',')
