@@ -82,16 +82,21 @@ void popcon::GEMEMapSourceHandler::getNewObjects()
   TString WhichConf = "CosmicStand";
 
   if(WhichConf.Contains("CMS")){
-    mapfiles.push_back("GEM_GE1M_Depth1_ChannelsFromDB_Sept_01_2016.csv");
-    mapfiles.push_back("GEM_GE1M_Depth2_ChannelsFromDB_Sept_01_2016.csv");
-    mapfiles.push_back("GEM_GE1P_Depth1_ChannelsFromDB_Sept_01_2016.csv");
-    mapfiles.push_back("GEM_GE1P_Depth2_ChannelsFromDB_Sept_01_2016.csv");
+    mapfiles.push_back("GEM_GE1P_GE1M_Depth1_Depth2_ChannelsFromDB_Nov_7_2016.csv");
   }
-  else if(WhichConf.Contains("CosmicStand"))mapfiles.push_back("COSMIC_VFAT_CHANNELS_7Nov2016.csv");
+  else if(WhichConf.Contains("CosmicStand")){
+    //mapfiles.push_back("COSMIC_VFAT_CHANNELS_7Nov2016.csv");
+    mapfiles.push_back("COSMIC_VFAT_CHANNELS_8Nov2016.csv");
+  }
   
   // mapfiles.push_back("GEM_GE1P01_Depth1_ChannelsFromDB_Sept_01_2016.csv");
   // mapfiles.push_back("GEM_GE1P01_Depth2_ChannelsFromDB_Sept_01_2016.csv");
 
+  // mapfiles.push_back("GEM_GE1M_Depth1_ChannelsFromDB_Sept_01_2016.csv");
+  // mapfiles.push_back("GEM_GE1M_Depth2_ChannelsFromDB_Sept_01_2016.csv");
+  // mapfiles.push_back("GEM_GE1P_Depth1_ChannelsFromDB_Sept_01_2016.csv");
+  // mapfiles.push_back("GEM_GE1P_Depth2_ChannelsFromDB_Sept_01_2016.csv");
+  
   for (unsigned int ifm=0;ifm<mapfiles.size();ifm++){  
     GEMEMap::GEMVFatMaptype vmtype;
     std::string filename(baseCMS+mapfiles[ifm]);
