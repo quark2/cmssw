@@ -1,14 +1,52 @@
 #include <cstring>
 #include <climits>
 
+#include "DataFormats/HcalRecHit/interface/HcalSpecialTimes.h"
+
 #include "RecoLocalCalo/HcalRecAlgos/interface/HFSimpleTimeCheck.h"
 #include "RecoLocalCalo/HcalRecAlgos/interface/HFRecHitAuxSetter.h"
+
+// Rechit status bit assignments
+// #include "DataFormats/METReco/interface/HcalCaloFlagLabels.h"
+
+namespace {  
+    inline float build_rechit_time(const float weightedEnergySum,
+                                   const float weightedSum,
+                                   const float sum,
+                                   const unsigned count,
+                                   const float valueIfNothingWorks,
+                                   bool* resultComesFromTDC)
+    {
+        if (weightedEnergySum > 0.f)
+        {
+            *resultComesFromTDC = true;
+            return weightedSum/weightedEnergySum;
+        }
+        else if (count)
+        {
+            *resultComesFromTDC = true;
+            return sum/count;
+        }
+        else
+        {
+            *resultComesFromTDC = false;
+            return valueIfNothingWorks;
+        }
+    }
+}
+
 
 HFSimpleTimeCheck::HFSimpleTimeCheck(const std::pair<float,float> tlimits[2],
                                      const float energyWeights[2*HFAnodeStatus::N_POSSIBLE_STATES-1][2],
                                      const unsigned i_soiPhase,
+                                     const float i_timeShift,
+                                     const float i_triseIfNoTDC,
+                                     const float i_tfallIfNoTDC,
                                      const bool rejectAllFailures)
     : soiPhase_(i_soiPhase),
+      timeShift_(i_timeShift),
+      triseIfNoTDC_(i_triseIfNoTDC),
+      tfallIfNoTDC_(i_tfallIfNoTDC),
       rejectAllFailures_(rejectAllFailures)
 {
     tlimits_[0] = tlimits[0];
@@ -25,14 +63,34 @@ unsigned HFSimpleTimeCheck::determineAnodeStatus(
     const unsigned nRaw = anode.nRaw();
     if (nRaw)
     {
-        const QIE10DataFrame::Sample s(anode.getRaw(nRaw - 1));
-        if (!s.ok())
+        bool hardwareOK = true;
+        unsigned sampleToCheck = anode.soi();
+        if (sampleToCheck < nRaw)
+        {
+            const QIE10DataFrame::Sample s(anode.getRaw(sampleToCheck));
+            hardwareOK = s.ok();
+        }
+        else
+        {
+            // This should not normally happen, but we still
+            // need to do something reasonable here
+            for (sampleToCheck = 0; sampleToCheck < nRaw; ++sampleToCheck)
+            {
+                const QIE10DataFrame::Sample s(anode.getRaw(sampleToCheck));
+                if (!s.ok())
+                    hardwareOK = false;
+            }
+        }
+        if (!hardwareOK)
             return HFAnodeStatus::HARDWARE_ERROR;
     }
 
     // Check the time limits
-    const float trise = anode.timeRising();
-    if (tlimits_[ianode].first <= trise && trise <= tlimits_[ianode].second)
+    float trise = anode.timeRising();
+    const bool timeIsKnown = !HcalSpecialTimes::isSpecial(trise);
+    trise += timeShift_;
+    if (timeIsKnown &&
+        tlimits_[ianode].first <= trise && trise <= tlimits_[ianode].second)
         return HFAnodeStatus::OK;
     else
         return HFAnodeStatus::FAILED_TIMING;
@@ -58,12 +116,16 @@ unsigned HFSimpleTimeCheck::mapStatusIntoIndex(const unsigned states[2]) const
 
 HFRecHit HFSimpleTimeCheck::reconstruct(const HFPreRecHit& prehit,
                                         const HcalCalibrations& /* calibs */,
-                                        const bool flaggedBadInDB[2])
+                                        const bool flaggedBadInDB[2],
+                                        const bool expectSingleAnodePMT)
 {
     HFRecHit rh;
 
     // Determine the status of each anode
     unsigned states[2] = {HFAnodeStatus::NOT_READ_OUT, HFAnodeStatus::NOT_READ_OUT};
+    if (expectSingleAnodePMT)
+        states[1] = HFAnodeStatus::NOT_DUAL;
+
     for (unsigned ianode=0; ianode<2; ++ianode)
     {
         const HFQIE10Info* anodeInfo = prehit.getHFQIE10Info(ianode);
@@ -84,9 +146,10 @@ HFRecHit HFSimpleTimeCheck::reconstruct(const HFPreRecHit& prehit,
         // or was mapped into that status by "mapStatusIntoIndex" method
         //
         const float* weights = &energyWeights_[lookupInd][0];
-        float energy = 0.f, t = 0.f, tfall = 0.f, weightedEnergySum = 0.f;
-        float tsum = 0.f, tfallsum = 0.f;
-        unsigned anodeCount = 0;
+        float energy = 0.f, tfallWeightedEnergySum = 0.f, triseWeightedEnergySum = 0.f;
+        float tfallWeightedSum = 0.f, triseWeightedSum = 0.f;
+        float tfallSum = 0.f, triseSum = 0.f;
+        unsigned tfallCount = 0, triseCount = 0;
 
         for (unsigned ianode=0; ianode<2; ++ianode)
         {
@@ -95,38 +158,53 @@ HFRecHit HFSimpleTimeCheck::reconstruct(const HFPreRecHit& prehit,
             {
                 const float weightedEnergy = weights[ianode]*anodeInfo->energy();
                 energy += weightedEnergy;
-                const float trising = anodeInfo->timeRising();
-                tsum += trising;
-                const float tfalling = anodeInfo->timeFalling();
-                tfallsum += tfalling;
 
-                if (weightedEnergy > 0.f)
+                float trise = anodeInfo->timeRising();
+                if (!HcalSpecialTimes::isSpecial(trise))
                 {
-                    weightedEnergySum += weightedEnergy;
-                    t += trising*weightedEnergy;
-                    tfall += tfalling*weightedEnergy;
+                    trise += timeShift_;
+                    triseSum += trise;
+                    ++triseCount;
+                    if (weightedEnergy > 0.f)
+                    {
+                        triseWeightedSum += trise*weightedEnergy;
+                        triseWeightedEnergySum += weightedEnergy;
+                    }
                 }
 
-                ++anodeCount;
+                float tfall = anodeInfo->timeFalling();
+                if (!HcalSpecialTimes::isSpecial(tfall))
+                {
+                    tfall += timeShift_;
+                    tfallSum += tfall;
+                    ++tfallCount;
+                    if (weightedEnergy > 0.f)
+                    {
+                        tfallWeightedSum += tfall*weightedEnergy;
+                        tfallWeightedEnergySum += weightedEnergy;
+                    }
+                }
             }
         }
 
-        if (weightedEnergySum > 0.f)
-        {
-            // Normally, determine TDC rise and fall time
-            // by using energy-weighted anode values
-            t /= weightedEnergySum;
-            tfall /= weightedEnergySum;
-        }
-        else
-        {
-            // But if energies are negative, use simple averages
-            t = tsum/anodeCount;
-            tfall = tfallsum/anodeCount;
-        }
+        bool triseFromTDC = false;
+        const float trise = build_rechit_time(
+            triseWeightedEnergySum, triseWeightedSum, triseSum,
+            triseCount, triseIfNoTDC_, &triseFromTDC);
 
-        rh = HFRecHit(prehit.id(), energy, t, tfall);
+        bool tfallFromTDC = false;
+        const float tfall = build_rechit_time(
+            tfallWeightedEnergySum, tfallWeightedSum, tfallSum,
+            tfallCount, tfallIfNoTDC_, &tfallFromTDC);
+
+        rh = HFRecHit(prehit.id(), energy, trise, tfall);
         HFRecHitAuxSetter::setAux(prehit, states, soiPhase_, &rh);
+
+        // When Phase 1 rechit status bit assignments are understood,
+        // set the "timing from TDC" flag as follows:
+        //
+        // const uint32_t flag = triseFromTDC ? 1U : 0U;
+        // rh.setFlagField(flag, HcalCaloFlagLabels::?properFlagName?);
     }
 
     return rh;

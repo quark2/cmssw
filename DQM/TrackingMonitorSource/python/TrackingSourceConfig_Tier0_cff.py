@@ -84,6 +84,7 @@ for tracks in selectedTracks :
     locals()[label].doPlotsVsGoodPVtx                   = doPlotsVsGoodPVtx                   [tracks]
     locals()[label].doEffFromHitPatternVsPU             = doEffFromHitPatternVsPU             [tracks]
     locals()[label].doEffFromHitPatternVsBX             = doEffFromHitPatternVsBX             [tracks]
+    locals()[label].doEffFromHitPatternVsLUMI           = cms.bool(True)
     locals()[label].doStopSource                        = doStopSource                        [tracks]    
     locals()[label].setLabel(label)
 
@@ -156,6 +157,9 @@ from DQM.TrackingMonitorSource.dEdxAnalyzer_cff import *
 # temporary patch in order to have BXlumi 
 from RecoLuminosity.LumiProducer.lumiProducer_cff import *
 
+# import v0 monitoring
+from DQM.TrackingMonitor.V0Monitor_cff import *
+
 # temporary test in order to temporary produce the "goodPrimaryVertexCollection"
 # define with a new name if changes are necessary, otherwise simply include
 # it from CommonTools/ParticleFlow/python/goodOfflinePrimaryVertices_cfi.py
@@ -166,6 +170,10 @@ trackingDQMgoodOfflinePrimaryVertices = goodOfflinePrimaryVertices.clone()
 trackingDQMgoodOfflinePrimaryVertices.filterParams = pvSelector.clone( minNdof = cms.double(4.0), maxZ = cms.double(24.0) )
 trackingDQMgoodOfflinePrimaryVertices.src=cms.InputTag('offlinePrimaryVertices')
 trackingDQMgoodOfflinePrimaryVertices.filter = cms.bool(False)
+
+
+# import v0 monitoring
+from DQM.TrackingMonitor.V0Monitor_cff import *
 
 # Sequence
 TrackingDQMSourceTier0 = cms.Sequence()
@@ -194,6 +202,7 @@ TrackingDQMSourceTier0 += TrackSeedMonSequence
 for module in selectedModules :
     label = str(module)+'LogMessageMonCommon'
     TrackingDQMSourceTier0 += locals()[label]
+TrackingDQMSourceTier0 += voMonitoringSequence
 TrackingDQMSourceTier0 += dqmInfoTracking
 
 
@@ -212,6 +221,7 @@ TrackingDQMSourceTier0Common += TrackSeedMonSequence
 for module in selectedModules :
     label = str(module)+'LogMessageMonCommon'
     TrackingDQMSourceTier0Common += locals()[label]
+TrackingDQMSourceTier0Common += voMonitoringCommonSequence
 TrackingDQMSourceTier0Common += dqmInfoTracking
 
 TrackingDQMSourceTier0MinBias = cms.Sequence()
@@ -231,5 +241,6 @@ TrackingDQMSourceTier0MinBias += TrackSeedMonSequence
 for module in selectedModules :
     label = str(module)+'LogMessageMonMB'
     TrackingDQMSourceTier0MinBias += locals()[label]
+TrackingDQMSourceTier0MinBias += voMonitoringMBSequence
 TrackingDQMSourceTier0MinBias += dqmInfoTracking
 
