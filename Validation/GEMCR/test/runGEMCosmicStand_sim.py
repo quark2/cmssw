@@ -51,7 +51,7 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(40000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -74,7 +74,7 @@ process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(10485760),
-    fileName = cms.untracked.string('out_reco.root'),
+    fileName = cms.untracked.string('out_reco_R5.root'),
     #outputCommands = process.FEVTDEBUGHLTEventContent.outputCommands,
     outputCommands = cms.untracked.vstring( ('keep *')),
     splitLevel = cms.untracked.int32(0)
@@ -99,11 +99,11 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
-        MaxEta = cms.double(0.3),
-        MaxPhi = cms.double(2.6),
+        MaxEta = cms.double(0.1),
+        MaxPhi = cms.double(1.5707963267948966+0.1),
         MaxPt = cms.double(100.01),
-        MinEta = cms.double(-0.3),
-        MinPhi = cms.double(0.5),
+        MinEta = cms.double(-0.1),
+        MinPhi = cms.double(1.5707963267948966-0.1),
         MinPt = cms.double(99.99),
         PartID = cms.vint32(-13)
     ),

@@ -79,16 +79,23 @@ def makeSummary():
 
 \\newcommand{\\baseLoc}{./temp_plot_GEMRecHits/}
 
-\\newcommand{\imageFive}[5]{
-\scalebox{0.2}{
+\\newcommand{\imageOne}[1]{
+\scalebox{0.3}{
+\includegraphics{\\baseLoc#1}
+}
+}
+
+\\newcommand{\imageSix}[6]{
+\scalebox{0.18}{
 \includegraphics{\\baseLoc#1}
 \includegraphics{\\baseLoc#2}
+\includegraphics{\\baseLoc#3}
 }
 \\
-\scalebox{0.2}{
-\includegraphics{\\baseLoc#3}
+\scalebox{0.18}{
 \includegraphics{\\baseLoc#4}
 \includegraphics{\\baseLoc#5}
+\includegraphics{\\baseLoc#6}
 }
 }
 
@@ -96,15 +103,23 @@ def makeSummary():
 """
   tmp = """
 \\begin{frame}[plain]{%s}
-\imageFive{%s_gemDigi.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
+\imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_residual_r.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
 \end{frame}
 
-""" 
+"""
+  local_x_page = """
+\\begin{frame}[plain]{Det\_1\_LocalX vs Det\_N\_LocalX for all N != 1}
+\imageOne{local_x.png}
+\end{frame}
+
+"""
+ 
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
   for x in chamber:
     x = x.replace("GE1/1", "GE11")
-    outF.write(tmp%(x,x,x,x,x,x))
+    outF.write(tmp%(x,x,x,x,x,x,x))
+  outF.write(local_x_page)
   outF.write("\end{document}")
   outF.close() 
   import os
@@ -147,6 +162,14 @@ def makeMapHist(hist):
     h2.SetBinContent(divmod(y,8)[0]+1, 8-divmod(y,8)[1], mean)
   return h2
 
+def localXFitter(hist):
+  myFun = TF2("myfun", "[0]*x + [1] - y")
+  hist.Fit("myfun")
+  fitresult = TVirtualFitter.GetFitter()
+  m = fitresult.GetParameter(0)
+  b = fitresult.GetParameter(1)
+  return m,b 
+ 
 import optparse
 def getEtaRange( station ) :
   etaRange = [1.55,2.15,1.65,2.05,1.65,2.45]
@@ -398,11 +421,39 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(h2,"x",[1,3])
       tmpf = flipHist(h2)
       draw_occ(oDir, tmpf, ".png", "colz text")
+    elif ( hist.startswith("chamber") and hist.endswith("residual")):
+      tmph = d1.Get(hist)
+      #tmph.SetAxisRange(-1,1,"X")
+      #tmph.SetAxisRange(-1,1,"Y")
+      tmph.SetXTitle("residual x [cm]")
+      tmph.SetYTitle("residual y [cm]")
+      draw_occ(oDir, tmph)
+    elif ( hist.startswith("chamber") and hist.endswith("residual_r")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("residual x [cm]")
+      draw_occ(oDir, tmph)
     elif ( hist == "cluster_size"):
       tmph = d1.Get(hist)
       tmph.SetXTitle("cluster size")
       tmph.SetYTitle("count")
       draw_occ(oDir, tmph)
+    elif (hist == "local_x"):
+      c = TCanvas("local_X","local_x",600,600)
+      tmph = d1.Get(hist)
+      tmph.Draw()
+      fitR = localXFitter(tmph) 
+      tmph.SetXTitle("Det_1_LocalX [cm]")     
+      tmph.SetYTitle("Det_N_LocalX for all N != 1 [cm]") 
+      gStyle.SetStatStyle(0)
+      gStyle.SetOptStat(1110)
+      #c.SetRightMargin(0.35)
+      extraText = TLatex()
+      extraText.SetNDC()
+      extraText.SetTextFont(52)
+      extraText.SetTextSize(0.03)
+      extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
+      c.SaveAs(oDir + hist + ".png")   
+
     else : continue
     #  draw_occ( oDir, d1.Get(hist) )
 
