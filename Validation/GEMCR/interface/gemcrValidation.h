@@ -36,6 +36,7 @@ private:
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
   std::vector<MonitorElement*> gem_chamber_residual_r;
+  std::vector<MonitorElement*> gem_chamber_local_x;
   
   MonitorElement* gemcr_g;
   MonitorElement* gem_cls_tot;
@@ -45,7 +46,6 @@ private:
   MonitorElement* tr_chamber;
   MonitorElement* th_chamber;
   MonitorElement* rh_chamber;
-  MonitorElement* local_x;
 
   std::vector<GEMChamber> gemChambers;
   int n_ch;

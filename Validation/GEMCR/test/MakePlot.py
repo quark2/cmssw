@@ -106,10 +106,8 @@ def makeSummary():
 \imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_residual_r.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
 \end{frame}
 
-"""
-  local_x_page = """
-\\begin{frame}[plain]{Det\_1\_LocalX vs Det\_N\_LocalX for all N != 1}
-\imageOne{local_x.png}
+\\begin{frame}[plain]{%s vs Det\_N\_LocalX for all N != %s}
+\imageOne{%s_local_x.png}
 \end{frame}
 
 """
@@ -118,8 +116,7 @@ def makeSummary():
   outF.write(head)
   for x in chamber:
     x = x.replace("GE1/1", "GE11")
-    outF.write(tmp%(x,x,x,x,x,x,x))
-  outF.write(local_x_page)
+    outF.write(tmp%(x,x,x,x,x,x,x,x,x,x))
   outF.write("\end{document}")
   outF.close() 
   import os
@@ -201,148 +198,6 @@ def draw_occ(target_dir, h, ext =".png", opt = "colz"):
   h.Draw(opt)
   c.SaveAs(target_dir + c_title + ext)
 
-def draw_bx(target_dir, h , ext = ".png", opt = ""):
-  gStyle.SetStatStyle(0)
-  gStyle.SetOptStat(1110)
-  c = TCanvas(h.GetTitle(),h.GetName(),600,600)
-  c_title = c.GetTitle()
-  gPad.SetLogy()
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.Draw(opt)
-  h.SetMinimum(1.)
-  c.SaveAs(target_dir + c_title + ext)
-
-def draw_simple_zr(target_dir, h, ext =".png",opt="colz"):
-  gStyle.SetOptStat(0)
-  c = TCanvas(h.GetName(),h.GetName(),600,600)
-  c.Divide(2,1)
-  c_title = c.GetTitle()
-  #c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  c.cd(1)
-  gPad.SetRightMargin(0)
-  gPad.SetBorderMode(0)
-  h1 = h.Clone()
-  h1.SetAxisRange(564,572)
-  h1.Draw("col")
-  c.cd(2)
-  h2 = h.Clone()
-  gPad.SetLeftMargin(0)
-  gPad.SetBorderMode(0)
-  h2.SetAxisRange(793,800)
-  h2.Draw(opt)
-  #c.cd()
-  #c.Draw()
-  #c.Update()
-  c.SaveAs(target_dir + c_title + ext)
-
-
-def draw_col_nostat(target_dir, h, ext =".png", opt = "colz"):
-  gStyle.SetOptStat(0)
-  c = TCanvas(h.GetTitle(),h.GetName(),800,600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
-
-def draw_col_eff(target_dir, h, ext =".png", opt = "colz"):
-  gStyle.SetOptStat(0)
-  c = TCanvas(h.GetTitle(),h.GetName(),800,600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.SetMaximum(1.2)
-  h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
-
-
-
-def draw_col(target_dir, h, ext =".png", opt = "col"):
-  gStyle.SetStatStyle(0)
-  gStyle.SetOptStat(1110)
-  c = TCanvas(h.GetTitle(),h.GetName(),600,600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h:
-    sys.exit('h does not exist')
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
-
-
-def draw_eff(target_dir, h, ext = ".png", opt = ""):
-  c = TCanvas(h.GetTitle(), h.GetName(),600,600)
-  c_title = c.GetTitle()
-  c.Clear()
-  if not h: 
-    sys.exit('h does not exist')
-  gPad.SetGrid(1)
-  gStyle.SetStatStyle(0)
-  gStyle.SetOptStat(0)
-  gStyle.SetOptFit(0)
-  h.GetYaxis().SetRangeUser(0,1.05)
-  h.SetLineWidth(2)
-  h.SetLineColor(kBlue)
-  h.SetMarkerStyle(1)
-  h.SetMarkerColor(kBlue)
-  h.SetMarkerSize(1)
-  h.Draw(opt);
-  xmin=h.GetXaxis().GetXmin()
-  xmax=h.GetXaxis().GetXmax()
-  if ( h.GetName().find("eta") != -1) :
-    if ( h.GetName().find("st1") != -1) :
-      xmin,xmax = getEtaRange(1)
-    elif ( h.GetName().find("st2_short") != -1 ) :
-      xmin,xmax = getEtaRange(2)
-    elif ( h.GetName().find("st2") != -1 ) :
-      xmin,xmax = getEtaRange(3)
-    else :
-      print "Use default setting."
-
-  f1 = TF1("fit1","pol0", xmin, xmax )
-  r = h.Fit("fit1","RQS")
-  ptstats = TPaveStats(0.25,0.35,0.75,0.55,"brNDC")
-  ptstats.SetName("stats")
-  ptstats.SetBorderSize(0)
-  ptstats.SetLineWidth(0)
-  ptstats.SetFillColor(0)
-  ptstats.SetTextAlign(11)
-  ptstats.SetTextFont(42)
-  ptstats.SetTextSize(.05)
-  ptstats.SetTextColor(kRed)
-  ptstats.SetOptStat(0)
-  ptstats.SetOptFit(1111)
-  chi2 = int(r.Chi2())
-  ndf = int(r.Ndf())
-   ## prob = r.Prob()
-  round(2.675, 2)
-  p0 = f1.GetParameter(0)
-  p0e = f1.GetParError(0)
-  ptstats.AddText("#chi^{2} / ndf: %d/%d" %(chi2,ndf))
-  ## ptstats.AddText("Fit probability: %f %" %(prob))
-  ptstats.AddText("Efficiency: %f #pm %f %%"%(p0,p0e))
-  ptstats.Draw("same")
-  pt = TPaveText(0.09899329,0.9178322,0.8993289,0.9737762,"blNDC")
-  pt.SetName("title")
-  pt.SetBorderSize(1)
-  pt.SetFillColor(0)
-  pt.SetFillStyle(0)
-  pt.SetTextFont(42)
-  pt.AddText(h.GetTitle())
-  pt.Draw("same")
-  c.SaveAs(target_dir + c_title + ext)
 
 
 def draw_plot( file, tDir,oDir ) :
@@ -369,25 +224,7 @@ def draw_plot( file, tDir,oDir ) :
   for x in tlist :
     key_list.append(x.GetName())
   for hist in key_list :
-    if hist.find("track_") != -1 :
-      draw_occ( oDir,d1.Get(hist)) 
-    elif (hist.find("dcEta") !=-1 ) :
-      draw_col_nostat( oDir,d1.Get(hist))
-    elif (hist.find("simple_zr")!= -1 ) :
-      draw_simple_zr( oDir,d1.Get(hist))
-    elif (hist.find("eff_DigiHit") != -1 ) :
-      draw_col_eff( oDir, d1.Get(hist))
-    elif (hist.find("lx") !=-1 or hist.find("ly") != -1 or hist.find("dphi") != -1 or hist.find("_phi_dist") != -1 ) :
-      draw_occ( oDir,d1.Get(hist))
-    #elif ( hist.find("bx") != -1 ) :
-    #  draw_bx( oDir, d1.Get(hist)  )
-    elif ( hist.find("xy") !=-1 or hist.find("zr") !=-1 or hist.find("roll_vs_strip")!= -1 or hist.find("phipad")!=-1 or hist.find("phistrip") != -1 or hist.find("sp")!=-1 or hist.find("sub")!=-1 ) :
-      draw_col( oDir, d1.Get(hist) )
-    elif ( hist.find("phiz") != -1 ) :
-      draw_col_overflow( oDir, d1.Get(hist) )
-    elif ( hist.find("geo_phi") != -1) :
-      draw_col_userRange( oDir, d1.Get(hist))
-    elif ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
+    if ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("recHit_efficiency", "th2D_eff"))
       
@@ -437,7 +274,7 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetXTitle("cluster size")
       tmph.SetYTitle("count")
       draw_occ(oDir, tmph)
-    elif (hist == "local_x"):
+    elif (hist.startswith("chamber") and hist.endswith("local_x")):
       c = TCanvas("local_X","local_x",600,600)
       tmph = d1.Get(hist)
       tmph.Draw()
@@ -446,13 +283,23 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetYTitle("Det_N_LocalX for all N != 1 [cm]") 
       gStyle.SetStatStyle(0)
       gStyle.SetOptStat(1110)
+      gStyle.SetStatStyle(0)
+      gStyle.SetOptStat(1110)
+      name = findName(hist)
+      tname = hist.split("_")
+      etc = "_"
+      for x in tname[4:]:
+        etc += x+"_"
+      title = name+" "+tmph.GetTitle()
+      tmph.SetTitle(title)
+      tmph.SetName(name.replace("GE1/1", "GE11")+etc[:-1])
       #c.SetRightMargin(0.35)
       extraText = TLatex()
       extraText.SetNDC()
       extraText.SetTextFont(52)
       extraText.SetTextSize(0.03)
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
-      c.SaveAs(oDir + hist + ".png")   
+      c.SaveAs(oDir + tmph.GetName() + ".png")   
 
     else : continue
     #  draw_occ( oDir, d1.Get(hist) )

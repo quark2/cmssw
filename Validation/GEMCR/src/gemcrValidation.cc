@@ -59,7 +59,6 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   gem_bx_tot = ibooker.book1D("bx", "BX" , 30, -15,15);
   tr_size = ibooker.book1D("tr_size", "track size",10,0,10);
   tr_hit_size = ibooker.book1D("tr_hit_size", "hit size in track",15,0,15); 
-  local_x = ibooker.book2D("local_x", "Det_1_LocalX vs Det_N_LocalX for all N != 1",5000,-25,25,5000,-25,25); 
 
   tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,0,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
@@ -83,6 +82,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 140,-7,7,400,-20,20));
      gem_chamber_residual_r.push_back(ibooker.book1D(h_name+"_residual_r", h_name+" residual R", 140,-7,7));
+     gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", "LocalX vs Det_N_LocalX",500,-25,25,500,-25,25));
   }
 }
 
@@ -237,13 +237,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           continue;
         }
       }
-      if (checkTR[0]) {
-        for (int c=1;c<n_ch;c++){
-          if (checkTR[c]){
-            local_x->Fill(tr_x[0],tr_x[c]);
+      for (int tc=0; tc<n_ch;tc++){
+        if (checkTR[tc]) {
+          for (int c=0;c<n_ch;c++){
+            if (checkTR[c] and c != tc){
+              gem_chamber_local_x[tc]->Fill(tr_x[tc],tr_x[c]);
+            }  
           }
         }
-
       }
       for(int c=0;c<n_ch;c++){
         if (!checkTH[c]) {continue;}
