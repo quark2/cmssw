@@ -54,7 +54,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   
   ibooker.setCurrentFolder("MuonGEMRecHitsV/GEMRecHitsTask");
 
-  gemcr_g = ibooker.book3D("gemcr_g","GEMCR GLOBAL RECHITS", 500,-25,25,20,-55,55, 140,0,140);
+  gemcr_g = ibooker.book3D("gemcr_g","GEMCR GLOBAL RECHITS", 200,-100,100,20,-55,55, 140,0,140);
   gem_cls_tot = ibooker.book1D("cluster_size","Cluseter size",20,0,20);  
   gem_bx_tot = ibooker.book1D("bx", "BX" , 30, -15,15);
   tr_size = ibooker.book1D("tr_size", "track size",10,0,10);
@@ -74,12 +74,15 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   for(int c = 0; c<n_ch;c++){
      GEMDetId gid = gemChambers[c].id();
      string h_name = "chamber_"+to_string(gid.chamber())+"_layer_"+to_string(gid.layer());
-     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,10,0,10));
-     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 20,0,20,24,0,24));
-     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,10,0,10));
+     gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,8,1,9));
+     gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 50,0,50,24,0,24));
+     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,8,1,9));
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
-     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 10,0,5,18,0,9));
-     gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 10,0,5,18,0,9));
+     gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 3,1,4,8,1,9));
+     gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
+     gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 140,-7,7,400,-20,20));
+     gem_chamber_residual_r.push_back(ibooker.book1D(h_name+"_residual_r", h_name+" residual R", 140,-7,7));
+     gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", "LocalX vs Det_N_LocalX",500,-25,25,500,-25,25));
   }
 }
 
@@ -92,7 +95,7 @@ int gemcrValidation::findIndex(GEMDetId id_) {
 }
 
 int gemcrValidation::findvfat(float x, float a, float b) {
-  float step = (max(a,b)-min(a,b))/3.0;
+  float step = abs(b-a)/3.0;
   if ( x < (min(a,b)+step) ) { return 1;}
   else if ( x < (min(a,b)+2.0*step) ) { return 2;}
   else { return 3;}
@@ -133,7 +136,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
 
   vector<bool> checkRH, checkTH, checkTR;
   vector<int> check_th_roll, check_th_vfat;//, check_tr_roll, check_tr_vfat;
-   
+  vector<double> tr_x, tr_y, th_x, th_y; 
   for(int c=0;c<n_ch;c++){
     checkRH.push_back(0);
     checkTH.push_back(0);
@@ -142,6 +145,10 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     //check_tr_roll.push_back(-1);
     check_th_vfat.push_back(-1);
     //check_tr_vfat.push_back(-1);
+    tr_x.push_back(-99);
+    tr_y.push_back(-99);
+    th_x.push_back(999);
+    th_y.push_back(999);
   }
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
@@ -161,13 +168,12 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       continue;
     }
     GlobalPoint recHitGP = GEMGeometry_->idToDet((*recHit).gemId())->surface().toGlobal(recHitLP);
-
     Float_t     rh_g_X = recHitGP.x();
     Float_t     rh_g_Y = recHitGP.y();
     Float_t     rh_g_Z = recHitGP.z();
-    int nVfat = findvfat(firstClusterStrip, 0, 128*3) + (rh_roll-1)*3;
+    int nVfat = 8*(findvfat(firstClusterStrip+clusterSize+1, 1, 128*3)-1) + (8-rh_roll);
     gem_chamber_x_y[index]->Fill(rh_l_x, rh_roll);
-    gem_chamber_cl_size[index]->Fill(clusterSize, nVfat-1);
+    gem_chamber_cl_size[index]->Fill(clusterSize, nVfat);
     gem_chamber_bx[index]->Fill(bx,rh_roll);
     gemcr_g->Fill(rh_g_X,rh_g_Z,rh_g_Y);
     gem_cls_tot->Fill(clusterSize);
@@ -181,6 +187,20 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   if (gemTracks.isValid()){
     tr_size->Fill(gemTracks.product()->size());
     for(auto tr: *gemTracks.product()){
+      for(trackingRecHit_iterator hit = tr.recHitsBegin(); hit != tr.recHitsEnd(); hit++){
+        LocalPoint tlp = (*hit)->localPosition();
+        GEMDetId tid = GEMDetId((*hit)->geographicalId());
+        int index = findIndex(tid);
+        //GlobalPoint recHitGP = gemChambers[index].surface().toGlobal(tlp);
+        checkTR[index] = 1;
+        tr_x[index] = tlp.x();
+        tr_y[index] = tid.roll();
+        //check_tr_roll[index] = tid.roll();
+        //float min_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(0).x();
+        //float max_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(128*3).x();
+        //check_tr_vfat[index] = findvfat(tr_rh_lp.x(),min_x, max_x);
+        //cout << "roll : " << tid.roll() << ", vfat : " << findvfat(tr_rh_lp.x(),min_x, max_x) << endl;
+      }
       TrajectorySeed seed = trSeed.product()->back();
       PTrajectoryStateOnDet ptsd1(seed.startingState());
       DetId did(ptsd1.detId());
@@ -209,25 +229,34 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           check_th_roll[c] = mRoll;
           check_th_vfat[c] = findvfat(tlp.x(), min_x, max_x);
           checkTH[c] = 1; 
+          th_x[c] = tlp.x();
+          if (checkTR[c]) { 
+            Local3DPoint rtlp = ch.etaPartition(tr_y[c])->surface().toLocal(gtrp);
+            th_y[c] = rtlp.y();
+          }
           continue;
         }
       }
-      for(trackingRecHit_iterator hit = tr.recHitsBegin(); hit != tr.recHitsEnd(); hit++){
-        //LocalPoint tr_rh_lp = (*hit)->localPosition();
-        GEMDetId tid = GEMDetId((*hit)->geographicalId());
-        int index = findIndex(tid);
-        //GlobalPoint recHitGP = gemChambers[index].surface().toGlobal(tr_rh_lp);
-        checkTR[index] = 1;
-        //check_tr_roll[index] = tid.roll();
-        //float min_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(0).x();
-        //float max_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(128*3).x();
-        //check_tr_vfat[index] = findvfat(tr_rh_lp.x(),min_x, max_x);
-        //cout << "roll : " << tid.roll() << ", vfat : " << findvfat(tr_rh_lp.x(),min_x, max_x) << endl;
+      for (int tc=0; tc<n_ch;tc++){
+        if (checkTR[tc]) {
+          for (int c=0;c<n_ch;c++){
+            if (checkTR[c] and c != tc){
+              gem_chamber_local_x[tc]->Fill(tr_x[tc],tr_x[c]);
+            }  
+          }
+        }
       }
       for(int c=0;c<n_ch;c++){
         if (!checkTH[c]) {continue;}
         gem_chamber_th2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);
-        if(checkTR[c]){gem_chamber_tr2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);}
+        if(checkTR[c]){
+          gem_chamber_tr2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);
+          gem_chamber_residual[c]->Fill(tr_x[c]-th_x[c], th_y[c]);
+          //gem_chamber_residual_r[c]->Fill( sqrt((tr_x[c]-th_x[c])*(tr_x[c]-th_x[c])+ (tr_y[c]-th_y[c])*(tr_y[c]-th_y[c])));
+          //gem_chamber_residual_r[c]->Fill( th_x[c] - tr_x[c]);
+          //gem_chamber_residual_r[c]->Fill( sqrt((th_x[c]-tr_x[c])*(th_x[c]-tr_x[c]) + th_y[c]*th_y[c]));
+          gem_chamber_residual_r[c]->Fill(th_x[c]-tr_x[c]);
+        }
       }
     }
   }
