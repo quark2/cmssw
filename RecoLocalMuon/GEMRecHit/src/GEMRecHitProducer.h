@@ -21,10 +21,8 @@
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
-// #include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
-// #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
+#include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
 
 #include "GEMEtaPartitionMask.h"
 
@@ -61,17 +59,15 @@ private:
   GEMRecHitBaseAlgo *theAlgo;
   //   static std::string theAlgoName;
 
-  // GEMMaskedStrips* GEMMaskedStripsObj;
+  std::unique_ptr<GEMMaskedStrips> GEMMaskedStripsObj;
   // Object with mask-strips-vector for all the GEM Detectors
 
-  // GEMDeadStrips* GEMDeadStripsObj;
+  std::unique_ptr<GEMDeadStrips> GEMDeadStripsObj;
   // Object with dead-strips-vector for all the GEM Detectors
 
-  // std::string maskSource;
-  // std::string deadSource;
-
-  // std::vector<GEMMaskedStrips::MaskItem> MaskVec;
-  // std::vector<GEMDeadStrips::DeadItem> DeadVec;
+   enum class MaskSource { File, EventSetup } maskSource_, deadSource_;
+   std::vector<GEMMaskedStrips::MaskItem> MaskVec;
+   std::vector<GEMDeadStrips::DeadItem> DeadVec;
 
 };
 
