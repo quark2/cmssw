@@ -105,7 +105,8 @@ def makeSummary():
 \\begin{frame}[plain]{%s}
 \imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_residual_r.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
 \end{frame}
-
+"""
+  tmp2 = """
 \\begin{frame}[plain]{%s vs Det\_N\_LocalX for all N != %s}
 \imageOne{%s_local_x.png}
 \end{frame}
@@ -116,7 +117,8 @@ def makeSummary():
   outF.write(head)
   for x in chamber:
     x = x.replace("GE1/1", "GE11")
-    outF.write(tmp%(x,x,x,x,x,x,x,x,x,x))
+    outF.write(tmp%(x,x,x,x,x,x,x))
+    if runConfig.makeTrack : outF.write(tmp2%(x,x,x))
   outF.write("\end{document}")
   outF.close() 
   import os
@@ -275,6 +277,7 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetYTitle("count")
       draw_occ(oDir, tmph)
     elif (hist.startswith("chamber") and hist.endswith("local_x")):
+      if not runConfig.makeTrack : continue
       c = TCanvas("local_X","local_x",600,600)
       tmph = d1.Get(hist)
       tmph.Draw()
