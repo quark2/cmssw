@@ -108,7 +108,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
-process.gemRecHits.gemDigiLabel = cms.InputTag("muonGEMDigis")
+process.gemRecHits.gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO")
 
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        process.MuonServiceProxy,
@@ -120,7 +120,7 @@ process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                            ),
                                        )
 process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
-process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+
 process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
 #process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
@@ -143,7 +143,9 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
 
 # Path and EndPath definitions
 process.digi_step    = cms.Path(process.muonGEMDigis)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+if runConfig.makeTrack: process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+else : process.reconstruction_step    = cms.Path(process.gemLocalReco)
+
 process.validation_step = cms.Path(process.gemcrValidation)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
