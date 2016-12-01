@@ -319,7 +319,7 @@ TestGEMRecHitAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     // int chamber = rollId.chamber();
 
     std::cout<<"GEM Rec Hit in [DetId] = ["<<rollId<<"] with BX = "<<recHit->BunchX()<<" and Global Position = "<<GEMGlobalPoint<<std::endl;
-
+    if (rollId.rawId() != 671244034) {continue;}
     int bx = recHit->BunchX();
     int cl = recHit->clusterSize();
     int st = recHit->firstClusterStrip();

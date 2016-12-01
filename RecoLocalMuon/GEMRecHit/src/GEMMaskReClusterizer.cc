@@ -46,8 +46,8 @@ GEMClusterContainer GEMMaskReClusterizer::doAction(const GEMDetId& id,
     }
 
 
-    if ( ((prev.firstStrip()-cl.lastStrip()) == 2 && this->get(mask,(cl.lastStrip()+1)))
-	 && (cl.bx() == prev.bx()) ) {
+    if ( (prev.firstStrip()-cl.lastStrip()) == 2 and this->get(mask,cl.lastStrip()+1)
+	 and cl.bx() == prev.bx() ) {
 
       GEMCluster merged(cl.firstStrip(),prev.lastStrip(),cl.bx());
       prev = merged;
@@ -58,7 +58,6 @@ GEMClusterContainer GEMMaskReClusterizer::doAction(const GEMDetId& id,
     }
 
     else {
-
       j++;
       if ( j < initClusters.size() ) {
 	finClusters.insert(prev);
@@ -69,7 +68,6 @@ GEMClusterContainer GEMMaskReClusterizer::doAction(const GEMDetId& id,
 	finClusters.insert(cl);
       }
     }
- 
   }
 
   return finClusters;
@@ -78,10 +76,7 @@ GEMClusterContainer GEMMaskReClusterizer::doAction(const GEMDetId& id,
 
 
 
-int GEMMaskReClusterizer::get(const EtaPartitionMask& mask, int strip)
+bool GEMMaskReClusterizer::get(const EtaPartitionMask& mask, int strip)
 {
-
-  if ( mask.test(strip-1) ) return 1;
-  else return 0;
-
+  return mask.test(strip-1);
 }
