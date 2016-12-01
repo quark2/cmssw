@@ -26,13 +26,15 @@
 // #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
 // #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
 // #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
-
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
+#include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
 #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
 #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
 
 
 
 #include <string>
+#include <fstream>
 
 
 using namespace edm;
@@ -106,14 +108,15 @@ GEMRecHitProducer::~GEMRecHitProducer(){
 
 void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup){
 
-  if ( maskSource_ == MaskSource::EventSetup ) {
+  /*if ( maskSource_ == MaskSource::EventSetup ) {
     edm::ESHandle<GEMMaskedStrips> readoutMaskedStrips;
     setup.get<GEMMaskedStripsRcd>().get(readoutMaskedStrips);
     const GEMMaskedStrips* tmp_obj = readoutMaskedStrips.product();
     GEMMaskedStripsObj->MaskVec = tmp_obj->MaskVec;
     delete tmp_obj;
-  }
-  else if ( maskSource_ == MaskSource::File ) {
+  }*/
+  //else if ( maskSource_ == MaskSource::File ) {
+  if ( maskSource_ == MaskSource::File ) {
     std::vector<GEMMaskedStrips::MaskItem>::iterator posVec;
     for ( posVec = MaskVec.begin(); posVec != MaskVec.end(); ++posVec ) {
       GEMMaskedStrips::MaskItem Item; 
@@ -122,15 +125,16 @@ void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup
       GEMMaskedStripsObj->MaskVec.push_back(Item);
     }
   }
-
+  /*
   if ( deadSource_ == MaskSource::EventSetup ) {
     edm::ESHandle<GEMDeadStrips> readoutDeadStrips;
     setup.get<GEMDeadStripsRcd>().get(readoutDeadStrips);
     const GEMDeadStrips* tmp_obj = readoutDeadStrips.product();
     GEMDeadStripsObj->DeadVec = tmp_obj->DeadVec;
     delete tmp_obj;
-  }
-  else if ( deadSource_ == MaskSource::File ) {
+  }*/
+  //else if ( deadSource_ == MaskSource::File ) {
+  if ( deadSource_ == MaskSource::File ) {
     std::vector<GEMDeadStrips::DeadItem>::iterator posVec;
     for ( posVec = DeadVec.begin(); posVec != DeadVec.end(); ++posVec ) {
       GEMDeadStrips::DeadItem Item;
@@ -138,7 +142,7 @@ void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup
       Item.strip = (*posVec).strip;
       GEMDeadStripsObj->DeadVec.push_back(Item);
     }
-  }
+ }
 
 }
 
