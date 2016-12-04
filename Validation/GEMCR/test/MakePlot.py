@@ -23,6 +23,12 @@ for x in xrange(100): myPalette.append(fi+x)
 ROOT.gStyle.SetPalette(100, array("i", myPalette))
 
 import configureRun_cfi as runConfig
+
+rootF = "DQM_V0001_R%09d__Global__CMSSW_X_Y_Z__RECO.root"%runConfig.RunNumber
+run = runConfig.RunNumber
+tDir = "DQMData/Run %d/MuonGEMRecHitsV/Run summary/GEMRecHitsTask"%(run)
+oDir = "Run%06d_Plots/"%run
+
 SLOTLIST=[]
 VFATLIST=[] 
 COLUMNLIST=[] 
@@ -61,6 +67,10 @@ def makeSummary():
 \usefonttheme[onlylarge]{structurebold}
 \setbeamerfont*{frametitle}{size=\\normalsize,series=\\bfseries}
 \setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamerfont{page number in head/foot}{size=\small}
+\setbeamertemplate{footline}[frame number]
+
 
 \usepackage[english]{babel}
 \usepackage[latin1]{inputenc}
@@ -69,15 +79,12 @@ def makeSummary():
 
 \usepackage[T1]{fontenc}
 \usepackage{alltt}
-\usepackage{tikz}
-\usetikzlibrary{arrows}
-\\tikzstyle{block}=[draw opacity=0.7,line width=1.4cm]
+%\usepackage{tikz}
+%\usetikzlibrary{arrows}
+%\\tikzstyle{block}=[draw opacity=0.7,line width=1.4cm]
 
-\setbeamertemplate{itemize items}[circle]
-\setbeamerfont{page number in head/foot}{size=\small}
-\setbeamertemplate{footline}[frame number]
 
-\\newcommand{\\baseLoc}{./temp_plot_GEMRecHits/}
+\\newcommand{\\baseLoc}{./}
 
 \\newcommand{\imageOne}[1]{
 \scalebox{0.3}{
@@ -103,7 +110,7 @@ def makeSummary():
 """
   tmp = """
 \\begin{frame}[plain]{%s}
-\imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_residual_r.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
+\imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_trxy_eff.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
 \end{frame}
 """
   tmp2 = """
@@ -112,18 +119,33 @@ def makeSummary():
 \end{frame}
 
 """
- 
+  tmp3 = """
+\\begin{frame}[plain]{Run Info.}
+\\begin{itemize}
+  \item RAWFileName : %s
+  \item OutPutFile : %s
+  \item MaxEvents : %d
+  \item minClusterSize : %d
+  \item maxClusterSize : %d
+  \item maxResidual : %1.2f cm
+\end{itemize}
+\end{frame}
+"""
+  import os
+  os.chdir(oDir)
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
+  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual))
   for x in chamber:
-    x = x.replace("GE1/1", "GE11")
-    outF.write(tmp%(x,x,x,x,x,x,x))
-    if runConfig.makeTrack : outF.write(tmp2%(x,x,x))
+    t = x.replace("GE1/1", "GE11")
+    x = t+"/"+t
+    outF.write(tmp%(t,x,x,x,x,x,x))
+    if runConfig.makeTrack : outF.write(tmp2%(t,t,x))
   outF.write("\end{document}")
   outF.close() 
-  import os
   os.system("latex --output-format=pdf "+runConfig.OutputFileName.replace(".root", ".tex"))
-
+  import shutil
+  shutil.copy2("./"+runConfig.OutputFileName.replace(".root", ".pdf"), "..")
 def flipHist(hist):
   fhist = hist.Clone()
   fhist.Reset()
@@ -162,7 +184,12 @@ def makeMapHist(hist):
   return h2
 
 def localXFitter(hist):
-  myFun = TF2("myfun", "[0]*x + [1] - y")
+  #myFun = TF2("myfun", "[0]*x + [1] - y")
+  myFun = TF1("myfun", "[0]*x + [1]")
+  myFun.SetParameter(0,1)
+  myFun.SetParameter(1,0)
+  
+  if hist.GetEntries() == 0: return 0,0
   hist.Fit("myfun")
   fitresult = TVirtualFitter.GetFitter()
   m = fitresult.GetParameter(0)
@@ -170,13 +197,6 @@ def localXFitter(hist):
   return m,b 
  
 import optparse
-def getEtaRange( station ) :
-  etaRange = [1.55,2.15,1.65,2.05,1.65,2.45]
-  if ( station ==1 or station==2 or station ==3 ) :
-    return etaRange[ (station-1)*2], etaRange[ (station-1)*2+1 ]
-  else :
-    print "Something is wrong"
-    return 1.5,2.6
 
 def draw_occ(target_dir, h, ext =".png", opt = "colz"):
   gStyle.SetStatStyle(0)
@@ -198,7 +218,7 @@ def draw_occ(target_dir, h, ext =".png", opt = "colz"):
   h.SetLineWidth(2)
   h.SetLineColor(kBlue)
   h.Draw(opt)
-  c.SaveAs(target_dir + c_title + ext)
+  c.SaveAs(target_dir + name.replace("GE1/1", "GE11")+"/"+ c_title + ext)
 
 
 
@@ -225,18 +245,31 @@ def draw_plot( file, tDir,oDir ) :
       exit(-1)
   for x in tlist :
     key_list.append(x.GetName())
+
   for hist in key_list :
     if ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("recHit_efficiency", "th2D_eff"))
-      
       tmph.Divide(thEff)
       tmph.SetXTitle("vfat number")
       tmph.SetYTitle("roll number")
       setAxiNum(tmph,"x",[1,3])
       setAxiNum(tmph,"y",[1,8])
+      tmpf.GetZaxis().SetRange(0,1)
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf, ".png", "colz text")
+
+    if ( hist.startswith("chamber") and hist.endswith("trxy_eff")):
+      tmph = d1.Get(hist)
+      thEff = d1.Get(hist.replace("trxy_eff", "thxy_eff"))
+      tmph.Divide(thEff)
+      tmph.SetXTitle("x [cm]")
+      tmph.SetYTitle("roll number")
+      #setAxiNum(tmph,"x",[1,3])
+      setAxiNum(tmph,"y",[1,8])
+      tmpf = flipHist(tmph)
+      tmpf.GetZaxis().SetRange(0,1)
+      draw_occ(oDir, tmpf)
    
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
@@ -302,53 +335,18 @@ def draw_plot( file, tDir,oDir ) :
       extraText.SetTextFont(52)
       extraText.SetTextSize(0.03)
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
-      c.SaveAs(oDir + tmph.GetName() + ".png")   
+      dName = name.replace("GE1/1", "GE11")+"/"
+      c.SaveAs(oDir+dName+tmph.GetName()+".png")   
 
     else : continue
     #  draw_occ( oDir, d1.Get(hist) )
 
 if __name__ == '__main__' :
-  usage = ": %prog [option] DQM_filename.root\negs) ./%prog -a DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root"
-  parser = optparse.OptionParser(usage=usage)
-  #parser.add_option("-i",dest='dqmfile',help='Input DQM filename',default="DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root")
-  parser.add_option("-o",dest='directory',help='Name of output directory(Default : temp_plot)',default="temp_plot")
-  parser.add_option("-a",action='store_true',dest='all',help='Enable all step option.(-s -d -r)',default=False)
-  parser.add_option("-s",action='store_true',dest='simhit',help='Run simhit plotter',default=False)
-  parser.add_option("-d",action='store_true',dest='digi',help='Run digi plotter',default=False)
-  parser.add_option("-r",action='store_true',dest='reco',help='Run reco plotter',default=False)
-  options, args = parser.parse_args()
-
-  if len(sys.argv) ==1 :
-    parser.print_help()
-    exit()
-  # If no argument, default name will be used.
-  if len(args)==0 :
-    print "Input file name is None."
-    print "Use default name."
-    args.append("DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root")
-
-  if len(args) != 1 : 
-    print "Can not understand input argument"
-    parser.print_help()
   
-  steps= []
-  if ( options.all ) :
-    options.simhit=True
-    options.digi=True
-    options.reco=True
-
-  if ( options.simhit) :
-    steps.append("GEMHits")
-  if ( options.digi) :
-    steps.append("GEMDigis")
-  if ( options.reco) :
-    steps.append("GEMRecHits")
-
-  for step in steps :
-    run = int(args[0].split("_")[2][1:])
-    tDir = "DQMData/Run %d/Muon%sV/Run summary/%sTask"%(run,step,step)
-    oDir = options.directory+"_%s"%(step)+'/'
-    os.system("mkdir -p "+oDir )
-    draw_plot(args[0],tDir,oDir)  
+ 
+  os.system("mkdir -p "+oDir )
+  for c in chamber:
+    os.system("mkdir -p "+oDir+"/"+c.replace("/",""))
+  draw_plot(rootF,tDir,oDir)  
    
-    makeSummary()
+  makeSummary()

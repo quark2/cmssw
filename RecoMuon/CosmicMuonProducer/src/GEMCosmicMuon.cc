@@ -44,7 +44,9 @@ public:
   virtual ~GEMCosmicMuon() {}
   /// Produce the GEMSegment collection
   void produce(edm::Event&, const edm::EventSetup&) override;
-
+  double maxCLS;
+  double minCLS;
+  double maxRes;
 private:
   int iev; // events through
   edm::EDGetTokenT<GEMRecHitCollection> theGEMRecHitToken;
@@ -56,6 +58,10 @@ private:
 };
 
 GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
+  maxCLS = ps.getParameter<double>("maxClusterSize");
+  minCLS = ps.getParameter<double>("minClusterSize");
+  maxRes = ps.getParameter<double>("maxResidual");
+
   theGEMRecHitToken = consumes<GEMRecHitCollection>(ps.getParameter<edm::InputTag>("gemRecHitLabel"));
   // register what this produces
   edm::ParameterSet serviceParameters = ps.getParameter<edm::ParameterSet>("ServiceParameters");
@@ -126,6 +132,8 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
 	// Create the MuonTransientTrackingRecHit
 	for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit){
 	  const GeomDet* geomDet(etaPart);	
+          if ((*rechit).clusterSize()<minCLS) continue;
+          if ((*rechit).clusterSize()>maxCLS) continue;
 	  muRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
 
 	  //GEMRecHit *newRH = rechit->clone();
@@ -290,8 +298,10 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
       if (hitID.chamberId() == ch->id() ){
 	GlobalPoint hitGP = hit->globalPosition();
 	// cut is deltaX is too big - can be tighter?
-	if (abs(hitGP.x() - tsosGP.x()) > 7) continue;
-	if (abs(hitGP.z() - tsosGP.z()) > 40) continue;
+        //double x_err = hit->localPositionError().xx();
+        double y_err = hit->localPositionError().yy();
+	if (abs(hitGP.x() - tsosGP.x()) > maxRes) continue;
+	if (abs(hitGP.z() - tsosGP.z()) > abs(y_err)) continue;
 	// need to find best hits per chamber
 	float deltaR = (hitGP - tsosGP).mag();
 	if (maxR > deltaR){
