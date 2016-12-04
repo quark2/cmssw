@@ -13,8 +13,8 @@ RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
 OutputFileName='Reco_Run%06d.root'%RunNumber
 
 makeTrack = True
-maxClusterSize = 3
-maxResidual = 0.2 # cm
+maxClusterSize = 5
+maxResidual = 2 # cm
 MaxEvents=-1
 #MaxEvents=92000
 #MaxEvents=104000

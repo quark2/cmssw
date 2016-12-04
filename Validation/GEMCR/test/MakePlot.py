@@ -125,6 +125,8 @@ def makeSummary():
   \item RAWFileName : %s
   \item OutPutFile : %s
   \item MaxEvents : %d
+  \item maxClusterSize : %d
+  \item maxResidual : %1.2f cm
 \end{itemize}
 \end{frame}
 """
@@ -132,7 +134,7 @@ def makeSummary():
   os.chdir(oDir)
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
-  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents))
+  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.maxClusterSize, runConfig.maxResidual))
   for x in chamber:
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
@@ -187,7 +189,7 @@ def localXFitter(hist):
   myFun.SetParameter(1,0)
   
   if hist.GetEntries() == 0: return 0,0
-  hist.Fit("myfun", "WL")
+  hist.Fit("myfun")
   fitresult = TVirtualFitter.GetFitter()
   m = fitresult.GetParameter(0)
   b = fitresult.GetParameter(1)
@@ -252,6 +254,7 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetYTitle("roll number")
       setAxiNum(tmph,"x",[1,3])
       setAxiNum(tmph,"y",[1,8])
+      tmpf.GetZaxis().SetRange(0,1)
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf, ".png", "colz text")
 
@@ -264,6 +267,7 @@ def draw_plot( file, tDir,oDir ) :
       #setAxiNum(tmph,"x",[1,3])
       setAxiNum(tmph,"y",[1,8])
       tmpf = flipHist(tmph)
+      tmpf.GetZaxis().SetRange(0,1)
       draw_occ(oDir, tmpf)
    
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
