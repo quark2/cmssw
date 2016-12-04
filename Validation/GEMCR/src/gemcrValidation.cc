@@ -37,6 +37,7 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   InputTagToken_TS = consumes<vector<TrajectorySeed>>(cfg.getParameter<edm::InputTag>("seedInputLabel"));
   edm::ParameterSet serviceParameters = cfg.getParameter<edm::ParameterSet>("ServiceParameters");
   theService = new MuonServiceProxy(serviceParameters);
+
 }
 
 void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const & Run, edm::EventSetup const & iSetup ) {
@@ -80,6 +81,8 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
      gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 3,1,4,8,1,9));
      gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
+     gem_chamber_trxy_eff.push_back(ibooker.book2D(h_name+"_trxy_eff", h_name+" recHit efficiency", 50,-25,25,8,1,9));
+     gem_chamber_thxy_eff.push_back(ibooker.book2D(h_name+"_thxy_eff", h_name+"_th2D_eff", 50,-25,25,8,1,9));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 140,-7,7,400,-20,20));
      gem_chamber_residual_r.push_back(ibooker.book1D(h_name+"_residual_r", h_name+" residual R", 140,-7,7));
      gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", "LocalX vs Det_N_LocalX",500,-25,25,500,-25,25));
@@ -135,20 +138,21 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   }
 
   vector<bool> checkRH, checkTH, checkTR;
-  vector<int> check_th_roll, check_th_vfat;//, check_tr_roll, check_tr_vfat;
-  vector<double> tr_x, tr_y, th_x, th_y; 
+  vector<int> check_th_roll, check_th_vfat, check_tr_roll, check_tr_vfat;
+  vector<double> tr_x, tr_y, th_x, th_y, x_err; 
   for(int c=0;c<n_ch;c++){
     checkRH.push_back(0);
     checkTH.push_back(0);
     checkTR.push_back(0);
     check_th_roll.push_back(-1);
-    //check_tr_roll.push_back(-1);
+    check_tr_roll.push_back(-1);
     check_th_vfat.push_back(-1);
-    //check_tr_vfat.push_back(-1);
+    check_tr_vfat.push_back(-1);
     tr_x.push_back(-99);
     tr_y.push_back(-99);
     th_x.push_back(999);
     th_y.push_back(999);
+    x_err.push_back(0.0);
   }
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
@@ -195,10 +199,12 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         checkTR[index] = 1;
         tr_x[index] = tlp.x();
         tr_y[index] = tid.roll();
-        //check_tr_roll[index] = tid.roll();
-        //float min_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(0).x();
-        //float max_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(128*3).x();
-        //check_tr_vfat[index] = findvfat(tr_rh_lp.x(),min_x, max_x);
+        check_tr_roll[index] = tid.roll();
+        float min_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(0).x();
+        float max_x = gemChambers[index].etaPartition(tid.roll())->centreOfStrip(128*3).x();
+        check_tr_vfat[index] = findvfat(tlp.x(),min_x, max_x);
+        x_err[index] = (*hit)->localPositionError().xx();
+        //cout << (*hit)->clusterSize() << endl;
         //cout << "roll : " << tid.roll() << ", vfat : " << findvfat(tr_rh_lp.x(),min_x, max_x) << endl;
       }
       TrajectorySeed seed = trSeed.product()->back();
@@ -237,6 +243,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           continue;
         }
       }
+      /*int flag = 0;
+      for(int c=0;c<n_ch;c++){
+        if (checkTR[c] and checkTH[c]){
+          if (abs(th_x[c]-tr_x[c])<1.0) {flag++;}
+          else {checkTR[c] = 0; checkTH[c] = 0;  }
+        }
+      }
+      if (flag<3){ continue; }*/
       for (int tc=0; tc<n_ch;tc++){
         if (checkTR[tc]) {
           for (int c=0;c<n_ch;c++){
@@ -248,9 +262,16 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       }
       for(int c=0;c<n_ch;c++){
         if (!checkTH[c]) {continue;}
-        gem_chamber_th2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);
+        if (!checkTR[c]){
+          gem_chamber_th2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);
+          gem_chamber_thxy_eff[c]->Fill(th_x[c],check_th_roll[c]);
+        }
         if(checkTR[c]){
-          gem_chamber_tr2D_eff[c]->Fill(check_th_vfat[c],check_th_roll[c]);
+          gem_chamber_th2D_eff[c]->Fill(check_tr_vfat[c],check_tr_roll[c]);
+          gem_chamber_thxy_eff[c]->Fill(tr_x[c],check_tr_roll[c]);
+
+          gem_chamber_tr2D_eff[c]->Fill(check_tr_vfat[c],check_tr_roll[c]);
+          gem_chamber_trxy_eff[c]->Fill(tr_x[c],check_tr_roll[c]);
           gem_chamber_residual[c]->Fill(tr_x[c]-th_x[c], th_y[c]);
           //gem_chamber_residual_r[c]->Fill( sqrt((tr_x[c]-th_x[c])*(tr_x[c]-th_x[c])+ (tr_y[c]-th_y[c])*(tr_y[c]-th_y[c])));
           //gem_chamber_residual_r[c]->Fill( th_x[c] - tr_x[c]);

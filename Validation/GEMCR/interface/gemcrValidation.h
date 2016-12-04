@@ -34,6 +34,8 @@ private:
   std::vector<MonitorElement*> gem_chamber_firedStrip;
   std::vector<MonitorElement*> gem_chamber_tr2D_eff;
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
+  std::vector<MonitorElement*> gem_chamber_trxy_eff;
+  std::vector<MonitorElement*> gem_chamber_thxy_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
   std::vector<MonitorElement*> gem_chamber_residual_r;
   std::vector<MonitorElement*> gem_chamber_local_x;
