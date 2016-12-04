@@ -45,6 +45,7 @@ public:
   /// Produce the GEMSegment collection
   void produce(edm::Event&, const edm::EventSetup&) override;
   double maxCLS;
+  double minCLS;
   double maxRes;
 private:
   int iev; // events through
@@ -58,6 +59,7 @@ private:
 
 GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
   maxCLS = ps.getParameter<double>("maxClusterSize");
+  minCLS = ps.getParameter<double>("minClusterSize");
   maxRes = ps.getParameter<double>("maxResidual");
 
   theGEMRecHitToken = consumes<GEMRecHitCollection>(ps.getParameter<edm::InputTag>("gemRecHitLabel"));
@@ -130,6 +132,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
 	// Create the MuonTransientTrackingRecHit
 	for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit){
 	  const GeomDet* geomDet(etaPart);	
+          if ((*rechit).clusterSize()<minCLS) continue;
           if ((*rechit).clusterSize()>maxCLS) continue;
 	  muRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
 

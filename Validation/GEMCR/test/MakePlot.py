@@ -125,6 +125,7 @@ def makeSummary():
   \item RAWFileName : %s
   \item OutPutFile : %s
   \item MaxEvents : %d
+  \item minClusterSize : %d
   \item maxClusterSize : %d
   \item maxResidual : %1.2f cm
 \end{itemize}
@@ -134,7 +135,7 @@ def makeSummary():
   os.chdir(oDir)
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
-  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.maxClusterSize, runConfig.maxResidual))
+  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual))
   for x in chamber:
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
