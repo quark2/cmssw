@@ -108,11 +108,14 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
-process.gemRecHits.gemDigiLabel = cms.InputTag("muonGEMDigis")
+process.gemRecHits.gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO")
 
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
+                                       maxClusterSize = cms.double(runConfig.maxClusterSize),
+                                       minClusterSize = cms.double(runConfig.minClusterSize),
+                                       maxResidual = cms.double(runConfig.maxResidual),
                                        MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -120,7 +123,7 @@ process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                            ),
                                        )
 process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
-process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+
 process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
 #process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
@@ -131,7 +134,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     recHitsInputLabel = cms.InputTag('gemRecHits'),
     tracksInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
     seedInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
-    genParticleLabel = cms.InputTag('genParticles','','RECO'),
+    #genParticleLabel = cms.InputTag('genParticles','','RECO'),
     # st1, st2_short, st2_long of xbin, st1,st2_short,st2_long of ybin
     nBinGlobalZR = cms.untracked.vdouble(200,200,200,150,180,250),
     # st1 xmin, xmax, st2_short xmin, xmax, st2_long xmin, xmax, st1 ymin, ymax...
@@ -143,7 +146,9 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
 
 # Path and EndPath definitions
 process.digi_step    = cms.Path(process.muonGEMDigis)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+if runConfig.makeTrack: process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+else : process.reconstruction_step    = cms.Path(process.gemLocalReco)
+
 process.validation_step = cms.Path(process.gemcrValidation)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
