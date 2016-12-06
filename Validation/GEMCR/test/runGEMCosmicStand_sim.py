@@ -51,7 +51,7 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(40000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -74,7 +74,7 @@ process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(10485760),
-    fileName = cms.untracked.string('out_reco_R5.root'),
+    fileName = cms.untracked.string('out_reco_MC.root'),
     #outputCommands = process.FEVTDEBUGHLTEventContent.outputCommands,
     outputCommands = cms.untracked.vstring( ('keep *')),
     splitLevel = cms.untracked.int32(0)
@@ -99,11 +99,11 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
-        MaxEta = cms.double(0.1),
-        MaxPhi = cms.double(1.5707963267948966+0.1),
+        MaxEta = cms.double(0.3),
+        MaxPhi = cms.double(1.5707963267948966+0.3),
         MaxPt = cms.double(100.01),
-        MinEta = cms.double(-0.1),
-        MinPhi = cms.double(1.5707963267948966-0.1),
+        MinEta = cms.double(-0.3),
+        MinPhi = cms.double(1.5707963267948966-0.3),
         MinPt = cms.double(99.99),
         PartID = cms.vint32(-13)
     ),
@@ -148,9 +148,14 @@ process.simSiStripDigis = cms.EDAlias()
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
+import configureRun_cfi as runConfig
+
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
+                                       maxClusterSize = cms.double(runConfig.maxClusterSize),
+                                       minClusterSize = cms.double(runConfig.minClusterSize),
+                                       maxResidual = cms.double(runConfig.maxResidual),
                                        MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -177,6 +182,16 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     #nBinGlobalXY = cms.untracked.int32(720),
     #detailPlot = cms.bool(True),
     #detailPlot = cms.bool(False),
+    maxClusterSize = cms.double(runConfig.maxClusterSize),
+    minClusterSize = cms.double(runConfig.minClusterSize),
+    maxResidual = cms.double(runConfig.maxResidual),
+    makeTrack = cms.bool(runConfig.makeTrack),
+    MuonSmootherParameters = cms.PSet(
+                      PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
+                      PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
+                      RescalingFactor = cms.double(5.0)
+                      ),
+
 )
 
 # Path and EndPath definitions
@@ -189,7 +204,8 @@ process.simulation_step = cms.Path(process.psim)
 process.digitisation_step = cms.Path(process.pdigi)
 #process.reconstruction_step = cms.Path(process.reconstruction)
 #process.digitisation_step = cms.Path(process.muonGEMDigi)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+#process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+process.reconstruction_step    = cms.Path(process.gemLocalReco)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)

@@ -92,6 +92,39 @@ def makeSummary():
 }
 }
 
+\\newcommand{\imageTwo}[2]{
+\scalebox{0.26}{
+\includegraphics{\\baseLoc#1}
+\includegraphics{\\baseLoc#2}
+}
+}
+
+\\newcommand{\imageFour}[4]{
+\scalebox{0.18}{
+\includegraphics{\\baseLoc#1}
+\includegraphics{\\baseLoc#2}
+}
+\\
+\scalebox{0.18}{
+\includegraphics{\\baseLoc#3}
+\includegraphics{\\baseLoc#4}
+}
+}
+
+\\newcommand{\imageFive}[5]{
+\scalebox{0.18}{
+\includegraphics{\\baseLoc#1}
+\includegraphics{\\baseLoc#2}
+\includegraphics{\\baseLoc#3}
+}
+\\
+\scalebox{0.18}{
+\includegraphics{\\baseLoc#4}
+\includegraphics{\\baseLoc#5}
+}
+}
+
+
 \\newcommand{\imageSix}[6]{
 \scalebox{0.18}{
 \includegraphics{\\baseLoc#1}
@@ -108,18 +141,23 @@ def makeSummary():
 
 \\begin{document}
 """
-  tmp = """
-\\begin{frame}[plain]{%s}
-\imageSix{%s_gemDigi.png}{%s_recHit.png}{%s_trxy_eff.png}{%s_recHit_size.png}{%s_recHit_size_map.png}{%s_recHit_efficiency.png}
+  t_recHit = """
+\\begin{frame}[plain]{%s recHit}
+\imageFour{%s_gemDigi.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_size_map.png}
 \end{frame}
 """
-  tmp2 = """
-\\begin{frame}[plain]{%s vs Det\_N\_LocalX for all N != %s}
-\imageOne{%s_local_x.png}
+  t_track = """
+\\begin{frame}[plain]{%s Track}
+\imageFive{%s_recHit_efficiency.png}{%s_recHit_efficiency_vfat_err.png}{%s_TEfficiency1D.png}{%s_trxy_eff.png}{%s_trxy_eff_x_err.png}
+\end{frame}
+"""
+  t_localx = """
+\\begin{frame}[plain]{%s Alignment}
+\imageTwo{%s_local_x.png}{%s_residual.png}
 \end{frame}
 
 """
-  tmp3 = """
+  t_info = """
 \\begin{frame}[plain]{Run Info.}
 \\begin{itemize}
   \item RAWFileName : %s
@@ -130,22 +168,32 @@ def makeSummary():
   \item maxResidual : %1.2f cm
 \end{itemize}
 \end{frame}
+
+\\begin{frame}[plain]{recHits entries for chambers}
+\imageOne{recHits.png}
+\end{frame}
+
+
 """
   import os
   os.chdir(oDir)
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
-  outF.write(tmp3%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual))
+  outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual))
   for x in chamber:
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
-    outF.write(tmp%(t,x,x,x,x,x,x))
-    if runConfig.makeTrack : outF.write(tmp2%(t,t,x))
+    t = t.replace("GE11", "GE1/1")
+    outF.write(t_recHit%(t,x,x,x,x))
+    if runConfig.makeTrack :
+      outF.write(t_track%(t,x,x,x,x,x))
+      outF.write(t_localx%(t,x,x))
   outF.write("\end{document}")
   outF.close() 
   os.system("latex --output-format=pdf "+runConfig.OutputFileName.replace(".root", ".tex"))
   import shutil
   shutil.copy2("./"+runConfig.OutputFileName.replace(".root", ".pdf"), "..")
+
 def flipHist(hist):
   fhist = hist.Clone()
   fhist.Reset()
@@ -195,7 +243,67 @@ def localXFitter(hist):
   m = fitresult.GetParameter(0)
   b = fitresult.GetParameter(1)
   return m,b 
- 
+
+def effErr(h1, h2,t):
+  name = h1.GetName()+"_"+t
+  nX = h1.GetNbinsX()
+  lX = h1.GetXaxis().GetBinLowEdge(1)
+  uX = h1.GetXaxis().GetBinUpEdge(nX)
+  nY = h1.GetNbinsY()
+  lY = h1.GetYaxis().GetBinLowEdge(1)
+  uY = h1.GetYaxis().GetBinUpEdge(nY)
+  print nX, lX, uX, nY, lY, uY
+  teff = TEfficiency(name, "TEFF", nX, lX, uX, nY, lY, uY) 
+  for y in xrange(nY):
+    for x in xrange(nX):
+      passed = h1.GetBinContent(x+1,y+1)
+      tFill = h2.GetBinContent(x+1,y+1)
+      #if tFill == 0 : continue
+      cX = h1.GetXaxis().GetBinCenter(x+1)
+      cY = h1.GetYaxis().GetBinCenter(y+1)
+      teff.FillWeighted(True, passed, cX, cY)
+      teff.FillWeighted(False, tFill-passed, cX, cY)
+  err = TH2D(name+"_err", name+" efficiency Error",nX,lX,uX,nY,lY,uY)
+  for y in xrange(nY):
+    for x in xrange(nX):
+      errLow = teff.GetEfficiencyErrorLow(teff.GetGlobalBin(x+1,y+1))
+      errUp = teff.GetEfficiencyErrorUp(teff.GetGlobalBin(x+1,y+1))
+      e = (errLow+errUp)/2.0
+      if e > 0 : err.SetBinContent(x+1,y+1,e)
+  return err
+
+def effErr1D(h1, h2,t):
+  name = findName(h1.GetName()).replace("/","")
+  print name
+  nX = h1.GetNbinsX()
+  lX = h1.GetXaxis().GetBinLowEdge(1)
+  uX = h1.GetXaxis().GetBinUpEdge(nX)
+  nY = h1.GetNbinsY()
+  lY = h1.GetYaxis().GetBinLowEdge(1)
+  uY = h1.GetYaxis().GetBinUpEdge(nY)
+  
+  teff = TEfficiency(name,name , 24, 0, 24)
+  for x in xrange(3):
+    for y in xrange(8):
+      passed = h1.GetBinContent(x+1,y+1)
+      tFill = h2.GetBinContent(x+1,y+1)
+      ibin = y + x*8 
+      teff.FillWeighted(True, passed, ibin)
+      teff.FillWeighted(False, tFill-passed, ibin)
+  return teff
+
+def roll1D(hist):
+  nY = hist.GetNbinsY()
+  nX = hist.GetNbinsX()
+  name = hist.GetName()
+  histL = [TH1D(name+"_iEta_%d"%(x+1), "",nX,0,nX) for x in xrange(nY)]
+  for y in xrange(nY):
+    for x in xrange(nX):
+      histL[y].SetBinContent(x+1, hist.GetBinContent(x+1,y+1))
+  return histL
+
+
+
 import optparse
 
 def draw_occ(target_dir, h, ext =".png", opt = "colz"):
@@ -218,8 +326,8 @@ def draw_occ(target_dir, h, ext =".png", opt = "colz"):
   h.SetLineWidth(2)
   h.SetLineColor(kBlue)
   h.Draw(opt)
-  c.SaveAs(target_dir + name.replace("GE1/1", "GE11")+"/"+ c_title + ext)
-
+  if name.startswith("GE1"): c.SaveAs(target_dir + name.split("_")[0].replace("GE1/1", "GE11")+"/"+ c_title + ext)
+  else : c.SaveAs(target_dir + c_title + ext)
 
 
 def draw_plot( file, tDir,oDir ) :
@@ -248,41 +356,67 @@ def draw_plot( file, tDir,oDir ) :
 
   for hist in key_list :
     if ( hist.startswith("chamber") and hist.endswith("recHit_efficiency")):
+      if not runConfig.makeTrack : continue
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("recHit_efficiency", "th2D_eff"))
+
+      tmp1 = effErr1D(tmph,thEff, "1D")
+      
+      c1 = TCanvas("1D", "1D",600,600) 
+      tmp1.Draw()
+      c1.SaveAs(oDir+tmp1.GetName()+"/%s_TEfficiency1D.png"%tmp1.GetName())
+      tmpe = effErr(tmph, thEff,"vfat")
+      tmpe.SetXTitle("vfat number")
+      tmpe.SetYTitle("roll number")
+      setAxiNum(tmpe,"x",[1,3])
+      setAxiNum(tmpe,"y",[1,8])    
+      tmpef = flipHist(tmpe)   
+      draw_occ(oDir, tmpef,".png", "colz text")
+
       tmph.Divide(thEff)
       tmph.SetXTitle("vfat number")
       tmph.SetYTitle("roll number")
       setAxiNum(tmph,"x",[1,3])
       setAxiNum(tmph,"y",[1,8])
-      tmpf.GetZaxis().SetRange(0,1)
+
       tmpf = flipHist(tmph)
+      tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf, ".png", "colz text")
+ 
 
     if ( hist.startswith("chamber") and hist.endswith("trxy_eff")):
+      if not runConfig.makeTrack : continue
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("trxy_eff", "thxy_eff"))
+      tmpe = effErr(tmph,thEff,"x")
+      tmpe.SetXTitle("x [cm]")
+      tmpe.SetYTitle("roll number")
+      setAxiNum(tmpe,"y",[1,8])
+      tmpef = flipHist(tmpe)
+      draw_occ(oDir, tmpef)
       tmph.Divide(thEff)
       tmph.SetXTitle("x [cm]")
       tmph.SetYTitle("roll number")
-      #setAxiNum(tmph,"x",[1,3])
       setAxiNum(tmph,"y",[1,8])
       tmpf = flipHist(tmph)
-      tmpf.GetZaxis().SetRange(0,1)
+      tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf)
-   
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("Strip")
       tmph.SetYTitle("Roll Number (iEta)") 
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf)
+      histL = roll1D(tmpf)
+      for h in histL:
+        draw_occ(oDir, h) 
     elif ( hist.startswith("chamber") and hist.endswith("recHit")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("x [cm]")
       tmph.SetYTitle("Roll Number (iEta)") 
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf)
+
     elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
       h2 = makeMapHist(tmph)
@@ -293,32 +427,55 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(h2,"x",[1,3])
       tmpf = flipHist(h2)
       draw_occ(oDir, tmpf, ".png", "colz text")
-    elif ( hist.startswith("chamber") and hist.endswith("residual")):
-      tmph = d1.Get(hist)
-      #tmph.SetAxisRange(-1,1,"X")
-      #tmph.SetAxisRange(-1,1,"Y")
-      tmph.SetXTitle("residual x [cm]")
-      tmph.SetYTitle("residual y [cm]")
-      draw_occ(oDir, tmph)
-    elif ( hist.startswith("chamber") and hist.endswith("residual_r")):
-      tmph = d1.Get(hist)
-      tmph.SetXTitle("residual x [cm]")
-      draw_occ(oDir, tmph)
+
     elif ( hist == "cluster_size"):
       tmph = d1.Get(hist)
       tmph.SetXTitle("cluster size")
       tmph.SetYTitle("count")
       draw_occ(oDir, tmph)
+
+    elif (hist == "rh1_chamber"):
+      tmph = d1.Get(hist)
+      tmph.SetYTitle("count")
+      tmph.SetMaximum(tmph.GetMaximum()*1.5)
+      tmp2 = d1.Get("rh2_chamber")
+      tmp3 = d1.Get("rh3_chamber")
+      tmph.SetLineColor(kBlue-4)
+      tmp2.SetLineColor(kMagenta-4)
+      tmp3.SetLineColor(kOrange+7)
+      tmph.SetLineWidth(2)
+      tmp2.SetLineWidth(2)
+      tmp3.SetLineWidth(2)
+      for x in xrange(tmph.GetNbinsX()):
+        cName = tmph.GetXaxis().GetBinLabel(x+1)
+        tmph.GetXaxis().SetBinLabel(x+1, findName(cName)) 
+      tmph.SetStats(0) 
+      c = TCanvas("ent","ent",600,600) 
+      c.SetBottomMargin(0.18)
+      c.SetRightMargin(0.18)
+      tmph.Draw()
+      tmp2.Draw("same")
+      tmp3.Draw("same")
+      le = TLegend(0.4, 0.75, 0.99, 0.9)
+      le.SetTextSize(0.035)
+      le.SetFillStyle(0)
+      le.SetFillColor(kWhite)
+      le.SetBorderSize(0)
+      le.SetHeader("recHit Entries")
+      le.AddEntry(tmph, "all recHits")
+      le.AddEntry(tmp2, "%d < CLS < %d"%(runConfig.minClusterSize-1,runConfig.maxClusterSize+1))
+      le.AddEntry(tmp3, "tracking recHits")
+      le.Draw()
+      c.SaveAs(oDir+"recHits.png")
+      
     elif (hist.startswith("chamber") and hist.endswith("local_x")):
       if not runConfig.makeTrack : continue
       c = TCanvas("local_X","local_x",600,600)
       tmph = d1.Get(hist)
       tmph.Draw()
       fitR = localXFitter(tmph) 
-      tmph.SetXTitle("Det_1_LocalX [cm]")     
-      tmph.SetYTitle("Det_N_LocalX for all N != 1 [cm]") 
-      gStyle.SetStatStyle(0)
-      gStyle.SetOptStat(1110)
+      tmph.SetXTitle("recHit [cm]")     
+      tmph.SetYTitle("Track hit [cm]") 
       gStyle.SetStatStyle(0)
       gStyle.SetOptStat(1110)
       name = findName(hist)
@@ -337,6 +494,32 @@ def draw_plot( file, tDir,oDir ) :
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
       dName = name.replace("GE1/1", "GE11")+"/"
       c.SaveAs(oDir+dName+tmph.GetName()+".png")   
+    
+      hist =hist.replace("local_x", "residual")
+      tmph = d1.Get(hist)
+      fitR = localXFitter(tmph)
+      tmph.SetXTitle("Track hit [cm]")
+      tmph.SetYTitle("(recHit - Track hit) [cm]")
+      gStyle.SetStatStyle(0)
+      gStyle.SetOptStat(1110)
+      name = findName(hist)
+      tname = hist.split("_")
+      etc = "_"
+      for x in tname[4:]:
+        etc += x+"_"
+      title = name+" "+tmph.GetTitle()
+      tmph.SetTitle(title)
+      tmph.SetName(name.replace("GE1/1", "GE11")+etc[:-1])
+      #c.SetRightMargin(0.35)
+      extraText = TLatex()
+      extraText.SetNDC()
+      extraText.SetTextFont(52)
+      extraText.SetTextSize(0.03)
+      extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
+      dName = name.replace("GE1/1", "GE11")+"/"
+      c.SaveAs(oDir+dName+tmph.GetName()+".png")
+     
+
 
     else : continue
     #  draw_occ( oDir, d1.Get(hist) )
