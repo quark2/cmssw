@@ -26,6 +26,7 @@
 <use name="Validation/MuonGEMHits"/>
 <use name="Validation/MuonGEMDigis"/>
 <use name="RecoMuon/TrackingTools"/>
+<use name="RecoMuon/CosmicMuonProducer"/>
 <export>
 <lib name="1"/>
 </export>
