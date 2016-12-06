@@ -51,12 +51,7 @@
 ///
 
 
-
-
-
-
-
-
+using namespace std;
 
 class gemcrValidation : public GEMBaseValidation
 {
@@ -97,9 +92,7 @@ private:
 
   std::vector<GEMChamber> gemChambers;
   int n_ch;
-  
   MuonServiceProxy* theService;
-  
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);

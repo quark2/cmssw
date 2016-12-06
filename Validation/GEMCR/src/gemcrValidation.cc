@@ -132,7 +132,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_thxy_eff.push_back(ibooker.book2D(h_name+"_thxy_eff", h_name+"_th2D_eff", 50,-25,25,8,1,9));
      //gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 140,-7,7,400,-20,20));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 500,-25,25,100,-5,5));
-     gem_chamber_residual_r.push_back(ibooker.book1D(h_name+"_residual_r", h_name+" residual R", 140,-7,7));
+     //gem_chamber_residual_r.push_back(ibooker.book1D(h_name+"_residual_r", h_name+" residual R", 140,-7,7));
      gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", "LocalX vs Det_N_LocalX",500,-25,25,500,-25,25));
   }
 }
@@ -250,17 +250,17 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   theService->update(iSetup);
 
   edm::Handle<GEMRecHitCollection> gemRecHits;
-  edm::Handle<vector<reco::Track>> gemTracks;
-  edm::Handle<vector<TrajectorySeed>> trSeed;
+  //edm::Handle<vector<reco::Track>> gemTracks;
+  //edm::Handle<vector<TrajectorySeed>> trSeed;
 
   e.getByToken( this->InputTagToken_RH, gemRecHits);
-  e.getByToken( this->InputTagToken_TR, gemTracks);
-  e.getByToken( this->InputTagToken_TS, trSeed);
+  //e.getByToken( this->InputTagToken_TR, gemTracks);
+  //e.getByToken( this->InputTagToken_TS, trSeed);
   if (!gemRecHits.isValid()) {
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
   }
-
+  /*
   vector<bool> checkRH, checkTH, checkTR;
   vector<int> check_th_roll, check_th_vfat, check_tr_roll, check_tr_vfat;
   vector<double> tr_x, tr_y, th_x, th_y, x_err; 
@@ -277,7 +277,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     th_x.push_back(999);
     th_y.push_back(999);
     x_err.push_back(0.0);
-  }
+  }*/
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
     Float_t  rh_l_x = recHit->localPosition().x();
@@ -287,7 +287,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
 
     GEMDetId id((*recHit).gemId());
     int index = findIndex(id);
-    checkRH[index] = 1;
+    //checkRH[index] = 1;
     Short_t rh_roll = (Short_t) id.roll();
     LocalPoint recHitLP = recHit->localPosition();
 
@@ -316,6 +316,17 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   }
 
   for (auto tch : gemChambers){
+    MuonTransientTrackingRecHit::MuonRecHitContainer testRecHits;
+    for (auto etaPart : tch.etaPartitions()){
+      GEMDetId etaPartID = etaPart->id();
+      GEMRecHitCollection::range range = gemRecHits->get(etaPartID);
+      for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit){
+          const GeomDet* geomDet(etaPart);
+          if ((*rechit).clusterSize()<minCLS) continue;
+          if ((*rechit).clusterSize()>maxCLS) continue;
+          testRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));        
+      }
+    }
     MuonTransientTrackingRecHit::MuonRecHitContainer muRecHits;
     for (auto ch : gemChambers){
       if (tch == ch) continue;
@@ -333,25 +344,66 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
     trajectorySeeds =findSeeds(muRecHits);
     Trajectory bestTrajectory;
-
+    TrajectorySeed bestSeed;
     float maxChi2 = 1000;
     for (auto seed : *trajectorySeeds){
       Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
       if (smoothed.isValid()){
-        //trajectorys->push_back(smoothed);
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
           maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
           bestTrajectory = smoothed;
+          bestSeed = seed;
         }
       }
     }
-
-
-
-
-
+    if (!bestTrajectory.isValid()) continue;
+    PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
+    DetId did(ptsd1.detId());
+    const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();
+    TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(ptsd1,&bp,&*theService->magneticField());
+    TrajectoryStateOnSurface tsosCurrent = tsos;
+    for(int c=0; c<n_ch;c++){
+      GEMChamber ch = gemChambers[c];
+      tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch.surface());
+      if (!tsosCurrent.isValid()) continue;
+      Global3DPoint gtrp = tsosCurrent.freeTrajectoryState()->position();
+      Local3DPoint tlp = ch.surface().toLocal(gtrp);
+      if (!ch.surface().bounds().inside(tlp)){continue;}
+      if (ch==tch){
+        int n_roll = ch.nEtaPartitions();
+        double minDely = 50.;
+        int mRoll = -1;
+        for (int r=0;r<n_roll;r++){
+          Local3DPoint rtlp = ch.etaPartition(r+1)->surface().toLocal(gtrp);
+          if(minDely > abs(rtlp.y())){minDely = abs(rtlp.y()); mRoll = r+1;}
+        }
+        if (mRoll == -1){cout << "no mRoll" << endl;continue;}
+        int n_strip = ch.etaPartition(mRoll)->nstrips();
+        double min_x = ch.etaPartition(mRoll)->centreOfStrip(0).x();
+        double max_x = ch.etaPartition(mRoll)->centreOfStrip(n_strip).x();
+        if ((tlp.x()>(min_x)) & (tlp.x() < (max_x)) ){
+          int index = findIndex(tch.id().chamber());
+          double vfat = findvfat(gtrp.x(), min_x, max_x);
+          gem_chamber_th2D_eff[index]->Fill(vfat, mRoll);                
+          gem_chamber_thxy_eff[index]->Fill(gtrp.x(), mRoll);
+          for (auto hit : testRecHits){
+            GlobalPoint hitGP = hit->globalPosition();
+            if (abs(hitGP.x() - gtrp.x()) > maxRes) continue;
+            GEMDetId hitID(hit->rawId());
+            int hitRoll = hitID.roll();
+            if ((hitRoll - mRoll)>1) continue;
+            gem_chamber_tr2D_eff[index]->Fill(vfat, mRoll);
+            gem_chamber_thxy_eff[index]->Fill(gtrp.x(), mRoll);
+            gem_chamber_local_x[index]->Fill(gtrp.x(),hitGP.x());
+            gem_chamber_residual[index]->Fill(gtrp.x(), hitGP.x() - gtrp.x());
+            rh3_chamber->Fill(index);
+          }
+        }
+        continue;
+      }
+    }
   }
-  if (gemTracks.isValid()){
+  /*if (gemTracks.isValid()){
     tr_size->Fill(gemTracks.product()->size());
     for(auto tr: *gemTracks.product()){
       for(trackingRecHit_iterator hit = tr.recHitsBegin(); hit != tr.recHitsEnd(); hit++){
@@ -408,15 +460,15 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           continue;
         }
       }
-      /*int flag = 0;
+      int flag = 0;
       for(int c=0;c<n_ch;c++){
         if (checkTR[c] and checkTH[c]){
           if (abs(th_x[c]-tr_x[c])<1.0) {flag++;}
           else {checkTR[c] = 0; checkTH[c] = 0;  }
         }
       }
-      if (flag<3){ continue; }*/
-      /*vector<int> workingCh = {2,3,4,5};
+      if (flag<3){ continue; }
+      vector<int> workingCh = {2,3,4,5};
       bool flag1 = 1;
       for (auto x : workingCh){
         if (!checkTH[x]) flag1 = 0;
@@ -440,7 +492,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         gem_chamber_th2D_eff[x]->Fill(th_x[x], check_th_roll[x]);
         if (checkTR[x]) {gem_chamber_tr2D_eff[x]->Fill(th_x[x], check_th_roll[x]);}
                      
-      }*/
+      }
 
       for (int tc=0; tc<n_ch;tc++){
         if (checkTR[tc]) {
@@ -469,7 +521,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         }
       }
     }
-  }
+  }*/
 }
 
 
