@@ -22,10 +22,6 @@
 #include "RecoLocalMuon/GEMRecHit/interface/GEMRecHitAlgoFactory.h"
 #include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
 
-// #include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
-// #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
 #include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
 #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
 #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
@@ -183,7 +179,6 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
     // Get the iterators over the digis associated with this LayerId
     const GEMDigiCollection::Range& range = (*gemdgIt).second;
 
-
     // Getting the roll mask, that includes dead strips, for the given GEMDet
     EtaPartitionMask mask;
     int rawId = gemId.rawId();
@@ -202,8 +197,8 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 	mask.set(bit-1);
       }
     }
+    
     // Call the reconstruction algorithm    
-
     OwnVector<GEMRecHit> recHits =
       theAlgo->reconstruct(*roll, gemId, range, mask);
     
