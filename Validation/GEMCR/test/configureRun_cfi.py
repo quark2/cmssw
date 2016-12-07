@@ -7,16 +7,21 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/user/d/dorney/public/run000035_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/user/c/cepeda/public/CosmicStand/run000005_LatencyScan_TIF_2016-11-19.dat"
-#RAWFileName="run000006_Cosmics_TIF_2016-11-20.dat"
-RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
+RAWFileName="run000006_Cosmics_TIF_2016-11-20.dat"
+#RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
 RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
 OutputFileName='Reco_Run%06d.root'%RunNumber
 
 makeTrack = True
-minClusterSize = 1
-maxClusterSize = 10
-maxResidual = 0.5 # cm
-MaxEvents=-1
+minClusterSize = 1 
+maxClusterSize = 10 
+maxResidual =2.0 # cm
+trackChi2 = 2
+trackResX = 1.0 #cm
+trackResY = 20.0 #cm
+#MaxEvents = 12671
+MaxEvents=80941
+#MaxEvents=30000
 #MaxEvents=92000
 #MaxEvents=104000
 

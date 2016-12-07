@@ -51,7 +51,7 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(40000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -186,6 +186,9 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     minClusterSize = cms.double(runConfig.minClusterSize),
     maxResidual = cms.double(runConfig.maxResidual),
     makeTrack = cms.bool(runConfig.makeTrack),
+    trackChi2 = cms.double(runConfig.trackChi2),
+    trackResX = cms.double(runConfig.trackResX),
+    trackResY = cms.double(runConfig.trackResY),
     MuonSmootherParameters = cms.PSet(
                       PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                       PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),

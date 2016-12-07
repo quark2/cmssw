@@ -33,7 +33,7 @@ public:
   int findIndex(GEMDetId id_);
   int findvfat(float x, float a, float b);
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
-  double maxCLS, minCLS,maxRes;
+  double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX;
   bool makeTrack;
 private:
   const GEMGeometry* GEMGeometry_;
@@ -43,6 +43,8 @@ private:
   std::vector<MonitorElement*> gem_chamber_firedStrip;
   std::vector<MonitorElement*> gem_chamber_tr2D_eff;
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
+  std::vector<MonitorElement*> gem_chamber_trxroll_eff;
+  std::vector<MonitorElement*> gem_chamber_thxroll_eff;
   std::vector<MonitorElement*> gem_chamber_trxy_eff;
   std::vector<MonitorElement*> gem_chamber_thxy_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
