@@ -166,6 +166,12 @@ def makeSummary():
   \item minClusterSize : %d
   \item maxClusterSize : %d
   \item maxResidual : %1.2f cm
+  \item Track : %s
+  \\begin{itemize}
+    \item trackChi2 : %1.2f
+    \item trackResX : %1.2f
+    \item trackResY : %1.2f
+  \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -179,7 +185,9 @@ def makeSummary():
   os.chdir(oDir)
   outF = open(runConfig.OutputFileName.replace(".root", ".tex"), "w")
   outF.write(head)
-  outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual))
+  if runConfig.makeTrack: trackCheck = "True"
+  else : trackCheck = "False"
+  outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"), runConfig.MaxEvents, runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual, trackCheck, runConfig.trackChi2, runConfig.trackResX, runConfig.trackResY ))
   for x in chamber:
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
@@ -302,7 +310,10 @@ def roll1D(hist):
       histL[y].SetBinContent(x+1, hist.GetBinContent(x+1,y+1))
   return histL
 
-
+def saveRoot(tob, tdir):
+  outRoot.cd(tdir)
+  tob.Write()
+  outRoot.cd("..")
 
 import optparse
 
@@ -359,12 +370,11 @@ def draw_plot( file, tDir,oDir ) :
       if not runConfig.makeTrack : continue
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("recHit_efficiency", "th2D_eff"))
-
       tmp1 = effErr1D(tmph,thEff, "1D")
-      
       c1 = TCanvas("1D", "1D",600,600) 
       tmp1.Draw()
       c1.SaveAs(oDir+tmp1.GetName()+"/%s_TEfficiency1D.png"%tmp1.GetName())
+      saveRoot(tmp1, tmp1.GetName())
       tmpe = effErr(tmph, thEff,"vfat")
       tmpe.SetXTitle("vfat number")
       tmpe.SetYTitle("roll number")
@@ -372,7 +382,7 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(tmpe,"y",[1,8])    
       tmpef = flipHist(tmpe)   
       draw_occ(oDir, tmpef,".png", "colz text")
-
+      saveRoot(tmpef, tmp1.GetName())
       tmph.Divide(thEff)
       tmph.SetXTitle("vfat number")
       tmph.SetYTitle("roll number")
@@ -382,6 +392,7 @@ def draw_plot( file, tDir,oDir ) :
       tmpf = flipHist(tmph)
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf, ".png", "colz text")
+      saveRoot(tmpf, tmp1.GetName())
  
 
     if ( hist.startswith("chamber") and hist.endswith("trxy_eff")):
@@ -401,22 +412,25 @@ def draw_plot( file, tDir,oDir ) :
       tmpf = flipHist(tmph)
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf)
+      saveRoot(tmpf, findName(tmp1.GetName()))
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("Strip")
       tmph.SetYTitle("Roll Number (iEta)") 
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf)
+      saveRoot(tmpf, findName(tmph.GetName()))
       histL = roll1D(tmpf)
       for h in histL:
         draw_occ(oDir, h) 
+        saveRoot(h, findName(tmph.GetName()))
     elif ( hist.startswith("chamber") and hist.endswith("recHit")):
       tmph = d1.Get(hist)
       tmph.SetXTitle("x [cm]")
       tmph.SetYTitle("Roll Number (iEta)") 
       tmpf = flipHist(tmph)
       draw_occ(oDir, tmpf)
-
+      saveRoot(tmpf, findName(tmph.GetName()))
     elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
       h2 = makeMapHist(tmph)
@@ -427,12 +441,7 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(h2,"x",[1,3])
       tmpf = flipHist(h2)
       draw_occ(oDir, tmpf, ".png", "colz text")
-
-    elif ( hist == "cluster_size"):
-      tmph = d1.Get(hist)
-      tmph.SetXTitle("cluster size")
-      tmph.SetYTitle("count")
-      draw_occ(oDir, tmph)
+      saveRoot(tmpf, findName(tmph.GetName()))
 
     elif (hist == "rh1_chamber"):
       tmph = d1.Get(hist)
@@ -493,6 +502,9 @@ def draw_plot( file, tDir,oDir ) :
       extraText.SetTextSize(0.03)
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
       dName = name.replace("GE1/1", "GE11")+"/"
+      outRoot.cd(dName)
+      tmph.Write()
+      outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")   
     
       hist =hist.replace("local_x", "residual")
@@ -517,6 +529,9 @@ def draw_plot( file, tDir,oDir ) :
       extraText.SetTextSize(0.03)
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
       dName = name.replace("GE1/1", "GE11")+"/"
+      outRoot.cd(dName)
+      tmph.Write()
+      outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")
      
 
@@ -528,8 +543,11 @@ if __name__ == '__main__' :
   
  
   os.system("mkdir -p "+oDir )
+  outRoot = TFile(oDir+oDir[:-1]+".root", "recreate")
   for c in chamber:
-    os.system("mkdir -p "+oDir+"/"+c.replace("/",""))
+    outRoot.mkdir(c.replace("/",""))
+    os.system("mkdir -p "+oDir+"/"+c.replace("/",""))  
   draw_plot(rootF,tDir,oDir)  
-   
-  makeSummary()
+  outRoot.Write()
+  outRoot.Close() 
+  #makeSummary()
