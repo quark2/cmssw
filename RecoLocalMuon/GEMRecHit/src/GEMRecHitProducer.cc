@@ -28,6 +28,9 @@
 #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
 
 
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
+#include "CLHEP/Random/RandFlat.h"
 
 #include <string>
 #include <fstream>
@@ -45,6 +48,9 @@ GEMRecHitProducer::GEMRecHitProducer(const ParameterSet& config){
 
   theGEMDigiToken = consumes<GEMDigiCollection>(config.getParameter<edm::InputTag>("gemDigiLabel"));  
 
+  badConnector_ = config.getParameter<bool>("badConnector");
+  deadStripFraction_ = config.getParameter<double>("deadStripFraction");
+  
   // Get the concrete reconstruction algo from the factory
 
   string theAlgoName = config.getParameter<string>("recAlgo");
@@ -156,6 +162,10 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
   Handle<GEMDigiCollection> digis; 
   event.getByToken(theGEMDigiToken,digis);
 
+
+  edm::Service<edm::RandomNumberGenerator> rng;
+  CLHEP::HepRandomEngine* engine = &rng->getEngine(event.streamID());
+  
   // Pass the EventSetup to the algo
 
   theAlgo->setES(setup);
@@ -197,7 +207,22 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 	mask.set(bit-1);
       }
     }
-    
+
+    // masking study for ge11
+    if (gemId.station() == 1){
+      if (badConnector_){ // masking 1 and 128 from each readout
+	mask.set(0); mask.set(127);
+	mask.set(128); mask.set(255);
+	mask.set(256); mask.set(383);
+      }
+      if (deadStripFraction_ > 0.0){
+	for (int i = 0; i < 383; i++ ){	
+	  if (CLHEP::RandFlat::shoot(engine, 0., 100.) < deadStripFraction_)	
+	    mask.set(i);
+	}
+      }
+    }
+  
     // Call the reconstruction algorithm    
     OwnVector<GEMRecHit> recHits =
       theAlgo->reconstruct(*roll, gemId, range, mask);

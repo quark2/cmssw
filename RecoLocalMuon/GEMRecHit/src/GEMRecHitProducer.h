@@ -55,6 +55,9 @@ private:
   // The token to be used to retrieve GEM digis from the event
   edm::EDGetTokenT<GEMDigiCollection> theGEMDigiToken;
 
+  bool badConnector_;
+  double deadStripFraction_;
+  
   // The reconstruction algorithm
   GEMRecHitBaseAlgo *theAlgo;
   //   static std::string theAlgoName;
