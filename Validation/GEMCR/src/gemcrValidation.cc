@@ -154,6 +154,7 @@ auto_ptr<std::vector<TrajectorySeed> > gemcrValidation::findSeeds(MuonTransientT
                               hit2->globalPosition().z() - hit1->globalPosition().z());
 
         segDirGV *=10;
+        //segDirGV *=1;
         LocalVector segDir = hit1->det()->toLocal(segDirGV);
 
         int charge= 1;
@@ -201,13 +202,18 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
       if (hitID.chamberId() == ch.id() ){
         GlobalPoint hitGP = hit->globalPosition();
         /*double x_err = hit->localPositionError().xx();
-        double y_err = hit->localPositionError().yy();
         if (abs(hitGP.x() - tsosGP.x()) > x_err*2.0) continue;
         if (abs(hitGP.z() - tsosGP.z()) > y_err*2.0) continue;*/
 
+        float deltaR = (hitGP - tsosGP).mag();
+        double x_err = hit->localPositionError().xx();
+        double y_err = hit->localPositionError().yy();
+      
+        cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
+        cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
         if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
         if (abs(hitGP.z() - tsosGP.z()) > trackResY) continue;
-        float deltaR = (hitGP - tsosGP).mag();
+        //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         if (maxR > deltaR){
           tmpRecHit = hit;
           maxR = deltaR;
@@ -274,7 +280,9 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
 
   /// Tracking start
   if (!makeTrack) return; 
+  int countTC = 0;
   for (auto tch : gemChambers){
+    countTC += 1;
     MuonTransientTrackingRecHit::MuonRecHitContainer testRecHits;
     for (auto etaPart : tch.etaPartitions()){
       GEMDetId etaPartID = etaPart->id();
@@ -300,24 +308,31 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         }
       }
     }
-    if (muRecHits.size()<3) continue;
+    if (muRecHits.size()<3){ 
+      cout << "tracking passed due to # recHit under 3" << endl;
+      continue;}
     auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
     trajectorySeeds =findSeeds(muRecHits);
     Trajectory bestTrajectory;
     TrajectorySeed bestSeed;
+    
+    cout <<"test chamber #" << findIndex(tch.id()) << ", "<< countTC <<" # of seeds : " << trajectorySeeds->size() << ", # of recHit for track :" << muRecHits.size() << ", # of recHit for testChamber : " << testRecHits.size()<< endl;
     //if (trajectorySeeds->size() > 100) continue;
-    //cout << tch.id() << " " << trajectorySeeds->size() << " " << muRecHits.size() << " " << testRecHits.size()<< endl;
     float maxChi2 = trackChi2;
+    int countTR = 0;
     for (auto seed : *trajectorySeeds){
       Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
+      countTR += 1;
       if (smoothed.isValid()){
+        cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
           maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
           bestTrajectory = smoothed;
           bestSeed = seed;
         }
-      }
+      }else{cout << "trajectory " << countTR << " is not valid" << endl;}
     }
+    cout << "# of trajectories : " << countTR << endl;
     //cout <<maxChi2 << endl;
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
