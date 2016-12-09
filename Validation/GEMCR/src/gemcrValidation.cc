@@ -27,6 +27,7 @@
 #include "RecoMuon/TransientTrackingRecHit/interface/MuonTransientTrackingRecHit.h"
 #include "RecoMuon/TrackingTools/interface/MuonServiceProxy.h"
 
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 
 
@@ -74,6 +75,11 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   gem_bx_tot = ibooker.book1D("bx", "BX" , 30, -15,15);
   tr_size = ibooker.book1D("tr_size", "track size",10,0,10);
   tr_hit_size = ibooker.book1D("tr_hit_size", "hit size in track",15,0,15); 
+  trajectoryh = ibooker.book1D("trajectory","trajectory", 4,0,4);
+  trajectoryh->setBinLabel(1, "total seeds");
+  trajectoryh->setBinLabel(2, "unvalid");
+  trajectoryh->setBinLabel(3, "valid");
+  trajectoryh->setBinLabel(4, "passed chi2");
 
   tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,0,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
@@ -209,8 +215,8 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         double x_err = hit->localPositionError().xx();
         double y_err = hit->localPositionError().yy();
       
-        cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
-        cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
+        //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
+        //cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
         if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
         if (abs(hitGP.z() - tsosGP.z()) > trackResY) continue;
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
@@ -309,14 +315,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       }
     }
     if (muRecHits.size()<3){ 
-      cout << "tracking passed due to # recHit under 3" << endl;
+      //cout << "tracking passed due to # recHit under 3" << endl;
       continue;}
     auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
     trajectorySeeds =findSeeds(muRecHits);
     Trajectory bestTrajectory;
     TrajectorySeed bestSeed;
-    
-    cout <<"test chamber #" << findIndex(tch.id()) << ", "<< countTC <<" # of seeds : " << trajectorySeeds->size() << ", # of recHit for track :" << muRecHits.size() << ", # of recHit for testChamber : " << testRecHits.size()<< endl;
+    trajectoryh->Fill(0, trajectorySeeds->size());  
+    //cout <<"test chamber #" << findIndex(tch.id()) << ", "<< countTC <<" # of seeds : " << trajectorySeeds->size() << ", # of recHit for track :" << muRecHits.size() << ", # of recHit for testChamber : " << testRecHits.size()<< endl;
     //if (trajectorySeeds->size() > 100) continue;
     float maxChi2 = trackChi2;
     int countTR = 0;
@@ -324,17 +330,22 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
       countTR += 1;
       if (smoothed.isValid()){
-        cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
+        trajectoryh->Fill(2,1);
+        //cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
           maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
           bestTrajectory = smoothed;
           bestSeed = seed;
         }
-      }else{cout << "trajectory " << countTR << " is not valid" << endl;}
+      }else{
+        trajectoryh->Fill(1,1);
+        //cout << "trajectory " << countTR << " is not valid" << endl;
+      }
     }
-    cout << "# of trajectories : " << countTR << endl;
+    //cout << "# of trajectories : " << countTR << endl;
     //cout <<maxChi2 << endl;
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
+    trajectoryh->Fill(3,1);
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
     const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();

@@ -61,6 +61,7 @@ private:
   MonitorElement* rh1_chamber;
   MonitorElement* rh2_chamber;
   MonitorElement* rh3_chamber;
+  MonitorElement* trajectoryh;
 
   std::vector<GEMChamber> gemChambers;
   int n_ch;

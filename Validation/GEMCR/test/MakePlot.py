@@ -204,6 +204,7 @@ def makeSummary():
 
 def flipHist(hist):
   fhist = hist.Clone()
+  entries = hist.GetEntries()
   fhist.Reset()
   ny = fhist.GetNbinsY()
   nx = fhist.GetNbinsX()
@@ -212,6 +213,8 @@ def flipHist(hist):
       tmpV = hist.GetBinContent(x+1,y+1)
       fhist.SetBinContent(x+1,ny-y,tmpV)
       fhist.GetYaxis().SetBinLabel(y+1,"{}".format(ny-y))
+
+  fhist.SetEntries(entries)
   return fhist
  
 def setAxiNum(hist,axis,r, offSet=0):
@@ -239,18 +242,17 @@ def makeMapHist(hist):
     h2.SetBinContent(divmod(y,8)[0]+1, 8-divmod(y,8)[1], mean)
   return h2
 
-def localXFitter(hist):
+def localXFitter(hist,fun):
   #myFun = TF2("myfun", "[0]*x + [1] - y")
-  myFun = TF1("myfun", "[0]*x + [1]")
-  myFun.SetParameter(0,1)
-  myFun.SetParameter(1,0)
-  
+  fun.SetParameter(0,1)
+  fun.SetParameter(1,0)
+ 
   if hist.GetEntries() == 0: return 0,0
-  hist.Fit("myfun")
+  hist.Fit(fun.GetName())
   fitresult = TVirtualFitter.GetFitter()
   m = fitresult.GetParameter(0)
   b = fitresult.GetParameter(1)
-  return m,b 
+  return m,b
 
 def effErr(h1, h2,t):
   name = h1.GetName()+"_"+t
@@ -314,6 +316,18 @@ def saveRoot(tob, tdir):
   outRoot.cd(tdir)
   tob.Write()
   outRoot.cd("..")
+
+def dump(inF, tDir, outF):
+  dqm_file = TFile(inF)
+  d1 = dqm_file.Get(tDir)
+  tlist = d1.GetListOfKeys()
+  outF.cd()
+  outF.mkdir("DQMHist")
+  outF.cd("DQMHist")
+  for t in tlist:
+    tmp = d1.Get(t.GetName())
+    print t
+    tmp.Write()
 
 import optparse
 
@@ -407,8 +421,8 @@ def draw_plot( file, tDir,oDir ) :
       draw_occ(oDir, tmpef)
       tmph.Divide(thEff)
       tmph.SetXTitle("x [cm]")
-      tmph.SetYTitle("roll number")
-      setAxiNum(tmph,"y",[1,8])
+      tmph.SetYTitle("y [cm]")
+      #setAxiNum(tmph,"y",[1,8])
       tmpf = flipHist(tmph)
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf)
@@ -482,7 +496,8 @@ def draw_plot( file, tDir,oDir ) :
       c = TCanvas("local_X","local_x",600,600)
       tmph = d1.Get(hist)
       tmph.Draw()
-      fitR = localXFitter(tmph) 
+      fun = TF1("localx", "[0]*x + [1]")
+      fitR = localXFitter(tmph, fun) 
       tmph.SetXTitle("recHit [cm]")     
       tmph.SetYTitle("Track hit [cm]") 
       gStyle.SetStatStyle(0)
@@ -504,12 +519,16 @@ def draw_plot( file, tDir,oDir ) :
       dName = name.replace("GE1/1", "GE11")+"/"
       outRoot.cd(dName)
       tmph.Write()
+      print fitR
+      #fitR[2].Write()
       outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")   
     
       hist =hist.replace("local_x", "residual")
       tmph = d1.Get(hist)
-      fitR = localXFitter(tmph)
+      fun2 = TF1("residual", "[0]*x + [1]")
+      tmph.Fit(fun2.GetName())
+      fitR = localXFitter(tmph, fun2)
       tmph.SetXTitle("Track hit [cm]")
       tmph.SetYTitle("(recHit - Track hit) [cm]")
       gStyle.SetStatStyle(0)
@@ -530,6 +549,7 @@ def draw_plot( file, tDir,oDir ) :
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
       dName = name.replace("GE1/1", "GE11")+"/"
       outRoot.cd(dName)
+      #fitR[2].Wirte()
       tmph.Write()
       outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")
@@ -548,6 +568,7 @@ if __name__ == '__main__' :
     outRoot.mkdir(c.replace("/",""))
     os.system("mkdir -p "+oDir+"/"+c.replace("/",""))  
   draw_plot(rootF,tDir,oDir)  
+  dump(rootF, tDir, outRoot) 
   outRoot.Write()
   outRoot.Close() 
-  #makeSummary()
+  makeSummary()
