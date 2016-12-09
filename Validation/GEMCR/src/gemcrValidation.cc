@@ -299,6 +299,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       fChMul += 1;
     }
   }
+ if (fChMul == 4) cout << "4 chambers fired !"<< endl;
  firedMul->Fill(fChMul);
   /// Tracking start
   if (!makeTrack) return; 
