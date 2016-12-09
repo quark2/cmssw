@@ -179,6 +179,11 @@ def makeSummary():
 \imageOne{recHits.png}
 \end{frame}
 
+\\begin{frame}[plain]{fired chambers}
+\imageTwo{firedMul.png}{firedChamber.png}
+\end{frame}
+
+
 
 """
   import os
@@ -490,7 +495,27 @@ def draw_plot( file, tDir,oDir ) :
       le.AddEntry(tmp3, "tracking recHits")
       le.Draw()
       c.SaveAs(oDir+"recHits.png")
-      
+      hist = "firedMul"
+      tmph = d1.Get(hist)
+      tmph.SetYTitle("count")
+      tmph.SetLineColor(kBlue-4)
+      tmph.SetLineWidth(2)
+      tmph.Draw()
+      c.SaveAs(oDir+"firedMul.png")
+      hist = "firedChamber"
+      tmph = d1.Get(hist)
+      tmph.SetYTitle("count")
+      tmph.SetLineColor(kBlue-4)
+      tmph.SetLineWidth(2)
+      c.SaveAs(oDir+"firedMul.png")
+      for x in xrange(tmph.GetNbinsX()):
+        cName = tmph.GetXaxis().GetBinLabel(x+1)
+        tmph.GetXaxis().SetBinLabel(x+1, findName(cName))
+      c.SetBottomMargin(0.18)
+      c.SetRightMargin(0.18)
+      tmph.Draw()
+      c.SaveAs(oDir+"firedChamber.png")
+       
     elif (hist.startswith("chamber") and hist.endswith("local_x")):
       if not runConfig.makeTrack : continue
       c = TCanvas("local_X","local_x",600,600)

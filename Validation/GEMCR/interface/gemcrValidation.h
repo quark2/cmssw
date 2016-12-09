@@ -62,6 +62,10 @@ private:
   MonitorElement* rh2_chamber;
   MonitorElement* rh3_chamber;
   MonitorElement* trajectoryh;
+  MonitorElement* firedMul;
+  MonitorElement* firedChamber;
+  
+
 
   std::vector<GEMChamber> gemChambers;
   int n_ch;

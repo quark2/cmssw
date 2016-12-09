@@ -160,9 +160,9 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
 
 # Path and EndPath definitions
 process.digi_step    = cms.Path(process.muonGEMDigis)
-#if runConfig.makeTrack: process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
-#else : process.reconstruction_step    = cms.Path(process.gemLocalReco)
+if runConfig.makeTrack: process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+else : process.reconstruction_step    = cms.Path(process.gemLocalReco)
+#process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
 #process.reconstruction_step    = cms.Path(process.gemLocalReco)
 
 process.validation_step = cms.Path(process.gemcrValidation)

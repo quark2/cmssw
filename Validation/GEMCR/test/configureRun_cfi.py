@@ -7,21 +7,24 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/user/d/dorney/public/run000035_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/user/c/cepeda/public/CosmicStand/run000005_LatencyScan_TIF_2016-11-19.dat"
-RAWFileName="run000006_Cosmics_TIF_2016-11-20.dat"
+#RAWFileName="run000006_Cosmics_TIF_2016-11-20.dat"
 #RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
+RAWFileName="run000080_Cosmics_TIF_2016-12-05.dat"
+#RAWFileName="run000113_Cosmics_TIF_2016-12-07.dat"
 RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
-OutputFileName='Reco_Run%06d.root'%RunNumber
+makeTrack = False
+if makeTrack : OutputFileName='Reco_Run%06d.root'%RunNumber
+else : OutputFileName='Reco_Run%06d_noTr.root'%RunNumber
 
-makeTrack = True
 minClusterSize = 1 
 maxClusterSize = 10 
-maxResidual =2.0 # cm
-trackChi2 = 2
-trackResX = 1.0 #cm
-trackResY = 20.0 #cm
+maxResidual = 5.0 # cm
+trackChi2 = 1
+trackResX = 0.1 #cm
+trackResY = 30.0 #cm
 #MaxEvents = 12671
-MaxEvents=80941
-#MaxEvents=30000
+MaxEvents=-1
+#MaxEvents=300
 #MaxEvents=92000
 #MaxEvents=104000
 
@@ -39,8 +42,8 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     #Configuration of the Stand: write down every VFAT
     #The ones below are a editted version with respect to what is there in the elog
     
-    NUMBEROFDETECTORS=8
-
+    NUMBEROFDETECTORS=4
+    """
     schamber.append("GE1/1-SCS01")
     chamber.append("GE1/1-VII-S-CERN-0005")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -56,7 +59,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(4)
     layerSC.append(1) #Interior?
-
+    """
     schamber.append("GE1/1-SCL01")
     chamber.append("GE1/1-VII-L-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -88,7 +91,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(2)
     layerSC.append(1) #Interior?
-
+    """
     schamber.append("GE1/1-SCS02")
     chamber.append("GE1/1-VII-S-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -104,7 +107,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(1)
     layerSC.append(1) #Interior?
-
+    """
     VFATHEX=[] 
     BARCODE=[]   
  

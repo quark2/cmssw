@@ -80,6 +80,9 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   trajectoryh->setBinLabel(2, "unvalid");
   trajectoryh->setBinLabel(3, "valid");
   trajectoryh->setBinLabel(4, "passed chi2");
+  firedMul = ibooker.book1D("firedMul","fired chamber multiplicity",n_ch+1,0,n_ch+1);
+  firedChamber = ibooker.book1D("firedChamber", "fired chamber",n_ch,0,n_ch);
+
 
   tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,0,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
@@ -97,6 +100,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
    rh1_chamber->setBinLabel(c+1,b_name);
    rh2_chamber->setBinLabel(c+1,b_name);
    rh3_chamber->setBinLabel(c+1,b_name);
+   firedChamber->setBinLabel(c+1,b_name);
   }
   for(int c = 0; c<n_ch;c++){
      GEMDetId gid = gemChambers[c].id();
@@ -247,6 +251,10 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
   }
+  vector<bool> firedCh;
+  for (int c=0;c<n_ch;c++){
+    firedCh.push_back(0);
+  }
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
     Float_t  rh_l_x = recHit->localPosition().x();
@@ -256,6 +264,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
 
     GEMDetId id((*recHit).gemId());
     int index = findIndex(id);
+    firedCh[index] = 1;
     //checkRH[index] = 1;
     Short_t rh_roll = (Short_t) id.roll();
     LocalPoint recHitLP = recHit->localPosition();
@@ -283,7 +292,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     if (clusterSize > maxCLS) continue;
     rh2_chamber->Fill(index);
   }
-
+  int fChMul = 0;
+  for(int c=0;c<n_ch;c++){
+    if (firedCh[c]){ 
+      firedChamber->Fill(c+0.5);
+      fChMul += 1;
+    }
+  }
+ firedMul->Fill(fChMul);
   /// Tracking start
   if (!makeTrack) return; 
   int countTC = 0;
@@ -327,7 +343,12 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     float maxChi2 = trackChi2;
     int countTR = 0;
     for (auto seed : *trajectorySeeds){
-      Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
+      Trajectory smoothed;
+      try{smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);}
+      catch(int n){
+        cout << "bad trajectory" << endl;
+        throw; 
+      }
       countTR += 1;
       if (smoothed.isValid()){
         trajectoryh->Fill(2,1);
