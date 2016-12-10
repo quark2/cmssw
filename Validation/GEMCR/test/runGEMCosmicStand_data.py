@@ -115,7 +115,9 @@ process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
                                        maxClusterSize = cms.double(runConfig.maxClusterSize),
                                        minClusterSize = cms.double(runConfig.minClusterSize),
-                                       maxResidual = cms.double(runConfig.maxResidual),
+                                       trackChi2 = cms.double(runConfig.trackChi2),
+                                       trackResX = cms.double(runConfig.trackResX),
+                                       trackResY = cms.double(runConfig.trackResY),
                                        MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -142,12 +144,26 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     #nBinGlobalXY = cms.untracked.int32(720),
     #detailPlot = cms.bool(True),
     #detailPlot = cms.bool(False),
+    maxClusterSize = cms.double(runConfig.maxClusterSize),
+    minClusterSize = cms.double(runConfig.minClusterSize),
+    maxResidual = cms.double(runConfig.maxResidual),
+    makeTrack = cms.bool(runConfig.makeTrack),
+    trackChi2 = cms.double(runConfig.trackChi2),
+    trackResX = cms.double(runConfig.trackResX),
+    trackResY = cms.double(runConfig.trackResY),
+    MuonSmootherParameters = cms.PSet(
+                             PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
+                             PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
+                             RescalingFactor = cms.double(5.0))
+
 )
 
 # Path and EndPath definitions
 process.digi_step    = cms.Path(process.muonGEMDigis)
 if runConfig.makeTrack: process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
 else : process.reconstruction_step    = cms.Path(process.gemLocalReco)
+#process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+#process.reconstruction_step    = cms.Path(process.gemLocalReco)
 
 process.validation_step = cms.Path(process.gemcrValidation)
 process.endjob_step = cms.EndPath(process.endOfProcess)

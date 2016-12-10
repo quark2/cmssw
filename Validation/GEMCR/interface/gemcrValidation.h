@@ -12,46 +12,13 @@
 
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
-#include <TFile.h>
-#include <TEfficiency.h>
-#include <TH1D.h>
 
-///
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/stream/EDProducer.h"
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Utilities/interface/InputTag.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-
-#include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-
-#include <Geometry/Records/interface/MuonGeometryRecord.h>
-#include <Geometry/GEMGeometry/interface/GEMGeometry.h>
-
-#include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
-
-#include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrajectorySeed/interface/PropagationDirection.h"
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
-#include "DataFormats/TrackingRecHit/interface/TrackingRecHit.h"
-#include "RecoMuon/TransientTrackingRecHit/interface/MuonTransientTrackingRecHit.h"
-#include "RecoMuon/TrackingTools/interface/MuonServiceProxy.h"
 #include "RecoMuon/CosmicMuonProducer/interface/CosmicMuonSmoother.h"
-#include "RecoMuon/StandAloneTrackFinder/interface/StandAloneMuonSmoother.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/KalmanUpdators/interface/KFUpdator.h"
 
-#include "Geometry/Records/interface/MuonGeometryRecord.h"
-///
-
-
-
-
-
+#include "RecoMuon/TransientTrackingRecHit/interface/MuonTransientTrackingRecHit.h"
+#include "RecoMuon/StandAloneTrackFinder/interface/StandAloneMuonSmoother.h"
+#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
 
 
@@ -66,7 +33,8 @@ public:
   int findIndex(GEMDetId id_);
   int findvfat(float x, float a, float b);
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
-  double maxCLS, minCLS,maxRes;
+  double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX;
+  bool makeTrack;
 private:
   const GEMGeometry* GEMGeometry_;
   std::vector<MonitorElement*> gem_chamber_x_y;
@@ -75,10 +43,11 @@ private:
   std::vector<MonitorElement*> gem_chamber_firedStrip;
   std::vector<MonitorElement*> gem_chamber_tr2D_eff;
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
+  std::vector<MonitorElement*> gem_chamber_trxroll_eff;
+  std::vector<MonitorElement*> gem_chamber_thxroll_eff;
   std::vector<MonitorElement*> gem_chamber_trxy_eff;
   std::vector<MonitorElement*> gem_chamber_thxy_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
-  std::vector<MonitorElement*> gem_chamber_residual_r;
   std::vector<MonitorElement*> gem_chamber_local_x;
   
   MonitorElement* gemcr_g;
@@ -92,12 +61,15 @@ private:
   MonitorElement* rh1_chamber;
   MonitorElement* rh2_chamber;
   MonitorElement* rh3_chamber;
+  MonitorElement* trajectoryh;
+  MonitorElement* firedMul;
+  MonitorElement* firedChamber;
+  
+
 
   std::vector<GEMChamber> gemChambers;
   int n_ch;
-  
   MuonServiceProxy* theService;
-  
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
