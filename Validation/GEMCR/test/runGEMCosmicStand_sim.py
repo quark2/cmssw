@@ -90,10 +90,6 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 ## process.generator.ElossScaleFactor = 0.0
 ## process.generator.TrackerOnly = True
 ## process.generator.MinP = 100
-## process.RandomNumberGeneratorService.generator = cms.PSet(
-##         initialSeed = cms.untracked.uint32(123456789),
-##         engineName = cms.untracked.string('HepJamesRandom')
-##     )
 
 #process.genstepfilter.triggerConditions=cms.vstring("generation_step")
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
@@ -218,6 +214,7 @@ process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
 process.validation_step = cms.Path(process.gemcrValidation)
 
 process.digitisation_step.remove(process.simMuonME0Digis)
+process.digitisation_step.remove(process.simMuonME0ReDigis)
 process.digitisation_step.remove(process.simEcalTriggerPrimitiveDigis)
 process.digitisation_step.remove(process.simEcalDigis)
 process.digitisation_step.remove(process.simEcalPreshowerDigis)
@@ -242,10 +239,14 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
 #for path in process.paths:
 #	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
 
-process.RandomNumberGeneratorService.simMuonGEMDigis = cms.PSet(
-        initialSeed = cms.untracked.uint32(1234567),
-        engineName = cms.untracked.string('HepJamesRandom')
+process.RandomNumberGeneratorService.generator = cms.PSet(
+    initialSeed = cms.untracked.uint32(123456789),
+    engineName = cms.untracked.string('HepJamesRandom')
 )
+process.RandomNumberGeneratorService.simMuonGEMDigis = process.RandomNumberGeneratorService.generator
+process.RandomNumberGeneratorService.VtxSmeared = process.RandomNumberGeneratorService.generator
+process.RandomNumberGeneratorService.g4SimHits = process.RandomNumberGeneratorService.generator
+
 
 process.gemSegments.maxRecHitsInCluster = cms.int32(10)
 process.gemSegments.minHitsPerSegment = cms.uint32(3)
