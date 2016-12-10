@@ -109,7 +109,8 @@ process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
 process.gemRecHits.gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO")
-
+process.gemRecHits.maskvecfile = cms.FileInPath(runConfig.GEMMask)
+process.gemRecHits.deadvecfile = cms.FileInPath(runConfig.GEMHot)
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),

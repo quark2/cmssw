@@ -30,7 +30,7 @@ tDir = "DQMData/Run %d/MuonGEMRecHitsV/Run summary/GEMRecHitsTask"%(run)
 oDir = "Run%06d_Plots/"%run
 
 
-maskPlot = True
+maskPlot = runConfig.runWithMasking
 
 
 SLOTLIST=[]
@@ -58,7 +58,7 @@ for c in [1,2,3]:
     chi+=1
 
 import csv
-tmpID = [x for x in csv.reader(open("GEMRAWID.dat","r"))][0]
+tmpID = [x for x in csv.reader(open("../data/GEMRAWID.dat","r"))][0]
 GEMRAWID = {}
 GEMNAME = {}
 for x in tmpID:
@@ -113,8 +113,8 @@ def writeMask(hist):
       if v>cut*2.0: hotStrip.write("%d %d\n"%(findRawId(name), x))
 
 if maskPlot:
-  tmpM = open("GEMMaskVec.dat", "r")
-  tmpH = open("GEMHotVec.dat", "r")
+  tmpM = open("../data/GEMMaskVecRun%6d.dat"%run, "r")
+  tmpH = open("../data/GEMHotVecRun%6d.dat"%run, "r")
   maskL = {}
   for x in tmpM:
     tmpL = x.split()

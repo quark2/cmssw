@@ -6,8 +6,21 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000036_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
-
+RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
 RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
+
+GEMMask = "Validation/GEMCR/data/GEMMaskVecRun%06d.dat"%RunNumber
+GEMHot = "Validation/GEMCR/data/GEMHotVecRun%06d.dat"%RunNumber
+
+if os.path.isfile(os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+"/src/"+GEMHot): runWithMasking = True
+else : runWithMasking = False
+
+if not runWithMasking :
+  GEMMask = "Validation/GEMCR/data/GEMMaskEmp.dat" 
+  GEMHot = "Validation/GEMCR/data/GEMMaskEmp.dat"
+
+if runWithMasking : print "This run is running with masking"
+else : print  "This run dose not have mask lists" 
 
 makeTrack = False
 if makeTrack : OutputFileName='Reco_Run%06d.root'%RunNumber
@@ -22,7 +35,7 @@ trackResY = 30.0 #cm
 
 #MaxEvents=-1
 #MaxEvents=92000
-MaxEvents=9600
+MaxEvents=1000
 
 #makeTrack = False
 
