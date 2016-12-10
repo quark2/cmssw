@@ -41,8 +41,9 @@ maxChi2(cfg.getParameter<edm::ParameterSet>("maxChi2")),
 fitFastCircle(cfg.getParameter<bool>("fitFastCircle")),
 fitFastCircleChi2Cut(cfg.getParameter<bool>("fitFastCircleChi2Cut")),
 useBendingCorrection(cfg.getParameter<bool>("useBendingCorrection")),
-CAThetaCut(cfg.getParameter<double>("CAThetaCut")),
-CAPhiCut(cfg.getParameter<double>("CAPhiCut"))
+caThetaCut(cfg.getParameter<double>("CAThetaCut")),
+caPhiCut(cfg.getParameter<double>("CAPhiCut")),
+caHardPtCut(cfg.getParameter<double>("CAHardPtCut"))
 {
   if (cfg.exists("SeedComparitorPSet"))
   {
@@ -60,60 +61,108 @@ CAHitQuadrupletGenerator::~CAHitQuadrupletGenerator()
 {
 }
 
-void CAHitQuadrupletGenerator::hitQuadruplets(
-                                              const TrackingRegion& region, OrderedHitSeeds & result,
-                                              const edm::Event& ev, const edm::EventSetup& es)
+void CAHitQuadrupletGenerator::hitQuadruplets(const TrackingRegion& region,
+		OrderedHitSeeds & result, const edm::Event& ev,
+		const edm::EventSetup& es)
 {
-  edm::Handle<SeedingLayerSetsHits> hlayers;
-  ev.getByToken(theSeedingLayerToken, hlayers);
-  const SeedingLayerSetsHits& layers = *hlayers;
-  if (layers.numberOfLayersInSet() != 4)
-    throw cms::Exception("Configuration") << "CAHitQuadrupletsGenerator expects SeedingLayerSetsHits::numberOfLayersInSet() to be 4, got " << layers.numberOfLayersInSet();
-  for (unsigned int j=0; j < layers.size(); j++)
-  {
-    findQuadruplets(region, result, ev, es, layers[j]);
-  }
+	edm::Handle<SeedingLayerSetsHits> hlayers;
+	ev.getByToken(theSeedingLayerToken, hlayers);
+	const SeedingLayerSetsHits& layers = *hlayers;
+	if (layers.numberOfLayersInSet() != 4)
+		throw cms::Exception("Configuration")
+				<< "CAHitQuadrupletsGenerator expects SeedingLayerSetsHits::numberOfLayersInSet() to be 4, got "
+				<< layers.numberOfLayersInSet();
 
-  theLayerCache.clear();
-}
-
-void
-CAHitQuadrupletGenerator::findQuadruplets (const TrackingRegion& region, OrderedHitSeeds& result,
-                                           const edm::Event& ev, const edm::EventSetup& es,
-                                           const SeedingLayerSetsHits::SeedingLayerSet& fourLayers)
-{
-  if (theComparitor) theComparitor->init (ev, es);
-  HitPairGeneratorFromLayerPair thePairGenerator(0, 1, &theLayerCache);
-
-  std::vector<CACell::CAntuplet> foundQuadruplets;
-
-  std::vector<const HitDoublets*> layersDoublets(3);
-
-  HitDoublets doublets0 =  thePairGenerator.doublets(region, ev, es, fourLayers[0], fourLayers[1] );
-  HitDoublets doublets1 =  thePairGenerator.doublets(region, ev, es, fourLayers[1], fourLayers[2] );
-  HitDoublets doublets2 =  thePairGenerator.doublets(region, ev, es, fourLayers[2], fourLayers[3] );
-
-  layersDoublets[0] = &(doublets0);
-  layersDoublets[1] = &(doublets1);
-  layersDoublets[2] = &(doublets2);
+	CAGraph g;
 
 
-  CellularAutomaton<4> ca;
+	std::vector<HitDoublets> hitDoublets;
 
-  ca.createAndConnectCells (layersDoublets, fourLayers, region, CAThetaCut, CAPhiCut);
 
-  ca.evolve();
+	HitPairGeneratorFromLayerPair thePairGenerator(0, 1, &theLayerCache);
+	for (unsigned int i = 0; i < layers.size(); i++)
+	{
+		for (unsigned int j = 0; j < 4; ++j)
+		{
+			auto vertexIndex = 0;
+			auto foundVertex = std::find(g.theLayers.begin(), g.theLayers.end(),
+					layers[i][j].name());
+			if (foundVertex == g.theLayers.end())
+			{
+				g.theLayers.emplace_back(layers[i][j].name(), layers[i][j].hits().size());
+				vertexIndex = g.theLayers.size() - 1;
+			}
+			else
+			{
+				vertexIndex = foundVertex - g.theLayers.begin();
+			}
+			if (j == 0)
+			{
 
-  ca.findNtuplets(foundQuadruplets, 4);
+				if (std::find(g.theRootLayers.begin(), g.theRootLayers.end(),
+						vertexIndex) == g.theRootLayers.end())
+				{
+					g.theRootLayers.emplace_back(vertexIndex);
 
-  const QuantityDependsPtEval maxChi2Eval = maxChi2.evaluator(es);
+				}
+
+			}
+			else
+			{
+
+				auto innerVertex = std::find(g.theLayers.begin(),
+						g.theLayers.end(), layers[i][j - 1].name());
+
+				CALayerPair tmpInnerLayerPair(innerVertex - g.theLayers.begin(),
+						vertexIndex);
+
+				if (std::find(g.theLayerPairs.begin(), g.theLayerPairs.end(),
+						tmpInnerLayerPair) == g.theLayerPairs.end())
+				{
+					hitDoublets.emplace_back(thePairGenerator.doublets(region, ev, es,
+							layers[i][j-1], layers[i][j]));
+
+					g.theLayerPairs.push_back(tmpInnerLayerPair);
+					g.theLayers[vertexIndex].theInnerLayers.push_back(
+							innerVertex - g.theLayers.begin());
+					innerVertex->theOuterLayers.push_back(vertexIndex);
+					g.theLayers[vertexIndex].theInnerLayerPairs.push_back(
+							g.theLayerPairs.size() - 1);
+					innerVertex->theOuterLayerPairs.push_back(
+							g.theLayerPairs.size() - 1);
+
+				}
+
+			}
+
+		}
+	}
+
+
+	if (theComparitor)
+		theComparitor->init(ev, es);
+	const int numberOfHitsInNtuplet = 4;
+	std::vector<CACell::CAntuplet> foundQuadruplets;
+
+	CellularAutomaton ca(g);
+
+	ca.createAndConnectCells(hitDoublets, region, caThetaCut,
+			caPhiCut, caHardPtCut);
+
+	ca.evolve(numberOfHitsInNtuplet);
+
+	ca.findNtuplets(foundQuadruplets, numberOfHitsInNtuplet);
+
+
+	const QuantityDependsPtEval maxChi2Eval = maxChi2.evaluator(es);
 
   // re-used thoughout, need to be vectors because of RZLine interface
-  std::vector<float> bc_r(4), bc_z(4), bc_errZ(4);
-
-  declareDynArray(GlobalPoint, 4, gps);
-  declareDynArray(GlobalError, 4, ges);
-  declareDynArray(bool, 4, barrels);
+  std::array<float, 4> bc_r;
+  std::array<float, 4> bc_z;
+  std::array<float, 4> bc_errZ2;
+  std::array<GlobalPoint, 4> gps;
+  std::array<GlobalError, 4> ges;
+  std::array<bool, 4> barrels;
 
   unsigned int numberOfFoundQuadruplets = foundQuadruplets.size();
 
@@ -149,7 +198,7 @@ CAHitQuadrupletGenerator::findQuadruplets (const TrackingRegion& region, Ordered
       SeedingHitSet tmpTriplet(foundQuadruplets[quadId][0]->getInnerHit(), foundQuadruplets[quadId][2]->getInnerHit(), foundQuadruplets[quadId][2]->getOuterHit());
 
 
-      if (!theComparitor->compatible(tmpTriplet, region) )
+      if (!theComparitor->compatible(tmpTriplet) )
       {
         continue;
       }
@@ -169,18 +218,14 @@ CAHitQuadrupletGenerator::findQuadruplets (const TrackingRegion& region, Ordered
         bc_r[i] = sqrt( sqr(point.x() - region.origin().x()) + sqr(point.y() - region.origin().y()) );
         bc_r[i] += pixelrecoutilities::LongitudinalBendingCorrection(pt, es)(bc_r[i]);
         bc_z[i] = point.z() - region.origin().z();
-        bc_errZ[i] =  (barrels[i]) ? sqrt(error.czz()) : sqrt( error.rerr(point) ) * simpleCot;
+        bc_errZ2[i] =  (barrels[i]) ? error.czz() : error.rerr(point)*sqr(simpleCot);
       }
-      RZLine rzLine(bc_r, bc_z, bc_errZ);
-      float      cottheta, intercept, covss, covii, covsi;
-      rzLine.fit(cottheta, intercept, covss, covii, covsi);
-      chi2 = rzLine.chi2(cottheta, intercept);
+      RZLine rzLine(bc_r, bc_z, bc_errZ2, RZLine::ErrZ2_tag());
+      chi2 = rzLine.chi2();
     } else
     {
       RZLine rzLine(gps, ges, barrels);
-      float  cottheta, intercept, covss, covii, covsi;
-      rzLine.fit(cottheta, intercept, covss, covii, covsi);
-      chi2 = rzLine.chi2(cottheta, intercept);
+      chi2 = rzLine.chi2();
     }
     if (edm::isNotFinite(chi2) || chi2 > thisMaxChi2)
     {
@@ -202,6 +247,7 @@ CAHitQuadrupletGenerator::findQuadruplets (const TrackingRegion& region, Ordered
     result.emplace_back(foundQuadruplets[quadId][0]->getInnerHit(), foundQuadruplets[quadId][1]->getInnerHit(), foundQuadruplets[quadId][2]->getInnerHit(), foundQuadruplets[quadId][2]->getOuterHit());
   }
 
+  theLayerCache.clear();
 }
 
 

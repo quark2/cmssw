@@ -13,25 +13,20 @@ workflows = Matrix()
 
 #just define all of them
 
-numWFStart=10000
-numWFSkip=200
-#2017 WFs to run in IB (TenMuE_0_200, TTbar, ZEE, MinBias, TTbar PU, ZEE PU)
-numWFIB = [10021.0,10024.0,10025.0,10026.0,10023.0,10224.0,10225.0]
-#numWFIB.extend([10821.0,10824.0,10825.0,10826.0]) #2023sim scenario
-#numWFIB.extend([10621.0,10624.0,10625.0,10626.0]) #2023 with tilted tracker
-#numWFIB.extend([11021.0,11024.0,11025.0,11026.0]) #2023lreco
-for i,key in enumerate(upgradeKeys):
-    numWF=numWFStart+i*numWFSkip
+#2017 WFs to run in IB (TenMuE_0_200, TTbar, ZEE, MinBias, TTbar PU, ZEE PU, TTbar design)
+numWFIB = [10021.0,10024.0,10025.0,10026.0,10023.0,10224.0,10225.0,10424.0]
+for i,key in enumerate(upgradeKeys[2017]):
+    numWF=numWFAll[2017][i]
     for frag in upgradeFragments:
         k=frag[:-4]+'_'+key
         stepList=[]
-        for step in upgradeScenToRun[key]:
+        for step in upgradeProperties[2017][key]['ScenToRun']:
             if 'Sim' in step:
                 stepList.append(k+'_'+step)
             else:
                 stepList.append(step+'_'+key)
         if numWF in numWFIB:
-	    workflows[numWF] = [ upgradeDatasetFromFragment[frag], stepList]
+            workflows[numWF] = [ upgradeDatasetFromFragment[frag], stepList]
         numWF+=1
 
 # Tracking-specific special workflows
@@ -41,6 +36,8 @@ def _trackingOnly(stepList):
         s = step
         if 'RecoFull' in step or 'HARVESTFull' in step:
             s = s.replace('Full', 'Full_trackingOnly')
+        if 'ALCA' in s:
+            continue
         res.append(s)
     return res
 def _trackingRun2(stepList):
@@ -52,6 +49,8 @@ def _trackingRun2(stepList):
                 s = s.replace('Only', 'OnlyRun2')
             else:
                 s = s.replace('Full', 'Full_trackingRun2')
+        if 'ALCA' in s:
+            continue
         res.append(s)
     return res
 def _trackingPhase1PU70(stepList):
@@ -63,6 +62,8 @@ def _trackingPhase1PU70(stepList):
                 s = s.replace('Only', 'OnlyPhase1PU70')
             else:
                 s = s.replace('Full', 'Full_trackingPhase1PU70')
+        if 'ALCA' in s:
+            continue
         res.append(s)
     return res
 

@@ -1,4 +1,3 @@
-from Configuration.StandardSequences.Eras import eras
 
 from Validation.RecoTau.dataTypes.ValidateTausOnQCD_cff import *
 from Validation.RecoTau.dataTypes.ValidateTausOnRealData_cff import *
@@ -19,11 +18,7 @@ pfTauRunDQMValidation = cms.Sequence(
     TauValNumeratorAndDenominatorZMM+
     TauValNumeratorAndDenominatorZTT
     )
-eras.phase1Pixel.toReplaceWith(pfTauRunDQMValidation, pfTauRunDQMValidation.copyAndExclude([ # FIXME
-    TauValNumeratorAndDenominatorRealData,          # Excessive printouts because 2017 doesn't have HLT yet
-    TauValNumeratorAndDenominatorRealElectronsData, # Excessive printouts because 2017 doesn't have HLT yet
-    TauValNumeratorAndDenominatorRealMuonsData,     # Excessive printouts because 2017 doesn't have HLT yet
-]))
+from Configuration.Eras.Modifier_phase1Pixel_cff import phase1Pixel
 
 produceDenoms = cms.Sequence(
     produceDenominatorQCD+

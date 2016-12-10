@@ -4,6 +4,7 @@
 #include "RecoParticleFlow/PFClusterProducer/interface/PFRecHitCreatorBase.h"
 
 #include "Geometry/HGCalGeometry/interface/HGCalGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
@@ -19,7 +20,7 @@
 #include "Geometry/CaloTopology/interface/EcalPreshowerTopology.h"
 #include "RecoCaloTools/Navigation/interface/CaloNavigator.h"
 
-template <typename DET,PFLayer::Layer Layer,ForwardSubdetector subdet>
+template <typename DET,PFLayer::Layer Layer,unsigned subdet>
   class PFHGCalRecHitCreator :  public  PFRecHitCreatorBase {
 
  public:  
@@ -30,7 +31,7 @@ template <typename DET,PFLayer::Layer Layer,ForwardSubdetector subdet>
       geometryInstance_ = iConfig.getParameter<std::string>("geometryInstance");
     }
 
-    void importRecHits(std::auto_ptr<reco::PFRecHitCollection>&out,std::auto_ptr<reco::PFRecHitCollection>& cleaned ,const edm::Event& iEvent,const edm::EventSetup& iSetup) {
+    void importRecHits(std::unique_ptr<reco::PFRecHitCollection>&out,std::unique_ptr<reco::PFRecHitCollection>& cleaned ,const edm::Event& iEvent,const edm::EventSetup& iSetup) {
 
       for (unsigned int i=0;i<qualityTests_.size();++i) {
 	qualityTests_.at(i)->beginEvent(iEvent,iSetup);
@@ -40,27 +41,26 @@ template <typename DET,PFLayer::Layer Layer,ForwardSubdetector subdet>
       iEvent.getByToken(recHitToken_,recHitHandle);
       const HGCRecHitCollection& rechits = *recHitHandle;
 
-      edm::ESHandle<HGCalGeometry> geoHandle;
-      iSetup.get<IdealGeometryRecord>().get(geometryInstance_,geoHandle);
-      const HGCalGeometry& hgcGeo = *geoHandle;
-      
+      edm::ESHandle<CaloGeometry> geoHandle;
+      iSetup.get<CaloGeometryRecord>().get(geoHandle);
+      const CaloGeometry* geom = geoHandle.product();
+
       unsigned skipped_rechits = 0;
       for (unsigned int i=0;i<rechits.size();++i) {
 	const HGCRecHit& hgrh = rechits[i];
 	const DET detid(hgrh.detid());
 	
-	if( subdet != detid.subdet() ) {
+	if( subdet != detid.subdetId() ) {
 	  throw cms::Exception("IncorrectHGCSubdetector")
 	    << "subdet expected: " << subdet 
-	    << " subdet gotten: " << detid.subdet() << std::endl;
+	    << " subdet gotten: " << detid.subdetId() << std::endl;
 	}
 	
 	double energy = hgrh.energy();
 	double time = hgrh.time();	
 	
-	const FlatTrd *thisCell = 
-	  static_cast<const FlatTrd*>(hgcGeo.getGeometry(detid));	
-
+	const CaloCellGeometry *thisCell = geom->getSubdetectorGeometry(detid.det(),detid.subdetId())->getGeometry(detid);
+	
 	// find rechit geometry
 	if(!thisCell) {
 	  LogDebug("PFHGCalRecHitCreator")
@@ -112,9 +112,9 @@ template <typename DET,PFLayer::Layer Layer,ForwardSubdetector subdet>
 #include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
 #include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 
-typedef PFHGCalRecHitCreator<HGCEEDetId,PFLayer::HGCAL,HGCEE> PFHGCEERecHitCreator;
-typedef PFHGCalRecHitCreator<HGCHEDetId,PFLayer::HGCAL,HGCHEF> PFHGCHEFRecHitCreator;
-typedef PFHGCalRecHitCreator<HGCHEDetId,PFLayer::HGCAL,HGCHEB> PFHGCHEBRecHitCreator;
+typedef PFHGCalRecHitCreator<HGCalDetId,PFLayer::HGCAL,HGCEE> PFHGCEERecHitCreator;
+typedef PFHGCalRecHitCreator<HGCalDetId,PFLayer::HGCAL,HGCHEF> PFHGCHEFRecHitCreator;
+typedef PFHGCalRecHitCreator<HcalDetId ,PFLayer::HGCAL,HcalEndcap> PFHGCHEBRecHitCreator;
 
 
 #endif

@@ -268,6 +268,14 @@ class Process(object):
         return DictTypes.FixedKeysDict(self.__vpsets)
     vpsets = property(vpsets_,doc="dictionary containing the PSets for the process")
 
+    def isUsingModifier(self,mod):
+        """returns True if the Modifier is in used by this Process"""
+        if mod.isChosen():
+          for m in self.__modifiers:
+            if m._isOrContains(mod):
+              return True
+        return False
+
     def __setObjectLabel(self, object, newLabel) :
         if not object.hasLabel_() :
             object.setLabel(newLabel)
@@ -1111,8 +1119,6 @@ class _ParameterModifier(object):
     for k in self.__args.iterkeys():
         if hasattr(obj,k):
             params[k] = getattr(obj,k)
-        else:
-            params[k] = self.__args[k]
     _modifyParametersFromDict(params, self.__args, self._raiseUnknownKey)
     for k in self.__args.iterkeys():
         if k in params:
@@ -1120,8 +1126,9 @@ class _ParameterModifier(object):
         else:
             #the parameter must have been removed
             delattr(obj,k)
+  @staticmethod
   def _raiseUnknownKey(key):
-    raise KeyError("Unknown parameter name "+k+" specified while calling Modifier")
+    raise KeyError("Unknown parameter name "+key+" specified while calling Modifier")
 
 class _AndModifier(object):
   """A modifier which only applies if multiple Modifiers are chosen"""
@@ -1212,6 +1219,8 @@ class Modifier(object):
     return self.__chosen
   def __and__(self, other):
     return _AndModifier(self,other)
+  def _isOrContains(self, other):
+    return self == other
 
 
 class ModifierChain(object):
@@ -1232,6 +1241,13 @@ class ModifierChain(object):
             m._setChosen()
     def isChosen(self):
         return self.__chosen
+    def _isOrContains(self, other):
+      if self is other:
+        return True
+      for m in self.__chain:
+        if m._isOrContains(other):
+          return True
+      return False
 
 class ProcessModifier(object):
     """A class used by a Modifier to affect an entire Process instance.
@@ -1547,6 +1563,49 @@ process.p2 = cms.Path(process.r)
 
 
 process.schedule = cms.Schedule(*[ process.p2, process.p ])
+""")
+
+            s = Sequence()
+            a = EDProducer("A")
+            s2 = Sequence(a)
+            s2 += s
+            process = Process("DUMP")
+            process.a = a
+            process.s2 = s2
+            d=process.dumpPython()
+            self.assertEqual(d,
+            """import FWCore.ParameterSet.Config as cms
+
+process = cms.Process("DUMP")
+
+process.a = cms.EDProducer("A")
+
+
+process.s2 = cms.Sequence(process.a)
+
+
+""")
+            s = Sequence()
+            s1 = Sequence(s)
+            a = EDProducer("A")
+            s3 = Sequence(a+a)
+            s2 = Sequence(a+s3)
+            s2 += s1
+            process = Process("DUMP")
+            process.a = a
+            process.s2 = s2
+            d=process.dumpPython()
+            self.assertEqual(d,
+            """import FWCore.ParameterSet.Config as cms
+
+process = cms.Process("DUMP")
+
+process.a = cms.EDProducer("A")
+
+
+process.s2 = cms.Sequence(process.a+(process.a+process.a))
+
+
 """)
 
         def testSecSource(self):
@@ -1978,6 +2037,7 @@ process.addSubProcess(cms.SubProcess(process = childProcess, SelectEvents = cms.
             p.b = EDAnalyzer("YourAnalyzer", wilma = int32(1))
             m1.toModify(p.b, wilma = 2)
             self.assertEqual(p.b.wilma.value(),2)
+            self.assert_(p.isUsingModifier(m1))
             #check that Modifier not attached to a process doesn't run
             m1 = Modifier()
             p = Process("test")
@@ -1987,6 +2047,7 @@ process.addSubProcess(cms.SubProcess(process = childProcess, SelectEvents = cms.
             m1.toModify(p.b, wilma = 2)
             self.assertEqual(p.a.fred.value(),1)
             self.assertEqual(p.b.wilma.value(),1)
+            self.assertEqual(p.isUsingModifier(m1),False)
             #make sure clones get the changes
             m1 = Modifier()
             p = Process("test",m1)
@@ -2018,6 +2079,12 @@ process.addSubProcess(cms.SubProcess(process = childProcess, SelectEvents = cms.
             m1.toModify(p.a, flintstones = dict(fred = int32(2)))
             self.assertEqual(p.a.flintstones.fred.value(),2)
             self.assertEqual(p.a.flintstones.wilma.value(),1)
+            #test proper exception from nonexisting parameter name
+            m1 = Modifier()
+            p = Process("test",m1)
+            p.a = EDAnalyzer("MyAnalyzer", flintstones = PSet(fred = PSet(wilma = int32(1))))
+            self.assertRaises(KeyError, lambda: m1.toModify(p.a, flintstones = dict(imnothere = dict(wilma=2))))
+            self.assertRaises(KeyError, lambda: m1.toModify(p.a, foo = 1))
             #test that load causes process wide methods to run
             def _rem_a(proc):
                 del proc.a
@@ -2040,6 +2107,8 @@ process.addSubProcess(cms.SubProcess(process = childProcess, SelectEvents = cms.
             m1 = Modifier()
             mc = ModifierChain(m1)
             p = Process("test",mc)
+            self.assert_(p.isUsingModifier(m1))
+            self.assert_(p.isUsingModifier(mc))
             testMod = DummyMod()
             p.b = EDAnalyzer("Dummy2", fred = int32(1))
             m1.toModify(p.b, fred = int32(3))

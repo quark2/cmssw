@@ -76,6 +76,7 @@ TrackMon = cms.EDAnalyzer("TrackingMonitor",
     doProfilesVsLS                      = cms.bool(False),
     doRecHitsPerTrackProfile            = cms.bool(True),              
     doRecHitVsPhiVsEtaPerTrack          = cms.bool(False),
+    doRecHitVsPtVsEtaPerTrack           = cms.bool(False),
 #    doGoodTrackRecHitVsPhiVsEtaPerTrack = cms.bool(False),                          
     doLayersVsPhiVsEtaPerTrack          = cms.bool(False),
 #    doGoodTrackLayersVsPhiVsEtaPerTrack = cms.bool(False),
@@ -85,6 +86,8 @@ TrackMon = cms.EDAnalyzer("TrackingMonitor",
     doPUmonitoring                      = cms.bool(False),
     doPlotsVsBXlumi                     = cms.bool(False),
     doPlotsVsGoodPVtx                   = cms.bool(True),
+    doPlotsVsLUMI                       = cms.bool(False),
+    doPlotsVsBX                         = cms.bool(False),
     doHIPlots                           = cms.bool(False),                              
     qualityString = cms.string("highPurity"),                      
     #which seed plots to do
@@ -378,9 +381,13 @@ TrackMon = cms.EDAnalyzer("TrackingMonitor",
 
     # PU monitoring
     # Nunmber of Good Primary Vertices
-    GoodPVtxBin = cms.int32(60),
+    GoodPVtxBin = cms.int32(200),
     GoodPVtxMin = cms.double( 0.),
-    GoodPVtxMax = cms.double(60.),
+    GoodPVtxMax = cms.double(200.),
+
+    LUMIBin  = cms.int32 ( 4000 ),
+    LUMIMin  = cms.double(    0.),
+    LUMIMax  = cms.double(20000.),
 
 #    # BXlumi                          
 #    BXlumiBin = cms.int32(400),

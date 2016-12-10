@@ -232,13 +232,9 @@ JetCorrFactorsProducer::produce(edm::Event& event, const edm::EventSetup& setup)
 					    << "the sequence.";
     }
     for(unsigned int idx=0; idx<corrLevel->second.size(); ++idx){
-      bool flavorDependent=false;
       std::vector<float> factors;
-      if(flavorDependent ||
-	 corrLevel->second[idx].find("L5Flavor")!=std::string::npos ||
+      if(corrLevel->second[idx].find("L5Flavor")!=std::string::npos ||
 	 corrLevel->second[idx].find("L7Parton")!=std::string::npos){
-	flavorDependent=true;
-	// after the first encounter all subsequent correction levels are flavor dependent
 	for(FlavorCorrLevelMap::const_iterator flavor=corrLevel; flavor!=levels_.end(); ++flavor){
 	  if(!primaryVertices_.label().empty()){
 	    // if primaryVerticesToken_ has a value the number of primary vertices needs to be
@@ -284,13 +280,13 @@ JetCorrFactorsProducer::produce(edm::Event& event, const edm::EventSetup& setup)
     jcfs.push_back(corrFactors);
   }
   // build the value map
-  std::auto_ptr<JetCorrFactorsMap> jetCorrsMap(new JetCorrFactorsMap());
+  auto jetCorrsMap = std::make_unique<JetCorrFactorsMap>();
   JetCorrFactorsMap::Filler filler(*jetCorrsMap);
   // jets and jetCorrs have their indices aligned by construction
   filler.insert(jets, jcfs.begin(), jcfs.end());
   filler.fill(); // do the actual filling
   // put our produced stuff in the event
-  event.put(jetCorrsMap);
+  event.put(std::move(jetCorrsMap));
 }
 
 void

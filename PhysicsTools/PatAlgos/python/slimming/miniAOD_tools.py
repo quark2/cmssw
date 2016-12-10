@@ -37,6 +37,15 @@ def miniAOD_customizeCommon(process):
             eidRobustHighEnergy = cms.InputTag("reducedEgamma","eidRobustHighEnergy"),
         )
     process.patElectrons.addPFClusterIso = cms.bool(True)
+    #add puppi isolation in miniAOD
+    process.patElectrons.addPuppiIsolation = cms.bool(True)
+    process.patElectrons.puppiIsolationChargedHadrons = cms.InputTag("egmElectronPUPPIIsolation","h+-DR030-BarVeto000-EndVeto001")
+    process.patElectrons.puppiIsolationNeutralHadrons = cms.InputTag("egmElectronPUPPIIsolation","h0-DR030-BarVeto000-EndVeto000")
+    process.patElectrons.puppiIsolationPhotons        = cms.InputTag("egmElectronPUPPIIsolation","gamma-DR030-BarVeto000-EndVeto008")
+    process.patElectrons.puppiNoLeptonsIsolationChargedHadrons = cms.InputTag("egmElectronPUPPINoLeptonsIsolation","h+-DR030-BarVeto000-EndVeto001")
+    process.patElectrons.puppiNoLeptonsIsolationNeutralHadrons = cms.InputTag("egmElectronPUPPINoLeptonsIsolation","h0-DR030-BarVeto000-EndVeto000")
+    process.patElectrons.puppiNoLeptonsIsolationPhotons        = cms.InputTag("egmElectronPUPPINoLeptonsIsolation","gamma-DR030-BarVeto000-EndVeto008")
+
     process.patElectrons.ecalPFClusterIsoMap = cms.InputTag("reducedEgamma", "eleEcalPFClusIso")
     process.patElectrons.hcalPFClusterIsoMap = cms.InputTag("reducedEgamma", "eleHcalPFClusIso")
 
@@ -52,6 +61,13 @@ def miniAOD_customizeCommon(process):
     process.patPhotons.embedPreshowerClusters         = False  ## process.patPhotons.embed in AOD externally stored the photon's preshower clusters
     process.patPhotons.embedRecHits         = False  ## process.patPhotons.embed in AOD externally stored the RecHits - can be called from the PATPhotonProducer
     process.patPhotons.addPFClusterIso = cms.bool(True)
+
+    #add puppi isolation in miniAOD
+    process.patPhotons.addPuppiIsolation = cms.bool(True)
+    process.patPhotons.puppiIsolationChargedHadrons = cms.InputTag("egmPhotonPUPPIIsolation","h+-DR030-")
+    process.patPhotons.puppiIsolationNeutralHadrons = cms.InputTag("egmPhotonPUPPIIsolation","h0-DR030-")
+    process.patPhotons.puppiIsolationPhotons        = cms.InputTag("egmPhotonPUPPIIsolation","gamma-DR030-")
+
     process.patPhotons.ecalPFClusterIsoMap = cms.InputTag("reducedEgamma", "phoEcalPFClusIso")
     process.patPhotons.hcalPFClusterIsoMap = cms.InputTag("reducedEgamma", "phoHcalPFClusIso")
     process.patPhotons.photonSource = cms.InputTag("reducedEgamma","reducedGedPhotons")
@@ -148,6 +164,30 @@ def miniAOD_customizeCommon(process):
     process.patJets.userData.userFunctionLabels = cms.vstring('vtxMass','vtxNtracks','vtx3DVal','vtx3DSig','vtxPx','vtxPy','vtxPz','vtxPosX','vtxPosY','vtxPosZ')
     process.patJets.tagInfoSources = cms.VInputTag(cms.InputTag("pfSecondaryVertexTagInfos"))
     process.patJets.addTagInfos = cms.bool(True)
+
+    ## Legacy tight b-tag track selection
+    ## (this will run below-specified taggers with the tight b-tag track selection enabled
+    ## and will add an extra set of b-tag discriminators to 'selectedPatJets'
+    ## with the 'tight' prefix added to the usual discriminator names)
+    from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
+    updateJetCollection(
+        process,
+        jetSource = cms.InputTag('selectedPatJets'),
+        ## updateJetCollection defaults to MiniAOD inputs. Here, this needs to be changed to RECO/AOD inputs
+        pvSource = cms.InputTag('offlinePrimaryVertices'),
+        pfCandidates = cms.InputTag('particleFlow'),
+        svSource = cms.InputTag('inclusiveCandidateSecondaryVertices'),
+        muSource = cms.InputTag('muons'),
+        elSource = cms.InputTag('gedGsfElectrons'),
+        ##
+        jetCorrections = ('AK4PFchs', ['L1FastJet', 'L2Relative', 'L3Absolute'], ''),
+        btagDiscriminators = ["pfCombinedSecondaryVertexV2BJetTags", "pfCombinedInclusiveSecondaryVertexV2BJetTags",
+                              "pfCombinedCvsLJetTags", "pfCombinedCvsBJetTags"],
+        runIVF = True,
+        tightBTagNTkHits = True,
+        btagPrefix = 'tight',
+        postfix = 'BTAG' # added to avoid problems with unrunnable schedule
+    )
     #
     ## PU JetID
     process.load("RecoJets.JetProducers.PileupJetID_cfi")
@@ -164,7 +204,9 @@ def miniAOD_customizeCommon(process):
 	 lazyParser = cms.bool(True) )
     process.patJets.userData.userFloats.src += [ cms.InputTag("caloJetMap:pt"), cms.InputTag("caloJetMap:emEnergyFraction") ]
 
-    #EGM object modifications
+    #EGM object modifications 
+    from PhysicsTools.PatAlgos.slimming.egmIsolationsPUPPI_cfi import makeInputForPUPPIIsolationEgm
+    makeInputForPUPPIIsolationEgm(process)
     from RecoEgamma.EgammaTools.egammaObjectModificationsInMiniAOD_cff import egamma_modifications
     process.slimmedElectrons.modifierConfig.modifications = egamma_modifications
     process.slimmedPhotons.modifierConfig.modifications   = egamma_modifications
@@ -249,7 +291,7 @@ def miniAOD_customizeCommon(process):
     from PhysicsTools.PatAlgos.slimming.puppiForMET_cff import makePuppies
     makePuppies( process );
 
-    runMetCorAndUncForMiniAODProduction(process, metType="PF",
+    runMetCorAndUncForMiniAODProduction(process, metType="Puppi",
                                         pfCandColl=cms.InputTag("puppiForMET"),
                                         jetCollUnskimmed="slimmedJetsPuppi",
                                         recoMetFromPFCs=True,

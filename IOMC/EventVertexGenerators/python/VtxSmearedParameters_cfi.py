@@ -23,6 +23,17 @@ GaussVtxSmearingParameters = cms.PSet(
     SigmaZ = cms.double(5.3),
     TimeOffset = cms.double(0.0)
 )
+# Gaussian smearing
+GaussVtxSigmaZ4cmSmearingParameters = cms.PSet(
+    MeanX = cms.double(0.0),
+    MeanY = cms.double(0.0),
+    MeanZ = cms.double(0.0),
+    SigmaY = cms.double(0.0015),
+    SigmaX = cms.double(0.0015),
+    SigmaZ = cms.double(4.0),
+    TimeOffset = cms.double(0.0)
+)
+
 # Flat Smearing
 FlatVtxSmearingParameters = cms.PSet(
     MaxZ = cms.double(5.3),
@@ -462,6 +473,56 @@ Realistic50ns13TeVCollisionVtxSmearingParameters = cms.PSet(
     Z0 = cms.double(-1.0985)
 )
 
+# From 2015B 3.8T data, beta*=90m (700 bunches fills)
+# Centroid absolute positions extracted from 700 bunches fills 4499-4511:
+# X = 0.068357 cm
+# Y = 0.109159 cm
+# Z = 0.131811 cm
+#
+# BPIX absolute position extracted from Prompt Reco alignment of run 259352
+# X = -0.041651 cm
+# Y = -0.199279 cm
+# Z = -0.565093 cm
+#
+# Emittance has been calculated to match a BeamWidht of O(10um) with: https://lpc.web.cern.ch/lumi2.html
+#
+Realistic100ns13TeVCollisionBetaStar90mVtxSmearingParameters = cms.PSet(
+    Phi = cms.double(0.0),
+    BetaStar = cms.double(9121.0),
+    Emittance = cms.double(0.12e-7),
+    Alpha = cms.double(0.0),
+    SigmaZ = cms.double(4.9),
+    TimeOffset = cms.double(0.0),
+    X0 = cms.double(0.11000),
+    Y0 = cms.double(0.30844),
+    Z0 = cms.double(0.69690)
+)
+
+# From 2015B 3.8T data, beta*=90m (42/240 bunches fills)
+# Centroid absolute positions extracted from 42/240 bunches fills 4495-4496:
+# X = 0.064925 cm
+# Y = 0.112761 cm
+# Z = 0.170413 cm
+#
+# BPIX absolute position extracted from Prompt Reco alignment of run 259202
+# X = -0.041651 cm
+# Y = -0.199279 cm
+# Z = -0.565093 cm
+#
+# Emittance has been calculated to match a BeamWidht of O(10um) with: https://lpc.web.cern.ch/lumi2.html
+#
+Realistic100ns13TeVCollisionBetaStar90mLowBunchesVtxSmearingParameters = cms.PSet(
+    Phi = cms.double(0.0),
+    BetaStar = cms.double(9121.0),
+    Emittance = cms.double(0.12e-7),
+    Alpha = cms.double(0.0),
+    SigmaZ = cms.double(5.24),
+    TimeOffset = cms.double(0.0),
+    X0 = cms.double(0.10658),
+    Y0 = cms.double(0.31204),
+    Z0 = cms.double(0.735506)
+)
+
 # From 2016B 3.8T data
 # BS parameters extracted from fills 4895 - 4935:
 # X0         = 0.064870 +/- 4.9575E-07 [cm]
@@ -561,4 +622,44 @@ Nominal5TeVpp2015VtxSmearingParameters = cms.PSet(
     X0 = cms.double(0.1044),
     Y0 = cms.double(0.1676),
     Z0 = cms.double(0.6707)
+)
+
+# Parameters for HL-LHC operation at 13TeV
+HLLHCVtxSmearingParameters = cms.PSet(
+    MeanXIncm = cms.double(0.),
+    MeanYIncm = cms.double(0.),
+    MeanZIncm = cms.double(0.),
+    TimeOffsetInns = cms.double(0.0),
+    EprotonInGeV = cms.double(6500.0),
+    HalfCrossingAngleInurad = cms.double(295.0),
+    CrabAngleCrossingPlaneInurad = cms.double(295.0),
+    CrabFrequencyCrossingPlaneInMHz = cms.double(400.0),
+    NormalizedEmittanceCrossingPlaneInum = cms.double(2.5),
+    BetaStarCrossingPlaneInm = cms.double(0.15),
+    CrabAngleParallelPlaneInurad = cms.double(0.0),
+    CrabFrequencyParallelPlaneInMHz = cms.double(400.0),
+    NormalizedEmittanceParallelPlaneInum = cms.double(2.5),
+    BetaStarParallelPlaneInm = cms.double(0.15),
+    ZsizeInm = cms.double(0.075),
+    BeamProfile=cms.string("Gauss")
+)
+
+# Parameters for HL-LHC Crab-kissing operation 13 TeV
+HLLHCCrabKissingVtxSmearingParameters = cms.PSet(    
+    MeanXIncm = cms.double(0.),
+    MeanYIncm = cms.double(0.),
+    MeanZIncm = cms.double(0.),
+    TimeOffsetInns = cms.double(0.0),
+    EprotonInGeV = cms.double(6500.0),
+    HalfCrossingAngleInurad = cms.double(200.0),
+    CrabAngleCrossingPlaneInurad = cms.double(200.0),
+    CrabFrequencyCrossingPlaneInMHz = cms.double(400.0),
+    NormalizedEmittanceCrossingPlaneInum = cms.double(2.5),
+    BetaStarCrossingPlaneInm = cms.double(0.30),
+    CrabAngleParallelPlaneInurad = cms.double(100.0),
+    CrabFrequencyParallelPlaneInMHz = cms.double(400.0),
+    NormalizedEmittanceParallelPlaneInum = cms.double(2.5),
+    BetaStarParallelPlaneInm = cms.double(0.075),
+    ZsizeInm = cms.double(0.15),
+    BeamProfile=cms.string("Flat")
 )

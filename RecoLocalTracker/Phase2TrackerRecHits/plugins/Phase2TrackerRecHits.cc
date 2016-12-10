@@ -22,7 +22,7 @@
 #include "DataFormats/DetId/interface/DetId.h"
 
 #include "RecoLocalTracker/Records/interface/TkStripCPERecord.h"
-#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPETrivial.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPE.h"
 
 #include <vector>
 #include <string>
@@ -64,24 +64,24 @@ void Phase2TrackerRecHits::produce(edm::StreamID sid, edm::Event& event, const e
   const TrackerGeometry* tkGeom(&(*geomHandle));
 
   // Global container for the RecHits of each module
-  std::auto_ptr< Phase2TrackerRecHit1DCollectionNew > outputRecHits(new Phase2TrackerRecHit1DCollectionNew());
+  auto outputRecHits = std::make_unique<Phase2TrackerRecHit1DCollectionNew>();
 
   // Loop over clusters
-  for (auto DSViter : *clusters) { 
+  for (const auto &clusterDetSet : *clusters) { 
   
-    DetId detId(DSViter.detId());
+    DetId detId(clusterDetSet.detId());
 
     // Geometry
     const GeomDetUnit * geomDetUnit(tkGeom->idToDetUnit(detId));
 
     // Container for the clusters that will be produced for this modules
-    Phase2TrackerRecHit1DCollectionNew::FastFiller rechits(*outputRecHits, DSViter.detId());
+    Phase2TrackerRecHit1DCollectionNew::FastFiller rechits(*outputRecHits, clusterDetSet.detId());
 
-    for (auto clustIt : DSViter) { 
-      ClusterParameterEstimator< Phase2TrackerCluster1D >::LocalValues lv = cpe->localParameters(clustIt, *geomDetUnit);
+    for (const auto &clusterRef : clusterDetSet) { 
+      ClusterParameterEstimator< Phase2TrackerCluster1D >::LocalValues lv = cpe->localParameters(clusterRef, *geomDetUnit);
 
       // Create a persistent edm::Ref to the cluster
-      edm::Ref< Phase2TrackerCluster1DCollectionNew, Phase2TrackerCluster1D > cluster = edmNew::makeRefTo(clusters, &clustIt);
+      edm::Ref< Phase2TrackerCluster1DCollectionNew, Phase2TrackerCluster1D > cluster = edmNew::makeRefTo(clusters, &clusterRef);
 
       // Make a RecHit and add it to the DetSet
       Phase2TrackerRecHit1D hit(lv.first, lv.second, *geomDetUnit, cluster);
@@ -91,7 +91,7 @@ void Phase2TrackerRecHits::produce(edm::StreamID sid, edm::Event& event, const e
   }
 
   outputRecHits->shrink_to_fit();
-  event.put(outputRecHits);
+  event.put(std::move(outputRecHits));
 
 }
 

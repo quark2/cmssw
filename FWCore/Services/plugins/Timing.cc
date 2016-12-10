@@ -41,6 +41,7 @@ namespace edm {
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
       
       virtual void addToCPUTime(StreamID id, double iTime) override;
+      virtual double getTotalCPU() const override;
       
     private:
       
@@ -69,6 +70,8 @@ namespace edm {
       std::vector<double> min_events_time_; // seconds
       std::vector<double> sum_events_time_;
       std::atomic<unsigned long> total_event_count_;
+      unsigned int nStreams_;
+      unsigned int nThreads_;
     };
   }
 }
@@ -81,7 +84,14 @@ namespace edm {
         t << d;
         return t.str();
     }
+    
+    static std::string ui2str(unsigned int i) {
+      std::stringstream t;
+      t << i;
+      return t.str();
+    }
 
+    
     static double getTime() {
       struct timeval t;
       if(gettimeofday(&t, 0) < 0)
@@ -98,6 +108,12 @@ namespace edm {
         totalCPUTime = (double)usage.ru_utime.tv_sec + (double(usage.ru_utime.tv_usec) * 1E-6);
         // System functions
         totalCPUTime += (double)usage.ru_stime.tv_sec + (double(usage.ru_stime.tv_usec) * 1E-6);
+
+        // Additionally, add in CPU usage from our child processes.
+        getrusage(RUSAGE_CHILDREN, &usage);
+        totalCPUTime += (double)usage.ru_utime.tv_sec + (double(usage.ru_utime.tv_usec) * 1E-6);
+        totalCPUTime += (double)usage.ru_stime.tv_sec + (double(usage.ru_stime.tv_usec) * 1E-6);
+
         return totalCPUTime;
     }
     
@@ -133,11 +149,13 @@ namespace edm {
       }
           
       iRegistry.preallocateSignal_.connect([this](service::SystemBounds const& iBounds){
-        auto nStreams = iBounds.maxNumberOfStreams();
-        curr_events_time_.resize(nStreams,0.);
-        sum_events_time_.resize(nStreams,0.);
-        max_events_time_.resize(nStreams,0.);
-        min_events_time_.resize(nStreams,1.E6);
+        nStreams_ = iBounds.maxNumberOfStreams();
+        nThreads_ = iBounds.maxNumberOfThreads();
+        curr_events_time_.resize(nStreams_,0.);
+        sum_events_time_.resize(nStreams_,0.);
+        max_events_time_.resize(nStreams_,0.);
+        min_events_time_.resize(nStreams_,1.E6);
+        
       });
       
       iRegistry.postGlobalEndRunSignal_.connect([this](edm::GlobalContext const&) {
@@ -154,6 +172,9 @@ namespace edm {
       curr_job_cpu_ -= iTime;
     }
 
+    double Timing::getTotalCPU() const {
+      return getCPU();
+    }
 
     void Timing::fillDescriptions(ConfigurationDescriptions& descriptions) {
       ParameterSetDescription desc;
@@ -238,7 +259,8 @@ namespace edm {
         reportData.insert(std::make_pair("TotalJobTime", d2str(total_job_time)));
         reportData.insert(std::make_pair("TotalJobCPU", d2str(total_job_cpu)));
         reportData.insert(std::make_pair("TotalLoopCPU", d2str(total_loop_cpu)));
-
+        reportData.insert(std::make_pair("NumberOfStreams",ui2str(nStreams_)));
+        reportData.insert(std::make_pair("NumberOfThreads",ui2str(nThreads_)));
         reportSvc->reportPerformanceSummary("Timing", reportData);
       }
     }

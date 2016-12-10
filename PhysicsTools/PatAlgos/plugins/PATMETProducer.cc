@@ -126,8 +126,8 @@ void PATMETProducer::produce(edm::Event & iEvent, const edm::EventSetup & iSetup
   //  std::sort(patMETs->begin(), patMETs->end(), eTComparator_);
 
   // put genEvt object in Event
-  std::auto_ptr<std::vector<MET> > myMETs(patMETs);
-  iEvent.put(myMETs);
+  std::unique_ptr<std::vector<MET> > myMETs(patMETs);
+  iEvent.put(std::move(myMETs));
 
 }
 
@@ -188,7 +188,7 @@ PATMETProducer::getMETCovMatrix(const edm::Event& event, const edm::EventSetup& 
   JME::JetResolutionScaleFactor resSFObj = JME::JetResolutionScaleFactor::get(iSetup, jetSFType_);
 
   //Compute the covariance matrix and fill it
-  reco::METCovMatrix cov = metSigAlgo_->getCovariance( *inputJets, leptons, *inputCands,
+  reco::METCovMatrix cov = metSigAlgo_->getCovariance( *inputJets, leptons, inputCands,
 						       *rho, resPtObj, resPhiObj, resSFObj, event.isRealData());
 
   return cov;

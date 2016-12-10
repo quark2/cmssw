@@ -21,6 +21,7 @@
 #include "CommonTools/UtilAlgos/interface/StringCutObjectSelector.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
 #include "FWCore/Utilities/interface/isFinite.h"
+#include "DataFormats/Common/interface/ValueMap.h"
 
 namespace pat {
 
@@ -102,11 +103,12 @@ pat::PATPhotonSlimmer::produce(edm::Event & iEvent, const edm::EventSetup & iSet
     }
     noZS::EcalClusterLazyTools lazyToolsNoZS(iEvent, iSetup, reducedBarrelRecHitCollectionToken_, reducedEndcapRecHitCollectionToken_);
 
-    auto_ptr<vector<pat::Photon> >  out(new vector<pat::Photon>());
+    auto out = std::make_unique<std::vector<pat::Photon>>();
     out->reserve(src->size());
 
     if( modifyPhoton_ ) { photonModifier_->setEvent(iEvent); }
     if( modifyPhoton_ ) photonModifier_->setEventContent(iSetup);
+
 
     std::vector<unsigned int> keys;
     for (View<pat::Photon>::const_iterator it = src->begin(), ed = src->end(); it != ed; ++it) {
@@ -152,9 +154,10 @@ pat::PATPhotonSlimmer::produce(edm::Event & iEvent, const edm::EventSetup & iSet
             photon.addUserFloat("r9_NoZS", r9);
             photon.addUserFloat("e1x5_over_e5x5_NoZS", e15o55);
         }
+
      }
 
-    iEvent.put(out);
+    iEvent.put(std::move(out));
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

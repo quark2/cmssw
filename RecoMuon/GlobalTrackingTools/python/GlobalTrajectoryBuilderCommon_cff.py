@@ -69,10 +69,18 @@ GlobalTrajectoryBuilderCommon = cms.PSet(
         ),
 )
 
+# Switch back to GenericCPE until bias in template CPE gets fixed
+from Configuration.Eras.Modifier_phase1Pixel_cff import phase1Pixel
+phase1Pixel.toModify(GlobalTrajectoryBuilderCommon, # FIXME
+    TrackerRecHitBuilder = 'WithTrackAngle',
+    TrackTransformer = dict(TrackerRecHitBuilder = 'WithTrackAngle'),
+    GlbRefitterParameters = dict(TrackerRecHitBuilder = 'WithTrackAngle'),
+)
+
 # This customization will be removed once we get the templates for
 # phase2 pixel
-from Configuration.StandardSequences.Eras import eras
-eras.phase2_tracker.toModify(GlobalTrajectoryBuilderCommon, # FIXME
+from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
+phase2_tracker.toModify(GlobalTrajectoryBuilderCommon, # FIXME
     TrackerRecHitBuilder = 'WithTrackAngle',
     TrackTransformer = dict(TrackerRecHitBuilder = 'WithTrackAngle'),
     GlbRefitterParameters = dict(TrackerRecHitBuilder = 'WithTrackAngle'),

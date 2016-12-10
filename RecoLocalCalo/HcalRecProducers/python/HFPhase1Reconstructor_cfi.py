@@ -16,7 +16,7 @@ hfreco = cms.EDProducer("HFPhase1Reconstructor",
 
     # Configure the reconstruction algorithm
     algorithm = cms.PSet(
-        Class = cms.string("HFSimpleTimeCheck"),
+        Class = cms.string("HFFlexibleTimeCheck"),
 
         # Timing cuts: pass everything for now
         tlimits = cms.vdouble(-1000.0, 1000.0,
@@ -57,7 +57,7 @@ hfreco = cms.EDProducer("HFPhase1Reconstructor",
     ),
 
     # Reconstruction algorithm data to fetch from DB, if any
-    algoConfigClass = cms.string(""),
+    algoConfigClass = cms.string("HFPhase1PMTParams"),
 
     # Turn on/off the noise cleanup algorithms
     setNoiseFlags = cms.bool(False),

@@ -1,7 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
 # Use this object to make changes when different configurations are active
-from Configuration.StandardSequences.Eras import eras
 
 ecalDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
     ComponentName = cms.string('EcalDetIdAssociator'),
@@ -14,7 +13,8 @@ hcalDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
     ComponentName = cms.string('HcalDetIdAssociator'),
     etaBinSize = cms.double(0.087),
     nEta = cms.int32(70),
-    nPhi = cms.int32(72)
+    nPhi = cms.int32(72),
+    hcalRegion = cms.int32(2)
 )
 
 hoDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
@@ -42,11 +42,15 @@ muonDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
 )
 
 # If running in Run 2, include bad chambers
-eras.run2_common.toModify( muonDetIdAssociator, includeBadChambers = True )
+from Configuration.Eras.Modifier_run2_common_cff import run2_common
+run2_common.toModify( muonDetIdAssociator, includeBadChambers = True )
 
 # include GEM & ME0 for phase2
-eras.run3_GEM.toModify( muonDetIdAssociator, includeGEM = True )
-eras.phase2_muon.toModify( muonDetIdAssociator, includeME0 = True )
+from Configuration.Eras.Modifier_run3_GEM_cff import run3_GEM
+run3_GEM.toModify( muonDetIdAssociator, includeGEM = True )
+from Configuration.Eras.Modifier_phase2_muon_cff import phase2_muon
+phase2_muon.toModify( muonDetIdAssociator, includeME0 = True )
+phase2_muon.toModify( hcalDetIdAssociator, hcalRegion = 1 )
 
 preshowerDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
     ComponentName = cms.string('PreshowerDetIdAssociator'),
@@ -54,5 +58,3 @@ preshowerDetIdAssociator = cms.ESProducer("DetIdAssociatorESProducer",
     nEta = cms.int32(60),
     nPhi = cms.int32(30)
 )
-
-

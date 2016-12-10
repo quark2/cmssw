@@ -1,12 +1,12 @@
 <var name="TEST_COMMENT" value="">
-<var name="TEST_NEW" value="8_0_0_pre4_std">
-<var name="TEST_REF" value="8_0_0_pre2_std">
+<var name="TEST_NEW" value="8_1_0_pre9_std">
+<var name="TEST_REF" value="8_1_0_pre5_std">
 
-<var name="TAG_STARTUP" value="76X_mcRun2_asymptotic_v13">
+<var name="TAG_STARTUP" value="81X_mcRun2_asymptotic_v2">
 <var name="DATA_VERSION" value="v1">
 
 TAG for the REFERENCE DATA, USED ONLY FOR INFORMATION ON WEB PAGE
-<var name="DD_COND_REF" value="76X_mcRun2_asymptotic_v12-v1">
+<var name="DD_COND_REF" value="80X_mcRun2_asymptotic_v13-v1">
 
 <var name="DD_RELEASE" value="${CMSSW_VERSION}">
 <!--var name="DD_RELEASE" value="CMSSW_8_0_0_pre2"-->
@@ -14,7 +14,7 @@ TAG for the REFERENCE DATA, USED ONLY FOR INFORMATION ON WEB PAGE
 <var name="STORE_DIR" value="/afs/cern.ch/cms/Physics/egamma/www/validation/Electrons/Store/${TEST_NEW}">
 <var name="STORE_REF" value="/afs/cern.ch/cms/Physics/egamma/www/validation/Electrons/Store/${TEST_REF}">
  
-<var name="WEB_DIR" value="/afs/cern.ch/cms/Physics/egamma/www/validation/Electrons/Releases">
+<var name="WEB_DIR" value="/afs/cern.ch/cms/Physics/egamma/www/validation/Electrons/Dev">
 
 <!--var name="WEB_DIR" value="/afs/cern.ch/user/c/chamont/www/validation"-->
 <!--var name="WEB_URL" value="https://chamont.web.cern.ch/chamont/validation"-->
@@ -991,7 +991,7 @@ This set of targets is made to test cmsDriver.py steps
 
 <environment name="Validation">
 
-  <target name="step1" cmd="cmsDriver.py SingleElectronPt35_cfi.py -s GEN,SIM,DIGI,L1,DIGI2RAW,HLT:GRun -n 10 --eventcontent FEVTDEBUGHLT --conditions auto:mc --mc --fileout SingleElectronPt35-10-IDEAL-RAW.root">
+  <target name="step1" cmd="cmsDriver.py SingleElectronPt35_pythia8_cfi.py -s GEN,SIM,DIGI,L1,DIGI2RAW,HLT:GRun -n 10 --eventcontent FEVTDEBUGHLT --conditions auto:mc --mc --fileout SingleElectronPt35-10-IDEAL-RAW.root">
   <target name="step2" cmd="cmsDriver.py step2 -s RAW2DIGI,RECO,VALIDATION,DQM -n 10 --filein file:SingleElectronPt35-10-IDEAL-RAW.root --eventcontent FEVTDEBUGHLT --conditions auto:mc --mc --fileout SingleElectronPt35-10-IDEAL-RECO.root">
   <target name="step3" cmd="cmsDriver.py step3 -s HARVESTING:validationHarvesting+dqmHarvesting --harvesting AtRunEnd --conditions auto:mc --filein file:SingleElectronPt35-10-IDEAL-RECO.root --mc">
 

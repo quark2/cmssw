@@ -109,6 +109,9 @@ namespace edmtest
     context.get<HcalRecNumberingRecord>().get( topology );
     const HcalTopology* topo=&(*topology);
 
+    edm::ESHandle<HcalDbService> pSetup;
+    context.get<HcalDbRecord>().get( pSetup );
+
     using namespace edm::eventsetup;
     std::cout <<"HcalDumpConditions::analyze-> I AM IN RUN NUMBER "<<e.id().run() <<std::endl;
 
@@ -163,8 +166,23 @@ namespace edmtest
       dumpIt(new HcalMCParams(&(*topology)), new HcalMCParamsRcd, e,context,"MCParams", topo);
     if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("FlagHFDigiTimeParams")) != mDumpRequest.end())
       dumpIt(new HcalFlagHFDigiTimeParams(&(*topology)), new HcalFlagHFDigiTimeParamsRcd, e,context,"FlagHFDigiTimeParams", topo);
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("SiPMParameters")) != mDumpRequest.end())
+      dumpIt(new HcalSiPMParameters(&(*topology)), new HcalSiPMParametersRcd, e,context,"SiPMParameters", topo);
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("SiPMCharacteristics")) != mDumpRequest.end())
+      dumpIt(new HcalSiPMCharacteristics, new HcalSiPMCharacteristicsRcd, e,context,"SiPMCharacteristics");
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("TPChannelParameters")) != mDumpRequest.end())
+      dumpIt(new HcalTPChannelParameters(&(*topology)), new HcalTPChannelParametersRcd, e,context,"TPChannelParameters", topo);
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("TPParameters")) != mDumpRequest.end())
+      dumpIt(new HcalTPParameters, new HcalTPParametersRcd, e,context,"TPParameters");
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("CalibrationsSet")) != mDumpRequest.end()){
+      const HcalCalibrationsSet* tmp = pSetup->getHcalCalibrationsSet();
+      writeToFile(tmp,e,"CalibrationsSet");
+    }
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("CalibrationWidthsSet")) != mDumpRequest.end()){
+      const HcalCalibrationWidthsSet* tmp = pSetup->getHcalCalibrationWidthsSet();
+      writeToFile(tmp,e,"CalibrationWidthsSet");
+    }
 
-    
   }
   DEFINE_FWK_MODULE(HcalDumpConditions);
 }

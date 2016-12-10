@@ -6,6 +6,18 @@ namespace DataFormats_HGCDigi {
     HGCSample anHGCsample;
     std::vector<HGCSample> vHGCsample;
 
+    //HEX specific
+    HGCDataFrame<HGCalDetId,HGCSample> anHGCalDataFrame;
+    std::vector<HGCDataFrame<HGCalDetId,HGCSample> > vHGCalDataFrames;
+    edm::SortedCollection< HGCDataFrame<HGCalDetId,HGCSample> > scHGCalDataFrames;
+    edm::Wrapper< edm::SortedCollection< HGCDataFrame<HGCalDetId,HGCSample> > > prodHGCalDataFrames;
+
+    //BH (hcal) specific
+    HGCDataFrame<HcalDetId,HGCSample> anHGCalBHDataFrame;
+    std::vector<HGCDataFrame<HcalDetId,HGCSample> > vHGCalBHDataFrames;
+    edm::SortedCollection< HGCDataFrame<HcalDetId,HGCSample> > scHGCalBHDataFrames;
+    edm::Wrapper< edm::SortedCollection< HGCDataFrame<HcalDetId,HGCSample> > > prodHGCalBHDataFrames;
+    
     //EE specific
     HGCDataFrame<HGCEEDetId,HGCSample> anHGCEEDataFrame;
     std::vector<HGCDataFrame<HGCEEDetId,HGCSample> > vHGCEEDataFrames;

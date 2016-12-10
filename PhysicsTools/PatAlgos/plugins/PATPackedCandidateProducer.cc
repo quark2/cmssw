@@ -178,14 +178,13 @@ void pat::PATPackedCandidateProducer::produce(edm::StreamID, edm::Event& iEvent,
 
     edm::Handle<reco::TrackCollection> TKOrigs;
     iEvent.getByToken( TKOrigs_, TKOrigs );
-    std::auto_ptr< std::vector<pat::PackedCandidate> > outPtrP( new std::vector<pat::PackedCandidate> );
+    auto outPtrP = std::make_unique<std::vector<pat::PackedCandidate>>();
     std::vector<int> mapping(cands->size());
     std::vector<int> mappingReverse(cands->size());
     std::vector<int> mappingTk(TKOrigs->size(), -1);
 
     for(unsigned int ic=0, nc = cands->size(); ic < nc; ++ic) {
         const reco::PFCandidate &cand=(*cands)[ic];
-        float phiAtVtx = cand.phi();
         const reco::Track *ctrack = 0;
         if ((abs(cand.pdgId()) == 11 || cand.pdgId() == 22) && cand.gsfTrackRef().isNonnull()) {
             ctrack = &*cand.gsfTrackRef();
@@ -210,7 +209,7 @@ void pat::PATPackedCandidateProducer::produce(edm::StreamID, edm::Event& iEvent,
           //   vtx = tsos.globalPosition();
           //          phiAtVtx = tsos.globalDirection().phi();
           vtx = ctrack->referencePoint();
-          phiAtVtx = ctrack->phi();
+          float phiAtVtx = ctrack->phi();
           int nlost = ctrack->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS);
           if (nlost == 0) { 
             if (ctrack->hitPattern().hasValidHitInPixelLayer(PixelSubdetector::SubDetector::PixelBarrel, 1)) {
@@ -296,7 +295,7 @@ void pat::PATPackedCandidateProducer::produce(edm::StreamID, edm::Event& iEvent,
 
     }
 
-    std::auto_ptr< std::vector<pat::PackedCandidate> > outPtrPSorted( new std::vector<pat::PackedCandidate> );
+    auto outPtrPSorted = std::make_unique<std::vector<pat::PackedCandidate>>();
     std::vector<size_t> order=sort_indexes(*outPtrP);
     std::vector<size_t> reverseOrder(order.size());
     for(size_t i=0,nc=cands->size();i<nc;i++) {
@@ -315,11 +314,11 @@ void pat::PATPackedCandidateProducer::produce(edm::StreamID, edm::Event& iEvent,
         mappingPuppi[i]=reverseOrder[mappingPuppi[i]];
     }
 
-    edm::OrphanHandle<pat::PackedCandidateCollection> oh = iEvent.put( outPtrPSorted );
+    edm::OrphanHandle<pat::PackedCandidateCollection> oh = iEvent.put(std::move(outPtrPSorted));
 
     // now build the two maps
-    std::auto_ptr<edm::Association<pat::PackedCandidateCollection> > pf2pc(new edm::Association<pat::PackedCandidateCollection>(oh   ));
-    std::auto_ptr<edm::Association<reco::PFCandidateCollection   > > pc2pf(new edm::Association<reco::PFCandidateCollection   >(cands));
+    auto pf2pc = std::make_unique<edm::Association<pat::PackedCandidateCollection>>(oh);
+    auto pc2pf = std::make_unique<edm::Association<reco::PFCandidateCollection>>(cands);
     edm::Association<pat::PackedCandidateCollection>::Filler pf2pcFiller(*pf2pc);
     edm::Association<reco::PFCandidateCollection   >::Filler pc2pfFiller(*pc2pf);
     pf2pcFiller.insert(cands, mappingReverse.begin(), mappingReverse.end());
@@ -330,8 +329,8 @@ void pat::PATPackedCandidateProducer::produce(edm::StreamID, edm::Event& iEvent,
 
     pf2pcFiller.fill();
     pc2pfFiller.fill();
-    iEvent.put(pf2pc);
-    iEvent.put(pc2pf);
+    iEvent.put(std::move(pf2pc));
+    iEvent.put(std::move(pc2pf));
 
 }
 

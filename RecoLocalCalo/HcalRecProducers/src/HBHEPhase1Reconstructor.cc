@@ -18,7 +18,6 @@
 
 
 // system include files
-#include <memory>
 #include <utility>
 #include <algorithm>
 
@@ -33,8 +32,10 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 
+#include "DataFormats/HcalDetId/interface/HcalGenericDetId.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h"
+#include "DataFormats/METReco/interface/HcalPhase1FlagLabels.h"
 
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
@@ -42,59 +43,73 @@
 
 #include "CalibFormats/CaloObjects/interface/CaloSamples.h"
 
+#include "CalibCalorimetry/HcalAlgos/interface/HcalSiPMnonlinearity.h"
+
 #include "RecoLocalCalo/HcalRecAlgos/interface/HcalSeverityLevelComputer.h"
 #include "RecoLocalCalo/HcalRecAlgos/interface/HcalSeverityLevelComputerRcd.h"
+#include "RecoLocalCalo/HcalRecAlgos/interface/HBHEStatusBitSetter.h"
+#include "RecoLocalCalo/HcalRecAlgos/interface/HBHEPulseShapeFlag.h"
 
-// Base class for Phase 1 HB/HE reco algorithms configuration objects
-#include "CondFormats/HcalObjects/interface/AbsHFPhase1AlgoData.h"
+#include "CondFormats/HcalObjects/interface/HBHENegativeEFilter.h"
+#include "CondFormats/DataRecord/interface/HBHENegativeEFilterRcd.h"
 
 // Parser for Phase 1 HB/HE reco algorithms
 #include "RecoLocalCalo/HcalRecAlgos/interface/parseHBHEPhase1AlgoDescription.h"
 
+// Fetcher for reco algorithm data
+#include "RecoLocalCalo/HcalRecAlgos/interface/fetchHcalAlgoData.h"
+
 // Some helper functions
 namespace {
-    // Class Data must inherit from AbsHFPhase1AlgoData
-    // and must have a copy constructor. This function
-    // returns an object allocated on the heap.
-    template <class Data, class Record>
-    Data* fetchHBHEPhase1AlgoDataHelper(const edm::EventSetup& es)
+    // Class for making SiPM/QIE11 look like HPD/QIE8. HPD/QIE8
+    // needs only pedestal and gain to convert charge into energy.
+    // Due to nonlinearities, response of SiPM/QIE11 is substantially
+    // more complicated. It is possible to calculate all necessary
+    // quantities from the charge and the info stored in the DB every
+    // time the raw charge is needed. However, it does not make sense
+    // to retrieve DB contents stored by channel for every time slice.
+    // Because of this, we look things up only once, in the constructor.
+    template<class DFrame>
+    class RawChargeFromSample
     {
-        edm::ESHandle<Data> p;
-        es.get<Record>().get(p);
-        return new Data(*p.product());
-    }
+    public:
+        inline RawChargeFromSample(const HcalDbService& cond,
+                                   const HcalDetId id) {}
 
-    // Factory function for fetching (from EventSetup) objects
-    // of the types inheriting from AbsHFPhase1AlgoData
-    std::unique_ptr<AbsHFPhase1AlgoData>
-    fetchHBHEPhase1AlgoData(const std::string& className, const edm::EventSetup& es)
-    {
-        AbsHFPhase1AlgoData* data = 0;
-        // Compare with possibe class names
-        // if (className == "MyHFPhase1AlgoData")
-        //     data = fetchHBHEPhase1AlgoDataHelper<MyHFPhase1AlgoData, MyHFPhase1AlgoDataRcd>(es);
-        // else if (className == "OtherHFPhase1AlgoData")
-        //     ...;
-        return std::unique_ptr<AbsHFPhase1AlgoData>(data);
-    }
+        inline double getRawCharge(const double decodedCharge,
+                                   const double pedestal) const
+            {return decodedCharge;}
+    };
 
-    // The following function should apply the SiPM nonlinearity
-    // correction. It may need extra arguments for that. It should
-    // return the best estimate of the charge before pedestal subtraction.
-    double getRawChargeFromSample(const QIE11DataFrame::Sample& s,
-                                  const double decodedCharge,
-                                  const HcalCalibrations& calib)
+    template<>
+    class RawChargeFromSample<QIE11DataFrame>
     {
-        // FIX THIS!!!
-        return decodedCharge;
-    }
+    public:
+        inline RawChargeFromSample(const HcalDbService& cond,
+                                   const HcalDetId id)
+            : siPMParameter_(*cond.getHcalSiPMParameter(id)),
+              fcByPE_(siPMParameter_.getFCByPE()),
+              corr_(cond.getHcalSiPMCharacteristics()->getNonLinearities(siPMParameter_.getType()))
+        {
+            if (fcByPE_ <= 0.0)
+                throw cms::Exception("HBHEPhase1BadDB")
+                    << "Invalid fC/PE conversion factor for SiPM " << id
+                    << std::endl;
+        }
 
-    double getRawChargeFromSample(const HcalQIESample& s,
-                                  const double decodedCharge,
-                                  const HcalCalibrations& calib)
-    {
-        return decodedCharge;
-    }
+        inline double getRawCharge(const double decodedCharge,
+                                   const double pedestal) const
+        {
+            const double sipmQ = decodedCharge - pedestal;
+            const double nPixelsFired = sipmQ/fcByPE_;
+            return sipmQ*corr_.getRecoCorrectionFactor(nPixelsFired) + pedestal;
+        }
+
+    private:
+        const HcalSiPMParameter& siPMParameter_;
+        double fcByPE_;
+        HcalSiPMnonlinearity corr_;
+    };
 
     float getTDCTimeFromSample(const QIE11DataFrame::Sample& s)
     {
@@ -147,6 +162,48 @@ namespace {
     {
         return std::pair<bool,bool>(df.linkError(), df.capidError());
     }
+
+    std::unique_ptr<HBHEStatusBitSetter> parse_HBHEStatusBitSetter(
+        const edm::ParameterSet& psdigi)
+    {
+        return std::make_unique<HBHEStatusBitSetter>(
+            psdigi.getParameter<double>("nominalPedestal"),
+            psdigi.getParameter<double>("hitEnergyMinimum"),
+            psdigi.getParameter<int>("hitMultiplicityThreshold"),
+            psdigi.getParameter<std::vector<edm::ParameterSet> >("pulseShapeParameterSets"));
+    }
+
+    std::unique_ptr<HBHEPulseShapeFlagSetter> parse_HBHEPulseShapeFlagSetter(
+        const edm::ParameterSet& psPulseShape, const bool setLegacyFlags)
+    {
+        return std::make_unique<HBHEPulseShapeFlagSetter>(
+            psPulseShape.getParameter<double>("MinimumChargeThreshold"),
+            psPulseShape.getParameter<double>("TS4TS5ChargeThreshold"),
+            psPulseShape.getParameter<double>("TS3TS4ChargeThreshold"),
+            psPulseShape.getParameter<double>("TS3TS4UpperChargeThreshold"),
+            psPulseShape.getParameter<double>("TS5TS6ChargeThreshold"),
+            psPulseShape.getParameter<double>("TS5TS6UpperChargeThreshold"),
+            psPulseShape.getParameter<double>("R45PlusOneRange"),
+            psPulseShape.getParameter<double>("R45MinusOneRange"),
+            psPulseShape.getParameter<unsigned int>("TrianglePeakTS"),
+            psPulseShape.getParameter<std::vector<double> >("LinearThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("LinearCut"),
+            psPulseShape.getParameter<std::vector<double> >("RMS8MaxThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("RMS8MaxCut"),
+            psPulseShape.getParameter<std::vector<double> >("LeftSlopeThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("LeftSlopeCut"),
+            psPulseShape.getParameter<std::vector<double> >("RightSlopeThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("RightSlopeCut"),
+            psPulseShape.getParameter<std::vector<double> >("RightSlopeSmallThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("RightSlopeSmallCut"),
+            psPulseShape.getParameter<std::vector<double> >("TS4TS5LowerThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("TS4TS5LowerCut"),
+            psPulseShape.getParameter<std::vector<double> >("TS4TS5UpperThreshold"),
+            psPulseShape.getParameter<std::vector<double> >("TS4TS5UpperCut"),
+            psPulseShape.getParameter<bool>("UseDualFit"),
+            psPulseShape.getParameter<bool>("TriangleIgnoreSlow"),
+            setLegacyFlags);
+    }
 }
 
 
@@ -177,15 +234,26 @@ private:
     bool tsFromDB_;
     bool recoParamsFromDB_;
 
+    // Parameters for turning status bit setters on/off
+    bool setNegativeFlags_;
+    bool setNoiseFlagsQIE8_;
+    bool setNoiseFlagsQIE11_;
+    bool setPulseShapeFlagsQIE8_;
+    bool setPulseShapeFlagsQIE11_;
+
     // Other members
     edm::EDGetTokenT<HBHEDigiCollection> tok_qie8_;
     edm::EDGetTokenT<QIE11DigiCollection> tok_qie11_;
     std::unique_ptr<AbsHBHEPhase1Algo> reco_;
-    std::unique_ptr<AbsHFPhase1AlgoData> recoConfig_;
+    std::unique_ptr<AbsHcalAlgoData> recoConfig_;
     std::unique_ptr<HcalRecoParams> paramTS_;
 
     // Status bit setters
-    // ... Not available yet ...
+    const HBHENegativeEFilter* negEFilter_;    // We don't manage this pointer
+    std::unique_ptr<HBHEStatusBitSetter> hbheFlagSetterQIE8_;
+    std::unique_ptr<HBHEStatusBitSetter> hbheFlagSetterQIE11_;
+    std::unique_ptr<HBHEPulseShapeFlagSetter> hbhePulseShapeFlagSetterQIE8_;
+    std::unique_ptr<HBHEPulseShapeFlagSetter> hbhePulseShapeFlagSetterQIE11_;
 
     // For the function below, arguments "infoColl" and/or "rechits"
     // are allowed to be null.
@@ -200,11 +268,16 @@ private:
                      HBHERecHitCollection* rechits);
 
     // Methods for setting rechit status bits
-    void setAsicSpecificBits(const HBHEDataFrame& frame,
-                             const HBHEChannelInfo& info, HBHERecHit* rh);
-    void setAsicSpecificBits(const QIE11DataFrame& frame,
-                             const HBHEChannelInfo& info, HBHERecHit* rh);
-    void setCommonStatusBits(const HBHEChannelInfo& info, HBHERecHit* rh);
+    void setAsicSpecificBits(const HBHEDataFrame& frame, const HcalCoder& coder,
+                             const HBHEChannelInfo& info, const HcalCalibrations& calib,
+                             HBHERecHit* rh);
+    void setAsicSpecificBits(const QIE11DataFrame& frame, const HcalCoder& coder,
+                             const HBHEChannelInfo& info, const HcalCalibrations& calib,
+                             HBHERecHit* rh);
+    void setCommonStatusBits(const HBHEChannelInfo& info, const HcalCalibrations& calib,
+                             HBHERecHit* rh);
+
+    void runHBHENegativeEFilter(const HBHEChannelInfo& info, HBHERecHit* rh);
 };
 
 //
@@ -220,7 +293,13 @@ HBHEPhase1Reconstructor::HBHEPhase1Reconstructor(const edm::ParameterSet& conf)
       dropZSmarkedPassed_(conf.getParameter<bool>("dropZSmarkedPassed")),
       tsFromDB_(conf.getParameter<bool>("tsFromDB")),
       recoParamsFromDB_(conf.getParameter<bool>("recoParamsFromDB")),
-      reco_(parseHBHEPhase1AlgoDescription(conf.getParameter<edm::ParameterSet>("algorithm")))
+      setNegativeFlags_(conf.getParameter<bool>("setNegativeFlags")),
+      setNoiseFlagsQIE8_(conf.getParameter<bool>("setNoiseFlagsQIE8")),
+      setNoiseFlagsQIE11_(conf.getParameter<bool>("setNoiseFlagsQIE11")),
+      setPulseShapeFlagsQIE8_(conf.getParameter<bool>("setPulseShapeFlagsQIE8")),
+      setPulseShapeFlagsQIE11_(conf.getParameter<bool>("setPulseShapeFlagsQIE11")),
+      reco_(parseHBHEPhase1AlgoDescription(conf.getParameter<edm::ParameterSet>("algorithm"))),
+      negEFilter_(nullptr)
 {
     // Check that the reco algorithm has been successfully configured
     if (!reco_.get())
@@ -228,6 +307,26 @@ HBHEPhase1Reconstructor::HBHEPhase1Reconstructor(const edm::ParameterSet& conf)
             << "Invalid HBHEPhase1Algo algorithm configuration"
             << std::endl;
 
+    // Configure the status bit setters that have been turned on
+    if (setNoiseFlagsQIE8_)
+        hbheFlagSetterQIE8_ = parse_HBHEStatusBitSetter(
+            conf.getParameter<edm::ParameterSet>("flagParametersQIE8"));
+
+    if (setNoiseFlagsQIE11_)
+        hbheFlagSetterQIE11_ = parse_HBHEStatusBitSetter(
+            conf.getParameter<edm::ParameterSet>("flagParametersQIE11"));
+
+    if (setPulseShapeFlagsQIE8_)
+        hbhePulseShapeFlagSetterQIE8_ = parse_HBHEPulseShapeFlagSetter(
+            conf.getParameter<edm::ParameterSet>("pulseShapeParametersQIE8"),
+            conf.getParameter<bool>("setLegacyFlagsQIE8"));
+
+    if (setPulseShapeFlagsQIE11_)
+        hbhePulseShapeFlagSetterQIE11_ = parse_HBHEPulseShapeFlagSetter(
+            conf.getParameter<edm::ParameterSet>("pulseShapeParametersQIE11"),
+            conf.getParameter<bool>("setLegacyFlagsQIE11"));
+
+    // Consumes and produces statements
     if (processQIE8_)
         tok_qie8_ = consumes<HBHEDigiCollection>(
             conf.getParameter<edm::InputTag>("digiLabelQIE8"));
@@ -276,9 +375,7 @@ void HBHEPhase1Reconstructor::processData(const Collection& coll,
     {
         const DFrame& frame(*it);
         const HcalDetId cell(frame.id());
-        const HcalRecoParam* param_ts = nullptr;
-        if (tsFromDB_ || recoParamsFromDB_)
-            param_ts = paramTS_->getValues(cell.rawId());
+        const HcalRecoParam* param_ts = paramTS_->getValues(cell.rawId());
 
         // Check if the database tells us to drop this channel
         const HcalChannelStatus* mydigistatus = qual.getValues(cell.rawId());
@@ -296,9 +393,17 @@ void HBHEPhase1Reconstructor::processData(const Collection& coll,
 
         // Basic ADC decoding tools
         const HcalCalibrations& calib = cond.getHcalCalibrations(cell);
+        const HcalCalibrationWidths& calibWidth = cond.getHcalCalibrationWidths(cell);
         const HcalQIECoder* channelCoder = cond.getHcalCoder(cell);
         const HcalQIEShape* shape = cond.getHcalShape(channelCoder);
-        HcalCoderDb coder(*channelCoder, *shape);
+        const HcalCoderDb coder(*channelCoder, *shape);
+        const RawChargeFromSample<DFrame> rcfs(cond, cell);
+
+	// needed for the dark current in the M2
+	const HcalSiPMParameter& siPMParameter(*cond.getHcalSiPMParameter(cell));
+	const double darkCurrent = siPMParameter.getDarkCurrent();
+	const double fcByPE = siPMParameter.getFCByPE();
+	const double lambda = cond.getHcalSiPMCharacteristics()->getCrossTalk(siPMParameter.getType());
 
         // ADC to fC conversion
         CaloSamples cs;
@@ -316,17 +421,22 @@ void HBHEPhase1Reconstructor::processData(const Collection& coll,
             auto s(frame[ts]);
             const int capid = s.capid();
             const double pedestal = calib.pedestal(capid);
+            const double pedestalWidth = calibWidth.pedestal(capid);
             const double gain = calib.respcorrgain(capid);
-            const double rawCharge = getRawChargeFromSample(s, cs[ts], calib);
+	    const double gainWidth = calibWidth.gain(capid);
+            const double rawCharge = rcfs.getRawCharge(cs[ts], pedestal);
             const float t = getTDCTimeFromSample(s);
-            channelInfo->setSample(ts, s.adc(), rawCharge, pedestal, gain, t);
+            channelInfo->setSample(ts, s.adc(), rawCharge, pedestal, pedestalWidth, gain, gainWidth, t);
             if (ts == soi)
                 soiCapid = capid;
         }
 
+
         // Fill the overall channel info items
+	const int pulseShapeID = param_ts->pulseShapeID();
         const std::pair<bool,bool> hwerr = findHWErrors(frame, maxTS);
-        channelInfo->setChannelInfo(cell, maxTS, soi, soiCapid,
+        channelInfo->setChannelInfo(cell, pulseShapeID, maxTS, soi, soiCapid,
+				    darkCurrent, fcByPE, lambda,
                                     hwerr.first, hwerr.second,
                                     taggedBadByDb || dropByZS);
 
@@ -344,8 +454,8 @@ void HBHEPhase1Reconstructor::processData(const Collection& coll,
             HBHERecHit rh = reco_->reconstruct(*channelInfo, pptr, calib, isRealData);
             if (rh.id().rawId())
             {
-                setAsicSpecificBits(frame, *channelInfo, &rh);
-                setCommonStatusBits(*channelInfo, &rh);
+                setAsicSpecificBits(frame, coder, *channelInfo, calib, &rh);
+                setCommonStatusBits(*channelInfo, calib, &rh);
                 rechits->push_back(rh);
             }
         }
@@ -353,21 +463,47 @@ void HBHEPhase1Reconstructor::processData(const Collection& coll,
 }
 
 void HBHEPhase1Reconstructor::setCommonStatusBits(
-    const HBHEChannelInfo& info, HBHERecHit* rh)
+    const HBHEChannelInfo& info, const HcalCalibrations& calib,
+    HBHERecHit* rh)
 {
-    // FIX THIS!!! after status bit inventory
+    if (setNegativeFlags_)
+        runHBHENegativeEFilter(info, rh);
 }
 
 void HBHEPhase1Reconstructor::setAsicSpecificBits(
-    const HBHEDataFrame& frame, const HBHEChannelInfo& info, HBHERecHit* rh)
+    const HBHEDataFrame& frame, const HcalCoder& coder,
+    const HBHEChannelInfo& info, const HcalCalibrations& calib,
+    HBHERecHit* rh)
 {
-    // FIX THIS!!! after status bit inventory
+    if (setNoiseFlagsQIE8_)
+        hbheFlagSetterQIE8_->rememberHit(*rh);
+
+    if (setPulseShapeFlagsQIE8_)
+        hbhePulseShapeFlagSetterQIE8_->SetPulseShapeFlags(*rh, frame, coder, calib);
 }
 
 void HBHEPhase1Reconstructor::setAsicSpecificBits(
-    const QIE11DataFrame& frame, const HBHEChannelInfo& info, HBHERecHit* rh)
+    const QIE11DataFrame& frame, const HcalCoder& coder,
+    const HBHEChannelInfo& info, const HcalCalibrations& calib,
+    HBHERecHit* rh)
 {
-    // FIX THIS!!! after status bit inventory
+    if (setNoiseFlagsQIE11_)
+        hbheFlagSetterQIE11_->rememberHit(*rh);
+
+    if (setPulseShapeFlagsQIE11_)
+        hbhePulseShapeFlagSetterQIE11_->SetPulseShapeFlags(*rh, frame, coder, calib);
+}
+
+void HBHEPhase1Reconstructor::runHBHENegativeEFilter(const HBHEChannelInfo& info,
+                                                     HBHERecHit* rh)
+{
+    double ts[HBHEChannelInfo::MAXSAMPLES];
+    const unsigned nRead = info.nSamples();
+    for (unsigned i=0; i<nRead; ++i)
+        ts[i] = info.tsCharge(i);
+    const bool passes = negEFilter_->checkPassFilter(info.id(), &ts[0], nRead);
+    if (!passes)
+        rh->setFlagField(1, HcalPhase1FlagLabels::HBHENegativeNoise);
 }
 
 // ------------ method called to produce the data  ------------
@@ -376,13 +512,10 @@ HBHEPhase1Reconstructor::produce(edm::Event& e, const edm::EventSetup& eventSetu
 {
     using namespace edm;
 
-    // Get the Hcal topology if needed
+    // Get the Hcal topology
     ESHandle<HcalTopology> htopo;
-    if (tsFromDB_ || recoParamsFromDB_)
-    {
-        eventSetup.get<HcalRecNumberingRecord>().get(htopo);
-        paramTS_->setTopo(htopo.product());
-    }
+    eventSetup.get<HcalRecNumberingRecord>().get(htopo);
+    paramTS_->setTopo(htopo.product());
 
     // Fetch the calibrations
     ESHandle<HcalDbService> conditions;
@@ -393,6 +526,14 @@ HBHEPhase1Reconstructor::produce(edm::Event& e, const edm::EventSetup& eventSetu
  
     ESHandle<HcalSeverityLevelComputer> mycomputer;
     eventSetup.get<HcalSeverityLevelComputerRcd>().get(mycomputer);
+
+    // Configure the negative energy filter
+    ESHandle<HBHENegativeEFilter> negEHandle;
+    if (setNegativeFlags_)
+    {
+        eventSetup.get<HBHENegativeEFilterRcd>().get(negEHandle);
+        negEFilter_ = negEHandle.product();
+    }
 
     // Find the input data
     unsigned maxOutputSize = 0;
@@ -429,16 +570,26 @@ HBHEPhase1Reconstructor::produce(edm::Event& e, const edm::EventSetup& eventSetu
     const bool isData = e.isRealData();
     if (processQIE8_)
     {
+        if (setNoiseFlagsQIE8_)
+            hbheFlagSetterQIE8_->Clear();
+
         HBHEChannelInfo channelInfo(false);
         processData<HBHEDataFrame>(*hbDigis, *conditions, *p, *mycomputer,
                                    isData, &channelInfo, infos.get(), out.get());
+        if (setNoiseFlagsQIE8_)
+            hbheFlagSetterQIE8_->SetFlagsFromRecHits(*out);
     }
 
     if (processQIE11_)
     {
+        if (setNoiseFlagsQIE11_)
+            hbheFlagSetterQIE11_->Clear();
+
         HBHEChannelInfo channelInfo(true);
         processData<QIE11DataFrame>(*heDigis, *conditions, *p, *mycomputer,
                                     isData, &channelInfo, infos.get(), out.get());
+        if (setNoiseFlagsQIE11_)
+            hbheFlagSetterQIE11_->SetFlagsFromRecHits(*out);
     }
 
     // Add the output collections to the event record
@@ -452,24 +603,37 @@ HBHEPhase1Reconstructor::produce(edm::Event& e, const edm::EventSetup& eventSetu
 void
 HBHEPhase1Reconstructor::beginRun(edm::Run const& r, edm::EventSetup const& es)
 {
-    if (tsFromDB_ || recoParamsFromDB_)
-    {
-        edm::ESHandle<HcalRecoParams> p;
-        es.get<HcalRecoParamsRcd>().get(p);
-        paramTS_ = std::make_unique<HcalRecoParams>(*p.product());
-    }
+    edm::ESHandle<HcalRecoParams> p;
+    es.get<HcalRecoParamsRcd>().get(p);
+    paramTS_ = std::make_unique<HcalRecoParams>(*p.product());
 
     if (reco_->isConfigurable())
     {
-        recoConfig_ = fetchHBHEPhase1AlgoData(algoConfigClass_, es);
+        recoConfig_ = fetchHcalAlgoData(algoConfigClass_, es);
         if (!recoConfig_.get())
             throw cms::Exception("HBHEPhase1BadConfig")
-                << "Invalid HFPhase1Reconstructor \"algoConfigClass\" parameter value \""
+                << "Invalid HBHEPhase1Reconstructor \"algoConfigClass\" parameter value \""
                 << algoConfigClass_ << '"' << std::endl;
         if (!reco_->configure(recoConfig_.get()))
             throw cms::Exception("HBHEPhase1BadConfig")
                 << "Failed to configure HBHEPhase1Algo algorithm from EventSetup"
                 << std::endl;
+    }
+
+    if (setNoiseFlagsQIE8_ || setNoiseFlagsQIE11_)
+    {
+        edm::ESHandle<HcalFrontEndMap> hfemap;
+        es.get<HcalFrontEndMapRcd>().get(hfemap);
+        if (hfemap.isValid())
+        {
+            if (setNoiseFlagsQIE8_)
+                hbheFlagSetterQIE8_->SetFrontEndMap(hfemap.product());
+            if (setNoiseFlagsQIE11_)
+                hbheFlagSetterQIE11_->SetFrontEndMap(hfemap.product());
+        }
+        else
+            edm::LogWarning("EventSetup") <<
+                "HBHEPhase1Reconstructor failed to get HcalFrontEndMap!" << std::endl;
     }
 
     reco_->beginRun(r, es);
@@ -503,8 +667,19 @@ HBHEPhase1Reconstructor::fillDescriptions(edm::ConfigurationDescriptions& descri
     desc.add<bool>("dropZSmarkedPassed");
     desc.add<bool>("tsFromDB");
     desc.add<bool>("recoParamsFromDB");
+    desc.add<bool>("setNegativeFlags");
+    desc.add<bool>("setNoiseFlagsQIE8");
+    desc.add<bool>("setNoiseFlagsQIE11");
+    desc.add<bool>("setPulseShapeFlagsQIE8");
+    desc.add<bool>("setPulseShapeFlagsQIE11");
+    desc.add<bool>("setLegacyFlagsQIE8");
+    desc.add<bool>("setLegacyFlagsQIE11");
 
     add_param_set(algorithm);
+    add_param_set(flagParametersQIE8);
+    add_param_set(flagParametersQIE11);
+    add_param_set(pulseShapeParametersQIE8);
+    add_param_set(pulseShapeParametersQIE11);
     
     descriptions.addDefault(desc);
 }

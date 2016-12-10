@@ -3,6 +3,7 @@
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Utilities/interface/transform.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
@@ -40,6 +41,12 @@ using namespace std;
 using namespace edm;
 
 typedef edm::Ref<edm::HepMCProduct, HepMC::GenParticle > GenParticleRef;
+namespace {
+  bool trackSelected(unsigned char mask, unsigned char qual) {
+    return mask & 1<<qual;
+  }
+
+}
 
 MultiTrackValidator::MultiTrackValidator(const edm::ParameterSet& pset):
   MultiTrackValidatorBase(pset,consumesCollector()),
@@ -52,7 +59,9 @@ MultiTrackValidator::MultiTrackValidator(const edm::ParameterSet& pset):
   doRecoTrackPlots_(pset.getUntrackedParameter<bool>("doRecoTrackPlots")),
   dodEdxPlots_(pset.getUntrackedParameter<bool>("dodEdxPlots")),
   doPVAssociationPlots_(pset.getUntrackedParameter<bool>("doPVAssociationPlots")),
-  doSeedPlots_(pset.getUntrackedParameter<bool>("doSeedPlots"))
+  doSeedPlots_(pset.getUntrackedParameter<bool>("doSeedPlots")),
+  doMVAPlots_(pset.getUntrackedParameter<bool>("doMVAPlots")),
+  simPVMaxZ_(pset.getUntrackedParameter<double>("simPVMaxZ"))
 {
   ParameterSet psetForHistoProducerAlgo = pset.getParameter<ParameterSet>("histoProducerAlgoBlock");
   histoProducerAlgo_ = std::make_unique<MTVHistoProducerAlgoForTracker>(psetForHistoProducerAlgo, doSeedPlots_, consumesCollector());
@@ -69,10 +78,26 @@ MultiTrackValidator::MultiTrackValidator(const edm::ParameterSet& pset):
     m_dEdx2Tag = consumes<edm::ValueMap<reco::DeDxData> >(pset.getParameter< edm::InputTag >("dEdx2Tag"));
   }
 
+  label_tv = consumes<TrackingVertexCollection>(pset.getParameter< edm::InputTag >("label_tv"));
   if(doPlotsOnlyForTruePV_ || doPVAssociationPlots_) {
-    label_tv = consumes<TrackingVertexCollection>(pset.getParameter< edm::InputTag >("label_tv"));
     recoVertexToken_ = consumes<edm::View<reco::Vertex> >(pset.getUntrackedParameter<edm::InputTag>("label_vertex"));
     vertexAssociatorToken_ = consumes<reco::VertexToTrackingVertexAssociator>(pset.getUntrackedParameter<edm::InputTag>("vertexAssociator"));
+  }
+
+  if(doMVAPlots_) {
+    mvaQualityCollectionTokens_.resize(labelToken.size());
+    auto mvaPSet = pset.getUntrackedParameter<edm::ParameterSet>("mvaLabels");
+    for(size_t iIter=0; iIter<labelToken.size(); ++iIter) {
+      edm::EDConsumerBase::Labels labels;
+      labelsForToken(labelToken[iIter], labels);
+      if(mvaPSet.exists(labels.module)) {
+        mvaQualityCollectionTokens_[iIter] = edm::vector_transform(mvaPSet.getUntrackedParameter<std::vector<std::string> >(labels.module),
+                                                                   [&](const std::string& tag) {
+                                                                     return std::make_tuple(consumes<MVACollection>(edm::InputTag(tag, "MVAValues")),
+                                                                                            consumes<QualityMaskCollection>(edm::InputTag(tag, "QualityMasks")));
+                                                                   });
+      }
+    }
   }
 
   tpSelector = TrackingParticleSelector(pset.getParameter<double>("ptMinTP"),
@@ -225,6 +250,7 @@ void MultiTrackValidator::bookHistograms(DQMStore::IBooker& ibook, edm::Run cons
         histoProducerAlgo_->bookRecoHistos(ibook);
         if (dodEdxPlots_) histoProducerAlgo_->bookRecodEdxHistos(ibook);
         if (doPVAssociationPlots_) histoProducerAlgo_->bookRecoPVAssociationHistos(ibook);
+        if (doMVAPlots_) histoProducerAlgo_->bookMVAHistos(ibook, mvaQualityCollectionTokens_[www].size());
       }
 
       if(doSeedPlots_) {
@@ -331,10 +357,26 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
 
   const reco::Vertex::Point *thePVposition = nullptr;
   const TrackingVertex::LorentzVector *theSimPVPosition = nullptr;
-  if(doPlotsOnlyForTruePV_ || doPVAssociationPlots_) {
-    edm::Handle<TrackingVertexCollection> htv;
-    event.getByToken(label_tv, htv);
+  // Find the sim PV and tak its position
+  edm::Handle<TrackingVertexCollection> htv;
+  event.getByToken(label_tv, htv);
+  {
+    const TrackingVertexCollection& tv = *htv;
+    for(size_t i=0; i<tv.size(); ++i) {
+      const TrackingVertex& simV = tv[i];
+      if(simV.eventId().bunchCrossing() != 0) continue; // remove OOTPU
+      if(simV.eventId().event() != 0) continue; // pick the PV of hard scatter
+      theSimPVPosition = &(simV.position());
+      break;
+    }
+  }
+  if(simPVMaxZ_ >= 0) {
+    if(!theSimPVPosition) return;
+    if(std::abs(theSimPVPosition->z()) > simPVMaxZ_) return;
+  }
 
+  // Check, when necessary, if reco PV matches to sim PV
+  if(doPlotsOnlyForTruePV_ || doPVAssociationPlots_) {
     edm::Handle<edm::View<reco::Vertex> > hvertex;
     event.getByToken(recoVertexToken_, hvertex);
 
@@ -346,19 +388,17 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
     if(!(pvPtr->isFake() || pvPtr->ndof() < 0)) { // skip junk vertices
       auto pvFound = v_r2s.find(pvPtr);
       if(pvFound != v_r2s.end()) {
-        int simPVindex = -1;
-        int i=0;
+        bool matchedToSimPV = false;
         for(const auto& vertexRefQuality: pvFound->val) {
           const TrackingVertex& tv = *(vertexRefQuality.first);
           if(tv.eventId().event() == 0 && tv.eventId().bunchCrossing() == 0) {
-            simPVindex = i;
+            matchedToSimPV = true;
+            break;
           }
-          ++i;
         }
-        if(simPVindex >= 0) {
+        if(matchedToSimPV) {
           if(doPVAssociationPlots_) {
             thePVposition = &(pvPtr->position());
-            theSimPVPosition = &(pvFound->val[simPVindex].first->position());
           }
         }
         else if(doPlotsOnlyForTruePV_)
@@ -520,6 +560,10 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
     v_dEdx.push_back(dEdx2Handle.product());
   }
 
+  std::vector<const MVACollection *> mvaCollections;
+  std::vector<const QualityMaskCollection *> qualityMaskCollections;
+  std::vector<float> mvaValues;
+
   int w=0; //counter counting the number of sets of histograms
   for (unsigned int ww=0;ww<associators.size();ww++){
     for (unsigned int www=0;www<label.size();www++, w++){ // need to increment w here, since there are many continues in the loop body
@@ -588,6 +632,24 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
       reco::RecoToSimCollection const & recSimColl = *recSimCollP;
       reco::SimToRecoCollection const & simRecColl = *simRecCollP;
  
+      // read MVA collections
+      if(doMVAPlots_ && !mvaQualityCollectionTokens_[www].empty()) {
+        edm::Handle<MVACollection> hmva;
+        edm::Handle<QualityMaskCollection> hqual;
+        for(const auto& tokenTpl: mvaQualityCollectionTokens_[www]) {
+          event.getByToken(std::get<0>(tokenTpl), hmva);
+          event.getByToken(std::get<1>(tokenTpl), hqual);
+
+          mvaCollections.push_back(hmva.product());
+          qualityMaskCollections.push_back(hqual.product());
+          if(mvaCollections.back()->size() != trackCollection.size()) {
+            throw cms::Exception("Configuration") << "Inconsistency in track collection and MVA sizes. Track collection " << www << " has " << trackCollection.size() << " tracks, whereas the MVA " << (mvaCollections.size()-1) << " for it has " << mvaCollections.back()->size() << " entries. Double-check your configuration.";
+          }
+          if(qualityMaskCollections.back()->size() != trackCollection.size()) {
+            throw cms::Exception("Configuration") << "Inconsistency in track collection and quality mask sizes. Track collection " << www << " has " << trackCollection.size() << " tracks, whereas the quality mask " << (qualityMaskCollections.size()-1) << " for it has " << qualityMaskCollections.back()->size() << " entries. Double-check your configuration.";
+          }
+        }
+      }
 
       // ########################################################
       // fill simulation histograms (LOOP OVER TRACKINGPARTICLES)
@@ -666,6 +728,8 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
 	// fill RecoAssociated SimTracks' histograms
 	// ##############################################
 	const reco::Track* matchedTrackPointer=0;
+        unsigned int selectsLoose = mvaCollections.size();
+        unsigned int selectsHP = mvaCollections.size();
 	if(simRecColl.find(tpr) != simRecColl.end()){
 	  auto const & rt = simRecColl[tpr];
 	  if (rt.size()!=0) {
@@ -675,6 +739,32 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
 	    LogTrace("TrackValidator") << "TrackingParticle #" << st
                                        << " with pt=" << sqrt(momentumTP.perp2())
                                        << " associated with quality:" << rt.begin()->second <<"\n";
+
+            if(doMVAPlots_) {
+              // for each MVA we need to take the value of the track
+              // with largest MVA value (for the cumulative histograms)
+              //
+              // also identify the first MVA that possibly selects any
+              // track matched to this TrackingParticle, separately
+              // for loose and highPurity qualities
+              for(size_t imva=0; imva<mvaCollections.size(); ++imva) {
+                const auto& mva = *(mvaCollections[imva]);
+                const auto& qual = *(qualityMaskCollections[imva]);
+
+                auto iMatch = rt.begin();
+                float maxMva = mva[iMatch->first.key()];
+                for(; iMatch!=rt.end(); ++iMatch) {
+                  auto itrk = iMatch->first.key();
+                  maxMva = std::max(maxMva, mva[itrk]);
+
+                  if(selectsLoose >= imva && trackSelected(qual[itrk], reco::TrackBase::loose))
+                    selectsLoose = imva;
+                  if(selectsHP >= imva && trackSelected(qual[itrk], reco::TrackBase::highPurity))
+                    selectsHP = imva;
+                }
+                mvaValues.push_back(maxMva);
+              }
+            }
 	  }
 	}else{
 	  LogTrace("TrackValidator")
@@ -693,7 +783,8 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
         int nSimLayers = nLayers_tPCeff[tpr];
         int nSimPixelLayers = nPixelLayers_tPCeff[tpr];
         int nSimStripMonoAndStereoLayers = nStripMonoAndStereoLayers_tPCeff[tpr];
-        histoProducerAlgo_->fill_recoAssociated_simTrack_histos(w,tp,momentumTP,vertexTP,dxySim,dzSim,dxyPVSim,dzPVSim,nSimHits,nSimLayers,nSimPixelLayers,nSimStripMonoAndStereoLayers,matchedTrackPointer,puinfo.getPU_NumInteractions(), dR, thePVposition);
+        histoProducerAlgo_->fill_recoAssociated_simTrack_histos(w,tp,momentumTP,vertexTP,dxySim,dzSim,dxyPVSim,dzPVSim,nSimHits,nSimLayers,nSimPixelLayers,nSimStripMonoAndStereoLayers,matchedTrackPointer,puinfo.getPU_NumInteractions(), dR, thePVposition, theSimPVPosition, mvaValues, selectsLoose, selectsHP);
+        mvaValues.clear();
           sts++;
           if(matchedTrackPointer)
             asts++;
@@ -803,8 +894,28 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
                                      << " NOT associated to any TrackingParticle" << "\n";
 	}
 
+        // set MVA values for this track
+        // take also the indices of first MVAs to select by loose and
+        // HP quality
+        unsigned int selectsLoose = mvaCollections.size();
+        unsigned int selectsHP = mvaCollections.size();
+        if(doMVAPlots_) {
+          for(size_t imva=0; imva<mvaCollections.size(); ++imva) {
+            const auto& mva = *(mvaCollections[imva]);
+            const auto& qual = *(qualityMaskCollections[imva]);
+            mvaValues.push_back(mva[i]);
+
+            if(selectsLoose >= imva && trackSelected(qual[i], reco::TrackBase::loose))
+              selectsLoose = imva;
+            if(selectsHP >= imva && trackSelected(qual[i], reco::TrackBase::highPurity))
+              selectsHP = imva;
+          }
+        }
+
 	double dR=dR_trk[i];
-	histoProducerAlgo_->fill_generic_recoTrack_histos(w,*track, ttopo, bs.position(), thePVposition, isSimMatched,isSigSimMatched, isChargeMatched, numAssocRecoTracks, puinfo.getPU_NumInteractions(), nSimHits, sharedFraction, dR);
+	histoProducerAlgo_->fill_generic_recoTrack_histos(w,*track, ttopo, bs.position(), thePVposition, theSimPVPosition, isSimMatched,isSigSimMatched, isChargeMatched, numAssocRecoTracks, puinfo.getPU_NumInteractions(), nSimHits, sharedFraction, dR, mvaValues, selectsLoose, selectsHP);
+        mvaValues.clear();
+
         if(doSummaryPlots_) {
           h_reco_coll[ww]->Fill(www);
           if(isSimMatched) {
@@ -858,6 +969,8 @@ void MultiTrackValidator::analyze(const edm::Event& event, const edm::EventSetup
 	//nrecHit_vs_nsimHit_rec2sim[w]->Fill(track->numberOfValidHits(), (int)(simhits.end()-simhits.begin() ));
 
       } // End of for(View<Track>::size_type i=0; i<trackCollection.size(); ++i){
+      mvaCollections.clear();
+      qualityMaskCollections.clear();
 
       histoProducerAlgo_->fill_trackBased_histos(w,at,rT,st);
       // Fill seed-specific histograms

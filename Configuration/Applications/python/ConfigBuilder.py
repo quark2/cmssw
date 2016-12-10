@@ -175,6 +175,8 @@ def MassReplaceInputTag(aProcess,oldT="rawDataCollector",newT="rawDataRepacker")
 	from PhysicsTools.PatAlgos.tools.helpers import massSearchReplaceAnyInputTag
 	for s in aProcess.paths_().keys():
 		massSearchReplaceAnyInputTag(getattr(aProcess,s),oldT,newT)
+	for s in aProcess.endpaths_().keys():
+		massSearchReplaceAnyInputTag(getattr(aProcess,s),oldT,newT)
 
 def anyOf(listOfKeys,dict,opt=None):
 	for k in listOfKeys:
@@ -879,14 +881,16 @@ class ConfigBuilder(object):
 		final_snippet += '\n# End of customisation functions\n'
 
 	### now for a useful command
-	if unsch==1 or not self._options.runUnscheduled:
-		if self._options.customise_commands:
-			import string
-			final_snippet +='\n# Customisation from command line'
-			for com in self._options.customise_commands.split('\\n'):
-				com=string.lstrip(com)
-				self.executeAndRemember(com)
-				final_snippet +='\n'+com
+	return final_snippet
+
+    def addCustomiseCmdLine(self):
+        final_snippet='\n# Customisation from command line\n'
+	if self._options.customise_commands:
+		import string
+		for com in self._options.customise_commands.split('\\n'):
+			com=string.lstrip(com)
+			self.executeAndRemember(com)
+			final_snippet +='\n'+com
 
         return final_snippet
 
@@ -1936,30 +1940,21 @@ class ConfigBuilder(object):
 			
 		if 'HLT' in self.stepMap.keys() or self._options.hltProcess:
 			self.renameHLTprocessInSequence(sequence)
+                
+                setattr(self.process,pathName, cms.EndPath( getattr(self.process,sequence ) ) )
+                self.schedule.append(getattr(self.process,pathName))
 
-		# if both HLT and DQM are run in the same process, schedule [HLT]DQM in an EndPath
-	        # not for fastsim
-		if 'HLT' in self.stepMap.keys() and not self._options.fast:
-			# need to put [HLT]DQM in an EndPath, to access the HLT trigger results
-			setattr(self.process,pathName, cms.EndPath( getattr(self.process, sequence ) ) )
-		else:
-			# schedule DQM as a standard Path
-			setattr(self.process,pathName, cms.Path( getattr(self.process, sequence) ) ) 
-		self.schedule.append(getattr(self.process,pathName))
+                if hasattr(self.process,"genstepfilter") and len(self.process.genstepfilter.triggerConditions):
+                        #will get in the schedule, smoothly
+                        getattr(self.process,pathName).insert(0,self.process.genstepfilter)
 
 	pathName='dqmofflineOnPAT_step'
 	for (i,sequence) in enumerate(postSequenceList):
                 if (i!=0):
                         pathName='dqmofflineOnPAT_%d_step'%(i)
 
-		# if both MINIAOD and DQM are run in the same process, schedule DQM in an EndPath
-		if 'PAT' in self.stepMap.keys():
-			# need to put DQM in an EndPath, to access the miniAOD filter results
-			setattr(self.process,pathName, cms.EndPath( getattr(self.process, sequence ) ) )
-		else:
-			# schedule DQM as a standard Path
-			setattr(self.process,pathName, cms.Path( getattr(self.process, sequence) ) )
-		self.schedule.append(getattr(self.process,pathName))
+                setattr(self.process,pathName, cms.EndPath( getattr(self.process, sequence ) ) )
+                self.schedule.append(getattr(self.process,pathName))
 
     def prepare_HARVESTING(self, sequence = None):
         """ Enrich the process with harvesting step """
@@ -2218,8 +2213,9 @@ class ConfigBuilder(object):
 		from FWCore.ParameterSet.Utilities import cleanUnscheduled
 		self.process=cleanUnscheduled(self.process)
 
+		self.pythonCfgCode += self.addCustomise(1)
 
-	self.pythonCfgCode += self.addCustomise(1)
+	self.pythonCfgCode += self.addCustomiseCmdLine()
 
 
 	# make the .io file

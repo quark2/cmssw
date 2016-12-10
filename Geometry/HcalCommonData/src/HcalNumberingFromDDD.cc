@@ -12,15 +12,19 @@
 #include "CLHEP/Units/GlobalSystemOfUnits.h"
 #include <iostream>
 
-//#define DebugLog
+//#define EDM_ML_DEBUG
 
 HcalNumberingFromDDD::HcalNumberingFromDDD(HcalDDDSimConstants *hcons) :
   hcalConstants(hcons) {
-  edm::LogInfo("HCalGeom") << "Creating HcalNumberingFromDDD";
+#ifdef EDM_ML_DEBUG
+  edm::LogInfo("HCalGeom") << "Creating HcalNumberingFromDDD\n";
+#endif
 }
 
 HcalNumberingFromDDD::~HcalNumberingFromDDD() {
-  edm::LogInfo("HCalGeom") << "Deleting HcalNumberingFromDDD";
+#ifdef EDM_ML_DEBUG
+  edm::LogInfo("HCalGeom") << "Deleting HcalNumberingFromDDD\n";
+#endif
 }
 
 HcalNumberingFromDDD::HcalID HcalNumberingFromDDD::unitID(int det,
@@ -56,10 +60,10 @@ HcalNumberingFromDDD::HcalID HcalNumberingFromDDD::unitID(int det,
     }
   }
 
-#ifdef DebugLog
-  LogDebug("HCalGeom") << "HcalNumberingFromDDD: point = " << point << " det "
-		       << det << ":" << hsubdet << " eta/R " << etaR << " phi "
-		       << hphi;
+#ifdef EDM_ML_DEBUG
+  std::cout << "HcalNumberingFromDDD: point = " << point
+	    << " det " << det << ":" << hsubdet << " eta/R " 
+	    << etaR << " phi " << hphi << std::endl;
 #endif
   return unitID(hsubdet,etaR,hphi,depth,lay);
 }
@@ -89,10 +93,10 @@ HcalNumberingFromDDD::HcalID HcalNumberingFromDDD::unitID(int det,
   int    iphi  = int(hphi/ficons.second) + 1;
   if (iphi > nphi) iphi = 1;
 
-#ifdef DebugLog
-  LogDebug("HCalGeom") << "HcalNumberingFromDDD: etaR = " << etaR << " : "
-                       << zside << "/" << ieta << " phi " << hphi << " : "
-                       << iphi;
+#ifdef EDM_ML_DEBUG
+  std::cout << "HcalNumberingFromDDD: etaR = " << etaR << " : "
+	    << zside << "/" << ieta << " phi " << hphi << " : "
+	    << iphi << std::endl;
 #endif
   return unitID(det,zside,depth,ieta,iphi,lay);
 }
@@ -104,24 +108,25 @@ HcalNumberingFromDDD::HcalID HcalNumberingFromDDD::unitID(int det, int zside,
 
 
   std::pair<int,int> etaDepth = hcalConstants->getEtaDepth(det, etaR, phi, depth, lay);
-  if (det == static_cast<int>(HcalBarrel) && etaDepth.second == 4) {
+  if (det == static_cast<int>(HcalBarrel) && lay > 17) {
     det = static_cast<int>(HcalOuter);
   }
 
   int units     = hcalConstants->unitPhi(det, etaDepth.first);
   int iphi_skip = hcalConstants->phiNumber(phi, units);
 
-#ifdef DebugLog
-  LogDebug("HCalGeom") << "HcalNumberingFromDDD: phi units= " << units  
-                       << "  iphi_skip= " << iphi_skip; 
+#ifdef EDM_ML_DEBUG
+  std::cout << "HcalNumberingFromDDD: phi units= " << units  
+	    << "  iphi_skip= " << iphi_skip << std::endl; 
 #endif
   HcalNumberingFromDDD::HcalID tmp(det,zside,etaDepth.second,etaDepth.first,phi,iphi_skip,lay);
 
-#ifdef DebugLog
-  LogDebug("HCalGeom") << "HcalNumberingFromDDD: det = " << det << " " 
-                       << tmp.subdet << " zside = " << tmp.zside << " depth = "
-                       << tmp.depth << " eta/R = " << tmp.etaR << " phi = " 
-                       << tmp.phi << " layer = " << tmp.lay;
+#ifdef EDM_ML_DEBUG
+  std::cout << "HcalNumberingFromDDD: det = " << det << " " 
+	    << tmp.subdet << " zside = " << tmp.zside 
+	    << " depth = " << tmp.depth << " eta/R = " 
+	    << tmp.etaR << " phi = "   << tmp.phi << " layer = "
+	    << tmp.lay << std::endl;
 #endif
   return tmp;
 }

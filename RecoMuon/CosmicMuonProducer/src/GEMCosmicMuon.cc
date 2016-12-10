@@ -53,7 +53,7 @@ private:
   CosmicMuonSmoother* theSmoother;
   MuonServiceProxy* theService;
   KFUpdator* theUpdator;
-  auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
+  unique_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, vector<const GEMChamber*> gemChambers);
 };
 
@@ -80,11 +80,11 @@ GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
 void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   //  cout << "GEMCosmicMuon::start producing segments for " << ++iev << "th event with gem data" << endl;
   
-  auto_ptr<reco::TrackCollection >          trackCollection( new reco::TrackCollection() );
-  auto_ptr<TrackingRecHitCollection >       trackingRecHitCollection( new TrackingRecHitCollection() );
-  auto_ptr<reco::TrackExtraCollection >     trackExtraCollection( new reco::TrackExtraCollection() );
-  auto_ptr<vector<Trajectory> >             trajectorys( new vector<Trajectory>() );
-  auto_ptr<vector<TrajectorySeed> >         trajectorySeeds( new vector<TrajectorySeed>() );
+  unique_ptr<reco::TrackCollection >          trackCollection( new reco::TrackCollection() );
+  unique_ptr<TrackingRecHitCollection >       trackingRecHitCollection( new TrackingRecHitCollection() );
+  unique_ptr<reco::TrackExtraCollection >     trackExtraCollection( new reco::TrackExtraCollection() );
+  unique_ptr<vector<Trajectory> >             trajectorys( new vector<Trajectory>() );
+  unique_ptr<vector<TrajectorySeed> >         trajectorySeeds( new vector<TrajectorySeed>() );
   TrackingRecHitRef::key_type recHitsIndex = 0;
   TrackingRecHitRefProd recHitCollectionRefProd = ev.getRefBeforePut<TrackingRecHitCollection>();
   reco::TrackExtraRef::key_type trackExtraIndex = 0;
@@ -103,10 +103,11 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   ev.getByToken(theGEMRecHitToken,gemRecHits);
 
   if (gemRecHits->size() <3){
-    ev.put(trackCollection);
-    ev.put(trackingRecHitCollection);
-    ev.put(trackExtraCollection);
-    ev.put(trajectorys);
+    ev.put(std::move(trajectorySeeds));
+    ev.put(std::move(trackCollection));
+    ev.put(std::move(trackingRecHitCollection));
+    ev.put(std::move(trackExtraCollection));
+    ev.put(std::move(trajectorys));
     return;
   }
   
@@ -168,11 +169,11 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
     }
   }
   if (!bestTrajectory.isValid()){
-    ev.put(trajectorySeeds);
-    ev.put(trackCollection);
-    ev.put(trackingRecHitCollection);
-    ev.put(trackExtraCollection);
-    ev.put(trajectorys);
+    ev.put(std::move(trajectorySeeds));
+    ev.put(std::move(trackCollection));
+    ev.put(std::move(trackingRecHitCollection));
+    ev.put(std::move(trackExtraCollection));
+    ev.put(std::move(trajectorys));
     return;
   }
   //cout << "GEMCosmicMuon::bestTrajectory " << bestTrajectory.foundHits() << endl;
@@ -225,16 +226,18 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   // fill the collection
   // put collection in event
   trajectorySeeds->push_back(bestSeed);
-  ev.put(trajectorySeeds);
-  ev.put(trackCollection);
-  ev.put(trackingRecHitCollection);
-  ev.put(trackExtraCollection);
-  ev.put(trajectorys);
+
+  ev.put(std::move(trajectorySeeds));
+  ev.put(std::move(trackCollection));
+  ev.put(std::move(trackingRecHitCollection));
+  ev.put(std::move(trackExtraCollection));
+  ev.put(std::move(trajectorys));
+  
 }
 
-auto_ptr<std::vector<TrajectorySeed> > GEMCosmicMuon::findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits)
+unique_ptr<std::vector<TrajectorySeed> > GEMCosmicMuon::findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits)
 {
-  auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
+  unique_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
   for (auto hit1 : muRecHits){
     for (auto hit2 : muRecHits){
       if (hit1->globalPosition().y() < hit2->globalPosition().y()){

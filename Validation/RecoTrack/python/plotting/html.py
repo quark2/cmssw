@@ -14,9 +14,12 @@ _sampleName = {
     "RelValWjet_Pt_3000_3500": "Wjet Pt 3000 to 3500",
     "RelValH125GGgluonfusion": "Higgs to gamma gamma",
     "RelValSingleElectronPt35": "Single Electron Pt 35",
+    "RelValSingleElectronPt35Extended": "Single Electron Pt 35 (extended eta)",
     "RelValSingleElectronPt10": "Single Electron Pt 10",
     "RelValSingleMuPt10": "Single Muon Pt 10",
+    "RelValSingleMuPt10Extended": "Single Muon Pt 10 (extended eta)",
     "RelValSingleMuPt100": "Single Muon Pt 100",
+    "RelValTenMuE_0_200": "Ten muon Pt 0-200",
 }
 
 _sampleFileName = {
@@ -29,9 +32,12 @@ _sampleFileName = {
     "RelValWjet_Pt_3000_3500": "wjet3000",
     "RelValH125GGgluonfusion": "hgg",
     "RelValSingleElectronPt35": "ele35",
+    "RelValSingleElectronPt35Extended": "ele35ext",
     "RelValSingleElectronPt10": "ele10",
     "RelValSingleMuPt10": "mu10",
+    "RelValSingleMuPt10Extended": "mu10ext",
     "RelValSingleMuPt100": "mu100",
+    "RelValTenMuE_0_200": "tenmu200",
 }
 
 _allTPEfficName = "All tracks (all TPs)"
@@ -39,6 +45,12 @@ _fromPVName = "Tracks from PV"
 _fromPVAllTPName = "Tracks from PV (all TPs)"
 _conversionName = "Tracks for conversions"
 _gsfName = "Electron GSF tracks"
+def _toHP(s):
+    return "High purity "+_lowerFirst(s)
+def _allToHP(s):
+    return s.replace("All", "High purity")
+def _ptCut(s):
+    return s.replace("Tracks", "Tracks pT &gt; 0.9 GeV").replace("tracks", "tracks pT &gt; 0.9 GeV")
 _trackQualityNameOrder = collections.OrderedDict([
     ("seeding_seeds", "Seeds"),
     ("seeding_seedsa", "Seeds A"),
@@ -48,8 +60,8 @@ _trackQualityNameOrder = collections.OrderedDict([
     ("building_", "Built tracks"),
     ("", "All tracks"),
     ("highPurity", "High purity tracks"),
-    ("Pt", "Tracks pT &gt; 0.9 GeV"),
-    ("highPurityPt", "High purity tracks pT &gt; 0.9 GeV"),
+    ("Pt09", "Tracks pT &gt; 0.9 GeV"),
+    ("highPurityPt09", "High purity tracks pT &gt; 0.9 GeV"),
     ("ByOriginalAlgo", "All tracks by originalAlgo"),
     ("highPurityByOriginalAlgo", "High purity tracks by originalAlgo"),
     ("ByAlgoMask", "All tracks by algoMask"),
@@ -57,17 +69,19 @@ _trackQualityNameOrder = collections.OrderedDict([
     ("btvLike", "BTV-like"),
     ("ak4PFJets", "AK4 PF jets"),
     ("allTPEffic_", _allTPEfficName),
-    ("allTPEffic_highPurity", _allTPEfficName.replace("All", "High purity")),
+    ("allTPEffic_highPurity", _allToHP(_allTPEfficName)),
     ("fromPV_", _fromPVName),
-    ("fromPV_highPurity", "High purity "+_lowerFirst(_fromPVName)),
+    ("fromPV_highPurity", _toHP(_fromPVName)),
+    ("fromPV_Pt09", _ptCut(_fromPVName)),
+    ("fromPV_highPurityPt09", _toHP(_ptCut(_fromPVName))),
     ("fromPVAllTP_", _fromPVAllTPName),
-    ("fromPVAllTP_highPurity", "High purity "+_lowerFirst(_fromPVAllTPName)),
-    ("fromPVAllTP_Pt", _fromPVAllTPName.replace("Tracks", "Tracks pT &gt; 0.9 GeV")),
-    ("fromPVAllTP_highPurityPt", "High purity "+_lowerFirst(_fromPVAllTPName).replace("tracks", "tracks pT &gt; 0.9 GeV")),
+    ("fromPVAllTP_highPurity", _toHP(_fromPVAllTPName)),
+    ("fromPVAllTP_Pt09", _ptCut(_fromPVAllTPName)),
+    ("fromPVAllTP_highPurityPt09", _toHP(_ptCut(_fromPVAllTPName))),
     ("fromPVAllTP2_", _fromPVAllTPName.replace("PV", "PV v2")),
     ("fromPVAllTP2_highPurity", "High purity "+_lowerFirst(_fromPVAllTPName).replace("PV", "PV v2")),
-    ("fromPVAllTP2_Pt", _fromPVAllTPName.replace("Tracks", "Tracks pT &gt; 0.9 GeV").replace("PV", "PV v2")),
-    ("fromPVAllTP2_highPurityPt", "High purity "+_lowerFirst(_fromPVAllTPName).replace("tracks", "tracks pT &gt; 0.9 GeV").replace("PV", "PV v2")),
+    ("fromPVAllTP2_Pt09", _fromPVAllTPName.replace("Tracks", "Tracks pT &gt; 0.9 GeV").replace("PV", "PV v2")),
+    ("fromPVAllTP2_highPurityPt09", _toHP(_ptCut(_fromPVAllTPName)).replace("PV", "PV v2")),
     ("conversion_", _conversionName),
     ("gsf_", _gsfName),
 ])
@@ -134,6 +148,8 @@ _sectionNameMapOrder = collections.OrderedDict([
     ("building", "Built tracks"),
     ("", "All tracks"),
     ("highPurity", "High purity tracks"),
+    ("btvLike", "BTV-like"),
+    ("ak4PFJets", "AK4 PF jets"),
     ("allTPEffic", _allTPEfficName),
     ("allTPEffic_highPurity", _allTPEfficName.replace("All", "High purity")),
     ("fromPV", _fromPVName),
@@ -143,18 +159,26 @@ _sectionNameMapOrder = collections.OrderedDict([
     ("conversion", _conversionName),
     ("gsf", _gsfName),
     # These are for vertices
+    ("genvertex", "Gen vertices"),
+    ("pixelVertices", "Pixel vertices"),
+    ("selectedPixelVertices", "Selected pixel vertices"),
+    ("firstStepPrimaryVerticesPreSplitting", "firstStepPrimaryVerticesPreSplitting"),
+    ("firstStepPrimaryVertices", "firstStepPrimaryVertices"),
     ("offlinePrimaryVertices", "All vertices (offlinePrimaryVertices)"),
     ("selectedOfflinePrimaryVertices", "Selected vertices (selectedOfflinePrimaryVertices)"),
+    ("offlinePrimaryVerticesWithBS", "All vertices with BS constraint"),
+    ("selectedOfflinePrimaryVerticesWithBS", "Selected vertices with BS constraint"),
     # These are for V0
     ("k0", "K0"),
     ("lambda", "Lambda"),
 ])
 _allTPEfficLegend = "All tracks, efficiency denominator contains all TrackingParticles"
 _fromPVLegend = "Tracks from reco PV vs. TrackingParticles from gen PV (fake rate includes pileup tracks)"
+_fromPVPtLegend = "Tracks (pT &gt; 0.9 GeV) from reco PV vs. TrackingParticles from gen PV (fake rate includes pileup tracks)"
 _fromPVAllTPLegend = "Tracks from reco PV, fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
-_fromPVAllTPPtLegend = "Tracks (pT &gt 0.9 GeV) from reco PV, fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
+_fromPVAllTPPtLegend = "Tracks (pT &gt; 0.9 GeV) from reco PV, fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
 _fromPVAllTP2Legend = "Tracks from reco PV (another method), fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
-_fromPVAllTPPt2Legend = "Tracks (pT &gt 0.9 GeV) from reco PV (another method), fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
+_fromPVAllTPPt2Legend = "Tracks (pT &gt; 0.9 GeV) from reco PV (another method), fake rate numerator contains all TrackingParticles (separates fake tracks from pileup tracks)"
 
 def _sectionNameLegend():
     return {
@@ -162,19 +186,21 @@ def _sectionNameLegend():
         "ak4PFJets": "Tracks from AK4 PF jets (jet corrected pT &gt; 10 GeV)",
         "allTPEffic": _allTPEfficLegend,
         "allTPEffic_": _allTPEfficLegend,
-        "allTPEffic_highPurity": _allTPEfficLegend.replace("All", "High purity"),
+        "allTPEffic_highPurity": _allToHP(_allTPEfficLegend),
         "fromPV": _fromPVLegend,
         "fromPV_": _fromPVLegend,
-        "fromPV_highPurity": "High purity "+_lowerFirst(_fromPVLegend),
+        "fromPV_highPurity": _toHP(_fromPVLegend),
+        "fromPV_Pt09": _fromPVPtLegend,
+        "fromPV_highPurity_Pt09": _toHP(_fromPVPtLegend),
         "fromPVAllTP": _fromPVAllTPLegend,
         "fromPVAllTP_": _fromPVAllTPLegend,
-        "fromPVAllTP_highPurity": "High purity "+_lowerFirst(_fromPVAllTPLegend),
-        "fromPVAllTP_Pt": _fromPVAllTPPtLegend,
-        "fromPVAllTP_highPurityPt": "High purity "+_lowerFirst(_fromPVAllTPPtLegend),
+        "fromPVAllTP_highPurity": _toHP(_fromPVAllTPLegend),
+        "fromPVAllTP_Pt09": _fromPVAllTPPtLegend,
+        "fromPVAllTP_highPurityPt09": _toHP(_fromPVAllTPPtLegend),
         "fromPVAllTP2_": _fromPVAllTP2Legend,
-        "fromPVAllTP2_highPurity": "High purity "+_lowerFirst(_fromPVAllTP2Legend),
-        "fromPVAllTP2_Pt": _fromPVAllTPPt2Legend,
-        "fromPVAllTP2_highPurityPt": "High purity "+_lowerFirst(_fromPVAllTPPt2Legend),
+        "fromPVAllTP2_highPurity": _toHP(_fromPVAllTP2Legend),
+        "fromPVAllTP2_Pt09": _fromPVAllTPPt2Legend,
+        "fromPVAllTP2_highPurityPt09": _toHP(_fromPVAllTPPt2Legend),
     }
 
 class Table:
@@ -436,24 +462,29 @@ class Page(object):
         return ret
 
 class PageSet(object):
-    def __init__(self, title, sampleName, sample, fastVsFull):
+    def __init__(self, title, sampleName, sample, fastVsFull, pileupComparison):
         self._title = title
         self._sampleName = sampleName
         self._pages = collections.OrderedDict()
 
-        self._prefix=""
-        if hasattr(sample, "hasPileup"):
-            self._prefix = "nopu"
-            if sample.hasPileup():
-                self._prefix = "pu"+sample.pileupType()
-            self._prefix += "_"
-
+        self._prefix = ""
         if sample.fastsim():
             self._prefix += "fast_"
             if fastVsFull:
                 self._prefix += "full_"
 
         self._prefix += _sampleFileName.get(sample.label(), sample.label())+"_"
+        if hasattr(sample, "hasScenario") and sample.hasScenario():
+            self._prefix += sample.scenario()+"_"
+
+        if hasattr(sample, "hasPileup"):
+            if sample.hasPileup():
+                self._prefix += "pu"+str(sample.pileupNumber())+"_"+sample.pileupType()+"_"
+            else:
+                self._prefix += "nopu_"
+            if pileupComparison:
+                self._prefix += "vspu_"
+
 
     def _getPage(self, key, pageClass):
         if key not in self._pages:
@@ -567,7 +598,7 @@ class TrackingPageSet(PageSet):
 
 
 class IndexSection:
-    def __init__(self, sample, fastVsFull, title):
+    def __init__(self, sample, title, fastVsFull, pileupComparison):
         self._sample = sample
 
         self._sampleName = ""
@@ -580,10 +611,18 @@ class IndexSection:
         if hasattr(sample, "hasPileup"):
             pileup = "with no pileup"
             if sample.hasPileup():
-                pileup = "with %s pileup" % sample.pileupType()
-        self._sampleName += "%s sample %s" % (_sampleName.get(sample.name(), sample.name()), pileup)
+                pileup = "with %d pileup (%s)" % (sample.pileupNumber(), sample.pileupType())
+            if pileupComparison is not None:
+                pileup += " "+pileupComparison
+        if hasattr(sample, "customPileupLabel"):
+            pileup = sample.customPileupLabel()
 
-        params = [title, self._sampleName, sample, fastVsFull]
+        scenario = ""
+        if hasattr(sample, "hasScenario") and sample.hasScenario():
+            scenario = " (\"%s\")" % sample.scenario()
+        self._sampleName += "%s sample%s %s" % (_sampleName.get(sample.name(), sample.name()), scenario, pileup)
+
+        params = [title, self._sampleName, sample, fastVsFull, pileupComparison is not None]
         self._summaryPage = PageSet(*params)
         self._iterationPages = TrackingPageSet(*params)
         self._vertexPage = PageSet(*params)
@@ -648,12 +687,16 @@ class HtmlReport:
     def addNote(self, note):
         self._index.append('  <p>%s</p>'%note)
 
-    def beginSample(self, sample, fastVsFull=False):
-        key = (sample.digest(), fastVsFull)
+    def beginSample(self, sample, fastVsFull=False, pileupComparison=None):
+        # Fast vs. Full becomes just after the corresponding Fast
+        # Same for PU
+        rightAfterRefSample = fastVsFull or (pileupComparison is not None)
+
+        key = (sample.digest(), rightAfterRefSample)
         if key in self._sections:
             self._currentSection = self._sections[key]
         else:
-            self._currentSection = IndexSection(sample, fastVsFull, self._title)
+            self._currentSection = IndexSection(sample, self._title, fastVsFull, pileupComparison)
             self._sections[key] = self._currentSection
 
     def addPlots(self, *args, **kwargs):

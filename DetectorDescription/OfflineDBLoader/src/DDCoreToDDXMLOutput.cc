@@ -279,6 +279,30 @@ DDCoreToDDXMLOutput::solid( const DDSolid& solid, std::ostream& xos )
          << std::endl;
          break;
       }
+      case ddcuttubs: 
+      {
+         //      <Tubs name="TrackerSupportTubeNomex"         rMin="[SupportTubeR1]+[Tol]" 
+         //            rMax="[SupportTubeR2]-[Tol]"           dz="[SupportTubeL]" 
+         //            startPhi="0*deg"                       deltaPhi="360*deg"/>
+         DDCutTubs rs(solid);
+	 const std::array<double, 3> &pLowNorm(rs.lowNorm());
+	 const std::array<double, 3> &pHighNorm(rs.highNorm());
+
+         xos << "<CutTubs name=\""  << rs.toString() << "\""
+	     << " dz=\"" << rs.zhalf() << "*mm\""
+	     << " rMin=\"" << rs.rIn() << "*mm\""
+	     << " rMax=\"" << rs.rOut() << "*mm\""
+	     << " startPhi=\"" << rs.startPhi()/deg << "*deg\""
+	     << " deltaPhi=\"" << rs.deltaPhi()/deg << "*deg\""
+	     << " lx=\"" << pLowNorm[0] << "\""
+	     << " ly=\"" << pLowNorm[1] << "\""
+	     << " lz=\"" << pLowNorm[2] << "\""
+	     << " tx=\"" << pHighNorm[0] << "\""
+	     << " ty=\"" << pHighNorm[1] << "\""
+	     << " tz=\"" << pHighNorm[2] << "\"/>"
+	     << std::endl;
+         break;
+      }
          //       return new PSolid( pstrs(solid.toString()), solid.parameters()
          // 			 , solid.shape(), pstrs(""), pstrs(""), pstrs("") );
       case dd_not_init:

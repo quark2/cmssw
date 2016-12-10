@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("testHGCalRecoLocal",eras.Phase2LReco)
+process = cms.Process("testHGCalRecoLocal",eras.Phase2C2_timing)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -11,8 +11,8 @@ process.load('Configuration.EventContent.EventContent_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
-process.load('Configuration.Geometry.GeometryExtended2023simReco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023sim_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D3Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D3_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedGauss_cfi')
@@ -125,5 +125,10 @@ for path in process.paths:
         getattr(process,path)._seq = process.generator * getattr(process,path)._seq
 
 # customisation of the process.
-from SLHCUpgradeSimulations.Configuration.phase2TkFlat import customise
-process=customise(process)
+# Automatic addition of the customisation function from HLTrigger.Configuration.customizeHLTforMC
+from HLTrigger.Configuration.customizeHLTforMC import customizeHLTforFullSim
+
+#call to customisation function customizeHLTforFullSim imported from HLTrigger.Configuration.customizeHLTforMC
+process = customizeHLTforFullSim(process)
+
+# End of customisation functions

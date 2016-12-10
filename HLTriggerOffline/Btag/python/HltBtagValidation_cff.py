@@ -28,8 +28,8 @@ HltVertexValidationVertices= cms.EDAnalyzer("HLTVertexPerformanceAnalyzer",
 	'HLT_QuadPFJet_VBF',
 	'HLT_QuadPFJet_VBF',
 	'HLT_QuadPFJet_VBF',
-	'HLT_Ele27_eta2p1_',
-	'HLT_IsoMu22_'
+	'HLT_Ele32_eta2p1_',
+	'HLT_IsoMu21_eta2p1_'
 	),
 	Vertex = cms.VInputTag(
 		cms.InputTag("hltVerticesL3"), 
@@ -46,8 +46,8 @@ hltbTagValidation = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
 	'HLT_PFMET120_',
 	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_',
 	'HLT_QuadPFJet_VBF',
-	'HLT_Ele27_eta2p1_',
-	'HLT_IsoMu22_'
+	'HLT_Ele32_eta2p1_',
+	'HLT_IsoMu21_eta2p1_'
 	),
 	JetTag = cms.VInputTag(
 		cms.InputTag("hltCombinedSecondaryVertexBJetTagsCalo"),
@@ -76,8 +76,8 @@ hltbtagValidationSequence = cms.Sequence(
 )
 
 # fastsim customs
-from Configuration.StandardSequences.Eras import eras
-if eras.fastSim.isChosen():
+from Configuration.Eras.Modifier_fastSim_cff import fastSim
+if fastSim.isChosen():
     HltVertexValidationVertices.SimVertexCollection = cms.InputTag("famosSimHits")
     # are these customs actually needed?
     #HltVertexValidationVertices.HLTPathNames =cms.vstring(

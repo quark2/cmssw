@@ -12,20 +12,22 @@ workflows = Matrix()
 
 #just define all of them
 
-numWFStart=10000
-numWFSkip=200
-#2023 WFs to run in IB (TenMuE_0_200, TTbar, ZEE, MinBias, TTbar PU, ZEE PU)
-numWFIB = [10821.0,10824.0,10825.0,10826.0] #2023sim scenario
-numWFIB.extend([10621.0,10624.0,10625.0,10626.0]) #2023 with tilted tracker
-numWFIB.extend([11021.0,11024.0,11025.0,11026.0]) #2023Lreco
-numWFIB.extend([11221.0,11224.0,11225.0,11226.0]) #2023Greco
-for i,key in enumerate(upgradeKeys):
-    numWF=numWFStart+i*numWFSkip
+#2023 WFs to run in IB (TenMuE_0_200, TTbar, ZEE, MinBias)
+numWFIB = [20021.0,20034.0,20046.0,20053.0] #2023D1 scenario
+numWFIB.extend([20421.0,20434.0,20446.0,20453.0]) #2023D2
+numWFIB.extend([20821.0,20834.0,20846.0,20853.0]) #2023D3
+numWFIB.extend([21221.0,21234.0,21246.0,21253.0]) #2023D4
+numWFIB.extend([23221.0,23234.0,23246.0,23253.0]) #2023D5
+numWFIB.extend([23621.0,23634.0,23646.0,23653.0]) #2023D6
+for i,key in enumerate(upgradeKeys[2023]):
+    numWF=numWFAll[2023][i]
     for frag in upgradeFragments:
         k=frag[:-4]+'_'+key
         stepList=[]
-        for step in upgradeScenToRun[key]:
+        for step in upgradeProperties[2023][key]['ScenToRun']:
             if 'Sim' in step:
+                if 'HLBeamSpotFull' in step and '14TeV' in frag:
+                    step = 'GenSimHLBeamSpotFull14'
                 stepList.append(k+'_'+step)
             else:
                 stepList.append(step+'_'+key)

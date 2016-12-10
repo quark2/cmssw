@@ -54,14 +54,19 @@ HcalDbProducer::HcalDbProducer( const edm::ParameterSet& fConfig)
 			  &HcalDbProducer::PFCorrsCallback &
 			  &HcalDbProducer::timeCorrsCallback &
 			  &HcalDbProducer::QIEDataCallback &
-                          &HcalDbProducer::QIETypesCallback &
+			  &HcalDbProducer::QIETypesCallback &
 			  &HcalDbProducer::gainWidthsCallback &
 			  &HcalDbProducer::channelQualityCallback &
 			  &HcalDbProducer::zsThresholdsCallback &
 			  &HcalDbProducer::L1triggerObjectsCallback &
 			  &HcalDbProducer::electronicsMapCallback &
-//			  &HcalDbProducer::frontEndMapCallback &
-			  &HcalDbProducer::lutMetadataCallback 
+			  &HcalDbProducer::frontEndMapCallback &
+			  &HcalDbProducer::SiPMParametersCallback &
+			  &HcalDbProducer::SiPMCharacteristicsCallback &
+			  &HcalDbProducer::TPChannelParametersCallback &
+			  &HcalDbProducer::TPParametersCallback &
+			  &HcalDbProducer::lutMetadataCallback &
+			  &HcalDbProducer::MCParamsCallback
 			  )
 		   );
 
@@ -76,11 +81,10 @@ HcalDbProducer::HcalDbProducer( const edm::ParameterSet& fConfig)
 }
 
 
-HcalDbProducer::~HcalDbProducer()
-{
- 
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
+HcalDbProducer::~HcalDbProducer() {
+
+  // do anything here that needs to be done at desctruction time
+  // (e.g. close files, deallocate resources etc.)
   if (mDumpStream != &std::cout) delete mDumpStream;
 }
 
@@ -379,5 +383,79 @@ void HcalDbProducer::lutMetadataCallback (const HcalLutMetadataRcd& fRecord) {
   }
 }
 
+void HcalDbProducer::SiPMParametersCallback (const HcalSiPMParametersRcd& fRecord) {
+  edm::ESTransientHandle <HcalSiPMParameters> item;
+  fRecord.get (item);
 
+  mSiPMParameters.reset( new HcalSiPMParameters(*item) );
+
+  edm::ESHandle<HcalTopology> htopo;
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
+  const HcalTopology* topo=&(*htopo);
+  mSiPMParameters->setTopo(topo);
+
+  mService->setData (mSiPMParameters.get());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("SiPMParameters")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL SiPMParameters set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(mSiPMParameters));
+  }
+}
+
+void HcalDbProducer::SiPMCharacteristicsCallback (const HcalSiPMCharacteristicsRcd& fRecord) {
+  edm::ESHandle <HcalSiPMCharacteristics> item;
+  fRecord.get (item);
+  mService->setData (item.product ());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("SiPMCharacteristics")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL SiPMCharacteristics set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(item.product ()));
+  }
+}
+
+void HcalDbProducer::TPChannelParametersCallback (const HcalTPChannelParametersRcd& fRecord) {
+  edm::ESTransientHandle <HcalTPChannelParameters> item;
+  fRecord.get (item);
+
+  mTPChannelParameters.reset( new HcalTPChannelParameters(*item) );
+
+  edm::ESHandle<HcalTopology> htopo;
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
+  const HcalTopology* topo=&(*htopo);
+  mTPChannelParameters->setTopo(topo);
+
+  mService->setData (mTPChannelParameters.get());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("TPChannelParameters")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL TPChannelParameters set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(mTPChannelParameters));
+  }
+}
+
+void HcalDbProducer::TPParametersCallback (const HcalTPParametersRcd& fRecord){
+
+  edm::ESHandle <HcalTPParameters> item;
+  fRecord.get (item);
+  mService->setData (item.product ());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("TPParameters")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL TPParameters set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(item.product ()));
+  }
+}
+
+
+void HcalDbProducer::MCParamsCallback (const HcalMCParamsRcd& fRecord) {
+  edm::ESTransientHandle <HcalMCParams> item;
+  fRecord.get (item);
+
+  mMCParams.reset( new HcalMCParams(*item) );
+
+  edm::ESHandle<HcalTopology> htopo;
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
+  const HcalTopology* topo=&(*htopo);
+  mMCParams->setTopo(topo);
+
+  mService->setData (mMCParams.get());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("MCParams")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL MCParams set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(mMCParams));
+  }
+}
 

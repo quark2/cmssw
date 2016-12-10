@@ -50,11 +50,12 @@ void RecoMETExtractor::produce(edm::StreamID streamID, edm::Event & iEvent,
 
   std::vector<reco::MET> *metCol = new std::vector<reco::MET>();
   
-  reco::MET met(src->front().corP4(corLevel_), src->front().vertex() );
+  reco::MET met(src->front().corSumEt(corLevel_), src->front().corP4(corLevel_), src->front().vertex() );
+  
   metCol->push_back( met );
   
-  std::auto_ptr<std::vector<reco::MET> > recoMETs(metCol);
-  iEvent.put(recoMETs);
+  std::unique_ptr<std::vector<reco::MET> > recoMETs(metCol);
+  iEvent.put(std::move(recoMETs));
 }
 
 

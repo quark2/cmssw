@@ -66,16 +66,16 @@
 
 namespace std {
   template<>
-    struct hash<std::pair<size_t,size_t> > {
-    typedef std::pair<size_t,size_t> arg_type;
-    typedef std::size_t value_type;
+    struct hash<std::pair<unsigned int,unsigned int> > {
+    typedef std::pair<unsigned int,unsigned int> arg_type;
+    typedef unsigned int value_type;
     value_type operator()(const arg_type& arg) const {
       return arg.first ^ (arg.second << 1);
     }
   };
   template<>
-    struct equal_to<std::pair<size_t,size_t> > {
-    typedef std::pair<size_t,size_t> arg_type;    
+    struct equal_to<std::pair<unsigned int,unsigned int> > {
+    typedef std::pair<unsigned int,unsigned int> arg_type;    
     bool operator()(const arg_type& arg1, const arg_type& arg2) const {
       return ( (arg1.first == arg2.first) & (arg1.second == arg2.second) );
     }
@@ -101,7 +101,7 @@ class PFBlockAlgo {
   typedef ElementList::const_iterator IEC;  
   typedef reco::PFBlockCollection::const_iterator IBC;
   //for skipping ranges
-  typedef std::array<std::pair<size_t,size_t>,reco::PFBlockElement::kNBETypes> ElementRanges;
+  typedef std::array<std::pair<unsigned int,unsigned int>,reco::PFBlockElement::kNBETypes> ElementRanges;
   
   PFBlockAlgo();
 
@@ -126,11 +126,11 @@ class PFBlockAlgo {
   
   /// \return collection of blocks
   /*   const  reco::PFBlockCollection& blocks() const {return *blocks_;} */
-  const std::auto_ptr< reco::PFBlockCollection >& blocks() const 
+  const std::unique_ptr< reco::PFBlockCollection >& blocks() const 
     {return blocks_;}
   
-  /// \return auto_ptr to collection of blocks
-  std::auto_ptr< reco::PFBlockCollection > transferBlocks() {return blocks_;}
+  //uniquen unique_ptr to collection of blocks
+  std::unique_ptr< reco::PFBlockCollection > transferBlocks() {return std::move(blocks_);}
 
   
   
@@ -139,7 +139,7 @@ class PFBlockAlgo {
   /// compute missing links in the blocks 
   /// (the recursive procedure does not build all links)  
   void packLinks(reco::PFBlock& block, 
-		 const std::unordered_map<std::pair<size_t,size_t>,PFBlockLink>& links) const; 
+		 const std::unordered_map<std::pair<unsigned int,unsigned int>,PFBlockLink>& links) const; 
   
   /// Avoid to check links when not useful
   inline bool linkPrefilter(const reco::PFBlockElement* last, 
@@ -152,8 +152,7 @@ class PFBlockAlgo {
 		    reco::PFBlock::LinkTest& linktest,
 		    double& dist) const;
   
-  std::auto_ptr< reco::PFBlockCollection >    blocksNew_;
-  std::auto_ptr< reco::PFBlockCollection >    blocks_;
+  std::unique_ptr< reco::PFBlockCollection >    blocks_;
   
   // the test elements will be transferred to the blocks
   ElementList       elements_; 
@@ -166,14 +165,14 @@ class PFBlockAlgo {
   friend std::ostream& operator<<(std::ostream&, const PFBlockAlgo&);
   bool useHO_;
 
-  std::vector<ImporterPtr> _importers;
+  std::vector<ImporterPtr> importers_;
 
   const std::unordered_map<std::string,reco::PFBlockElement::Type> 
-    _elementTypes;
-  std::vector<LinkTestPtr> _linkTests;
-  unsigned int _linkTestSquare[reco::PFBlockElement::kNBETypes][reco::PFBlockElement::kNBETypes];
+    elementTypes_;
+  std::vector<LinkTestPtr> linkTests_;
+  unsigned int linkTestSquare_[reco::PFBlockElement::kNBETypes][reco::PFBlockElement::kNBETypes];
   
-  std::vector<KDTreePtr> _kdtrees;
+  std::vector<KDTreePtr> kdtrees_;
 };
 
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElementGsfTrack.h"
