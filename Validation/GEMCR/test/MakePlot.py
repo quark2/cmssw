@@ -705,8 +705,8 @@ if __name__ == '__main__' :
   
   os.system("mkdir -p "+oDir )
   outRoot = TFile(oDir+oDir[:-1]+".root", "recreate")
-  mask = open("GEMMaskVec.dat", "w")
-  hotStrip = open("GEMHotVec.dat", "w")
+  mask = open("../data/GEMMaskVecRun%06d.dat"%run, "w")
+  hotStrip = open("../data/GEMHotVecRun%06d.dat"%run, "w")
   for c in chamber:
     outRoot.mkdir(c.replace("/",""))
     os.system("mkdir -p "+oDir+"/"+c.replace("/",""))  
