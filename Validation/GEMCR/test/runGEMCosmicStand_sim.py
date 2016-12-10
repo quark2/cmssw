@@ -218,6 +218,7 @@ process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
 process.validation_step = cms.Path(process.gemcrValidation)
 
 process.digitisation_step.remove(process.simMuonME0Digis)
+process.digitisation_step.remove(process.simMuonME0ReDigis)
 process.digitisation_step.remove(process.simEcalTriggerPrimitiveDigis)
 process.digitisation_step.remove(process.simEcalDigis)
 process.digitisation_step.remove(process.simEcalPreshowerDigis)
