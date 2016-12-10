@@ -46,7 +46,7 @@ public:
   void produce(edm::Event&, const edm::EventSetup&) override;
   double maxCLS;
   double minCLS;
-  double maxRes;
+  double trackChi2, trackResX, trackResY;
 private:
   int iev; // events through
   edm::EDGetTokenT<GEMRecHitCollection> theGEMRecHitToken;
@@ -60,8 +60,9 @@ private:
 GEMCosmicMuon::GEMCosmicMuon(const edm::ParameterSet& ps) : iev(0) {
   maxCLS = ps.getParameter<double>("maxClusterSize");
   minCLS = ps.getParameter<double>("minClusterSize");
-  maxRes = ps.getParameter<double>("maxResidual");
-
+  trackChi2 = ps.getParameter<double>("trackChi2");
+  trackResX = ps.getParameter<double>("trackResX");
+  trackResY = ps.getParameter<double>("trackResY");
   theGEMRecHitToken = consumes<GEMRecHitCollection>(ps.getParameter<edm::InputTag>("gemRecHitLabel"));
   // register what this produces
   edm::ParameterSet serviceParameters = ps.getParameter<edm::ParameterSet>("ServiceParameters");
@@ -153,7 +154,7 @@ void GEMCosmicMuon::produce(edm::Event& ev, const edm::EventSetup& setup) {
   //TrajectorySeed seed =trajectorySeeds->at(0);
   Trajectory bestTrajectory;
   TrajectorySeed bestSeed;
-  float maxChi2 = 1000;
+  float maxChi2 = trackChi2;
   for (auto seed : *trajectorySeeds){
     Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers);
     if (smoothed.isValid()){
@@ -302,9 +303,10 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
 	GlobalPoint hitGP = hit->globalPosition();
 	// cut is deltaX is too big - can be tighter?
         //double x_err = hit->localPositionError().xx();
-        double y_err = hit->localPositionError().yy();
-	if (abs(hitGP.x() - tsosGP.x()) > maxRes) continue;
-	if (abs(hitGP.z() - tsosGP.z()) > abs(y_err)) continue;
+        //double y_err = hit->localPositionError().yy();
+	if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
+	//if (abs(hitGP.z() - tsosGP.z()) > abs(y_err)) continue;
+	if (abs(hitGP.z() - tsosGP.z()) > trackResY) continue;
 	// need to find best hits per chamber
 	float deltaR = (hitGP - tsosGP).mag();
 	if (maxR > deltaR){
