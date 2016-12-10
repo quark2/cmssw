@@ -207,12 +207,12 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
         //uint64_t ui64bits = 0;
 
-        std::auto_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
-        std::auto_ptr<GEMDigiCollection> producedGEMDigis(new GEMDigiCollection);
-        std::auto_ptr<GEMDigiCollection> producedGEMDigisMissing(new GEMDigiCollection);
+        std::unique_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
+        std::unique_ptr<GEMDigiCollection> producedGEMDigis(new GEMDigiCollection);
+        std::unique_ptr<GEMDigiCollection> producedGEMDigisMissing(new GEMDigiCollection);
 
-        if(inpf_.eof()) { inpf_.close(); iEvent.put(pOut,"GEMTBData");  std::cout<<"END OF FILE"<<std::endl;  return; } // We should put out a collection even if it is empty
-        if(!inpf_.good()) { iEvent.put(pOut,"GEMTBData");  std::cout<<"EMPTY"<<std::endl;  return; }
+        if(inpf_.eof()) { inpf_.close(); iEvent.put(std::move(pOut),"GEMTBData");  std::cout<<"END OF FILE"<<std::endl;  return; } // We should put out a collection even if it is empty
+        if(!inpf_.good()) { iEvent.put(std::move(pOut),"GEMTBData");  std::cout<<"EMPTY"<<std::endl;  return; }
 
         std::vector<unsigned char> byteVec;  
 
@@ -465,14 +465,14 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                         f1.data()[i] = byteVec[i];
                 }
 
-                //     std::auto_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
+                //     std::unique_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
                 pOut->FEDData(999) = f1;
                 //     iEvent.put(pOut,"GEMTBData");
 
         }
 
         if(verbose_) std::cout <<" Run "<< iEvent.eventAuxiliary().run()<<"     "<<iEvent.eventAuxiliary().event()<<std::endl;
-        iEvent.put(pOut,"GEMTBData"); iEvent.put(producedGEMDigis); iEvent.put(producedGEMDigisMissing,"WrongGEMDigis");
+        iEvent.put(std::move(pOut),"GEMTBData"); iEvent.put(std::move(producedGEMDigis)); iEvent.put(std::move(producedGEMDigisMissing),"WrongGEMDigis");
 }
 
 // ------------ method called once each 64 Bits data word and keep in vector ------------
