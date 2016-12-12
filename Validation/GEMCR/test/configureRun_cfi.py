@@ -5,8 +5,11 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000035_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000036_Test_TIF_2016-11-28.dat"
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
-RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
-RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
+#RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
+#RAWFileName="run000153_Cosmics_TIF_2016-12-10.dat"
+RAWFileName="run000155_Cosmics_TIF_2016-12-10.dat"
+#RAWFileName="run000080_Cosmics_TIF_2016-12-10.dat"
 RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
 
 GEMMask = "Validation/GEMCR/data/GEMMaskVecRun%06d.dat"%RunNumber
@@ -35,7 +38,7 @@ trackResY = 30.0 #cm
 
 #MaxEvents=-1
 #MaxEvents=92000
-MaxEvents=1000
+MaxEvents=-1
 
 #makeTrack = False
 
@@ -98,7 +101,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     schamber.append("GE1/1-SCL02")
     chamber.append("GE1/1-VII-L-CERN-0001")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
-    barcode.append(["#117","#212","#206","#239","#63","#196","#243","#104","#244","#202","#130","#221","#189","#193","#187","#235","#124","#222","#201","#198","#213","#105","#194","#236"])
+    barcode.append(["#117","#212","#206","#239","#063","#196","#243","#104","#244","#202","#130","#221","#189","#193","#187","#235","#124","#222","#201","#198","#213","#105","#194","#236"])
     columnStand.append(2)
     rowStand.append(2)
     layerSC.append(1) #Interior?

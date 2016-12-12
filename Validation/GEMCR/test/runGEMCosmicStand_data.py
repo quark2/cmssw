@@ -177,7 +177,6 @@ process.schedule = cms.Schedule(process.digi_step,
                                 process.endjob_step,
                                 process.FEVTDEBUGHLToutput_step,
                                 )
-
 process.gemSegments.maxRecHitsInCluster = cms.int32(10)
 process.gemSegments.minHitsPerSegment = cms.uint32(3)
 process.gemSegments.clusterOnlySameBXRecHits = cms.bool(True)
