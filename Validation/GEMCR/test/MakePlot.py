@@ -33,6 +33,7 @@ rate = []
 vfatRate = []
 maskPlot = runConfig.runWithMasking
 #maskPlot = True
+showRate = False
 
 SLOTLIST=[]
 VFATLIST=[] 
@@ -344,15 +345,17 @@ def makeSummary():
 
   outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"),runConfig.MaxEvents, int(rate[0][2]),runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual, trackCheck, runConfig.trackChi2, runConfig.trackResX, runConfig.trackResY ))
 
-  outF.write("\\begin{frame}[plain]{noise rates}\n\\begin{itemize}")
-  for x in rate:
-    outF.write("\item %s : %3.3f MHz (%d times fired)"%(x[0], x[1]/x[2]*40.0, x[1]))
-  outF.write("\end{itemize}\n\end{frame}")
-  for x in chamber:
-    d = x.replace("/","")
-    outF.write(ratevfat_t%(x,d,d,d,d))
-    for r in xrange(1,9):
-      outF.write(rate_t%(x,r,d,d,r,d,d,r,d,d,r,d,d,r,r))
+
+  if showRate:
+    outF.write("\\begin{frame}[plain]{noise rates}\n\\begin{itemize}")
+    for x in rate:
+      outF.write("\item %s : %3.3f MHz (%d times fired)"%(x[0], x[1]/x[2]*40.0, x[1]))
+    outF.write("\end{itemize}\n\end{frame}")
+    for x in chamber:
+      d = x.replace("/","")
+      outF.write(ratevfat_t%(x,d,d,d,d))
+      for r in xrange(1,9):
+        outF.write(rate_t%(x,r,d,d,r,d,d,r,d,d,r,d,d,r,r))
   for x in chamber:
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
@@ -639,7 +642,7 @@ def draw_plot( file, tDir,oDir ) :
       vfatRate.Scale(40000.0/(4092.5/8.0/3.0)/ent)
       vfatRatef = flipHist(vfatRate)
       draw_occ(oDir,vfatRatef,".png", "colz text")  
-
+      """
       vfatRateM = TH2D(findName(tmph.GetName()).replace("/","")+"_masked_vfatRate", findName(tmph.GetName())+"masked vfat rate [KHz/cm^{2}]",3,1,4,8,1,9)
       for y in xrange(tmph.GetNbinsY()):
         for x in xrange(tmph.GetNbinsX()):
@@ -653,7 +656,7 @@ def draw_plot( file, tDir,oDir ) :
       vfatRateM.Scale(40000.0/(4092.5/8.0/3.0)/ent)
       vfatRateMf = flipHist(vfatRateM)
       draw_occ(oDir,vfatRateMf,".png", "colz text")  
-
+      """
 
 
 
@@ -706,7 +709,7 @@ def draw_plot( file, tDir,oDir ) :
       tmph.Draw()
       tmp2.Draw("same")
       tmp3.Draw("same")
-      le = TLegend(0.4, 0.75, 0.99, 0.9)
+      le = ROOT.TLegend(0.4, 0.75, 0.99, 0.9)
       le.SetTextSize(0.035)
       le.SetFillStyle(0)
       le.SetFillColor(kWhite)

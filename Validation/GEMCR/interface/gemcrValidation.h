@@ -40,7 +40,6 @@ private:
   std::vector<MonitorElement*> gem_chamber_x_y;
   std::vector<MonitorElement*> gem_chamber_cl_size;
   std::vector<MonitorElement*> gem_chamber_bx;
-  std::vector<MonitorElement*> gem_chamber_firedStrip;
   std::vector<MonitorElement*> gem_chamber_tr2D_eff;
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
   std::vector<MonitorElement*> gem_chamber_trxroll_eff;
@@ -49,7 +48,11 @@ private:
   std::vector<MonitorElement*> gem_chamber_thxy_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
   std::vector<MonitorElement*> gem_chamber_local_x;
-  
+  std::vector<MonitorElement*> gem_chamber_digi_digi;
+  std::vector<MonitorElement*> gem_chamber_digi_recHit;
+  std::vector<MonitorElement*> gem_chamber_digi_CLS;
+
+
   MonitorElement* gemcr_g;
   MonitorElement* gem_cls_tot;
   MonitorElement* gem_bx_tot;
@@ -74,7 +77,7 @@ private:
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber);
-  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_GP;
+  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG;
 };
 
 #endif

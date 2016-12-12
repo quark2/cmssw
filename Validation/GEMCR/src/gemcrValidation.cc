@@ -29,6 +29,7 @@
 
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 
+#include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
 
 
@@ -41,6 +42,7 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   InputTagToken_RH = consumes<GEMRecHitCollection>(cfg.getParameter<edm::InputTag>("recHitsInputLabel"));
   InputTagToken_TR = consumes<vector<reco::Track>>(cfg.getParameter<edm::InputTag>("tracksInputLabel"));
   InputTagToken_TS = consumes<vector<TrajectorySeed>>(cfg.getParameter<edm::InputTag>("seedInputLabel"));
+  InputTagToken_DG = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("gemDigiLabel"));
   edm::ParameterSet serviceParameters = cfg.getParameter<edm::ParameterSet>("ServiceParameters");
   theService = new MuonServiceProxy(serviceParameters);
   minCLS = cfg.getParameter<double>("minClusterSize"); 
@@ -107,7 +109,6 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      string h_name = "chamber_"+to_string(gid.chamber())+"_layer_"+to_string(gid.layer());
      gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,8,1,9));
      gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 50,0,50,24,0,24));
-     gem_chamber_firedStrip.push_back(ibooker.book2D(h_name+"_gemDigi", h_name+" gemDigi", 385,0,385,8,1,9));
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
      gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 3,1,4,8,1,9));
      gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
@@ -117,6 +118,9 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_thxy_eff.push_back(ibooker.book2D(h_name+"_thxy_eff", h_name+"_th2D_eff", 50,-25,25,120,-60,60));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 500,-25,25,100,-5,5));
      gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", h_name+" local x",500,-25,25,500,-25,25));
+     gem_chamber_digi_digi.push_back(ibooker.book2D(h_name+"_digi_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
+     gem_chamber_digi_recHit.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
+     gem_chamber_digi_CLS.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
   }
 }
 
@@ -222,7 +226,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
         //cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
         if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
-        if (abs(hitGP.z() - tsosGP.z()) > trackResY) continue;
+        if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         if (maxR > deltaR){
           tmpRecHit = hit;
@@ -245,11 +249,21 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   theService->update(iSetup);
 
   edm::Handle<GEMRecHitCollection> gemRecHits;
-
+  edm::Handle<GEMDigiCollection> digis;
   e.getByToken( this->InputTagToken_RH, gemRecHits);
   if (!gemRecHits.isValid()) {
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
+  }
+  e.getByToken( this->InputTagToken_RH, digis);
+
+  for (GEMDigiCollection::DigiRangeIterator gemdgIt = digis->begin(); gemdgIt != digis->end(); ++gemdgIt){
+    const GEMDetId& gemId = (*gemdgIt).first;
+    int index = findIndex(gemId);
+    const GEMDigiCollection::Range& range = (*gemdgIt).second;
+    for ( auto digi = range.first; digi != range.second; ++digi ) {
+      gem_chamber_digi_digi[index]->Fill(digi->strip(),gemId.roll());
+    }
   }
   vector<bool> firedCh;
   for (int c=0;c<n_ch;c++){
@@ -286,11 +300,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     gem_bx_tot->Fill(bx);
     rh1_chamber->Fill(index);
     for(int i = firstClusterStrip; i < (firstClusterStrip + clusterSize); i++){
-      gem_chamber_firedStrip[index]->Fill(i,rh_roll);
+      gem_chamber_digi_recHit[index]->Fill(i,rh_roll);
     }
     if (clusterSize < minCLS) continue;
     if (clusterSize > maxCLS) continue;
     rh2_chamber->Fill(index);
+    for(int i = firstClusterStrip; i < (firstClusterStrip + clusterSize); i++){
+      gem_chamber_digi_CLS[index]->Fill(i,rh_roll);
+    }
   }
   int fChMul = 0;
   for(int c=0;c<n_ch;c++){

@@ -209,7 +209,7 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 	mask.set(bit);
       }
     }
-
+    /*
     // masking study for ge11
     if (gemId.station() == 1){
       if (badConnector_){ // masking 1 and 128 from each readout
@@ -224,8 +224,9 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 	}
       }
     }
-  
+   */
     // Call the reconstruction algorithm    
+    //std::cout << mask << std::endl;
     OwnVector<GEMRecHit> recHits =
       theAlgo->reconstruct(*roll, gemId, range, mask);
     
