@@ -41,6 +41,7 @@ edm::OwnVector<GEMRecHit> GEMRecHitBaseAlgo::reconstruct(const GEMEtaPartition& 
     LocalError tmpErr;
     LocalPoint point;
     // Call the compute method
+    
     bool OK = this->compute(roll, *cl, point, tmpErr);
     if (!OK) continue;
 
