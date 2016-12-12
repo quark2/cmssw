@@ -27,6 +27,7 @@
 <use name="Validation/MuonGEMDigis"/>
 <use name="RecoMuon/TrackingTools"/>
 <use name="RecoMuon/CosmicMuonProducer"/>
+<use name="DataFormats/GEMDigi"/>
 <export>
 <lib name="1"/>
 </export>

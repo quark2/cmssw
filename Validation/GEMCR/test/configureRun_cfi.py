@@ -9,33 +9,43 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 #RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
 RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
+RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12_chunk_0.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000193_Cosmics_TIF_2016-12-12_chunk_0.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000113_Cosmics_TIF_2016-12-07.dat"
 MaxEvents=-1
 
-makeTrack = False
+makeTrack = True
 #flags for tracking
 minClusterSize = 1
 maxClusterSize = 10
 maxResidual = 3.0 # cm
-trackChi2 = 1
-trackResX = 0.5 #cm
-trackResY = 1.5 #cm
+trackChi2 = 5
+trackResX = 1.0 #cm
+trackResY = 1.5 
 
 ########################################################################################
 # 
 ########################################################################################
 RunNumber=int(RAWFileName.split("/")[-1].split("_")[0][3:])
 
+ratePlot = False
 GEMMask = "Validation/GEMCR/data/GEMMaskVecRun%06d.dat"%RunNumber
 GEMHot = "Validation/GEMCR/data/GEMHotVecRun%06d.dat"%RunNumber
 
-if os.path.isfile(os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+"/src/"+GEMHot): runWithMasking = True
-else : runWithMasking = False
-#runWithMasking = False
-
+if os.path.isfile(os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+"/src/"+GEMHot):
+   runWithMasking = True
+else : 
+  runWithMasking = False
+if runWithMasking :
+   makeMaskList = False
+else :
+   makeMaskList = True
 if not runWithMasking :
   GEMMask = "Validation/GEMCR/data/GEMMaskEmp.dat" 
   GEMHot = "Validation/GEMCR/data/GEMMaskEmp.dat"
+
+runWithMasking = False
+makeMaskList = False
 
 if runWithMasking : print "This run is running with masking"
 else : print  "This run dose not have mask lists" 

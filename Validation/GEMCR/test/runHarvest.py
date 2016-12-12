@@ -3,6 +3,7 @@
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
 # with command line options: harvest --conditions auto:run2_mc --magField 38T_PostLS1 --datatier GEN-SIM-DIGI --geometry GEMCosmicStand --eventcontent FEVTDEBUGHLT --era phase2_muon -s HARVESTING:genHarvesting --filein file:validation_VALIDATION.root --python_filename=harvest_test_cfg.py
+import configureRun_cfi as runConfig
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
@@ -26,7 +27,6 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
 )
 
-import configureRun_cfi as runConfig
 
 # Input source
 process.source = cms.Source("PoolSource",

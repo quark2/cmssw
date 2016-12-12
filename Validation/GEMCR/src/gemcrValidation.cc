@@ -32,7 +32,6 @@
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
 
-
 #include <iomanip>
 
 #include <TCanvas.h>
@@ -118,9 +117,9 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_thxy_eff.push_back(ibooker.book2D(h_name+"_thxy_eff", h_name+"_th2D_eff", 50,-25,25,120,-60,60));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 500,-25,25,100,-5,5));
      gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", h_name+" local x",500,-25,25,500,-25,25));
-     gem_chamber_digi_digi.push_back(ibooker.book2D(h_name+"_digi_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
-     gem_chamber_digi_recHit.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
-     gem_chamber_digi_CLS.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi", 384,0,384,8,1,9));
+     gem_chamber_digi_digi.push_back(ibooker.book2D(h_name+"_digi_gemDigi", h_name+" gemDigi (DIGI)", 384,0,384,8,1,9));
+     gem_chamber_digi_recHit.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi (recHit)", 384,0,384,8,1,9));
+     gem_chamber_digi_CLS.push_back(ibooker.book2D(h_name+"_CLS_gemDigi", h_name+" gemDigi (CLS)", 384,0,384,8,1,9));
   }
 }
 
@@ -255,7 +254,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
   }
-  e.getByToken( this->InputTagToken_RH, digis);
+  e.getByToken( this->InputTagToken_DG, digis);
 
   for (GEMDigiCollection::DigiRangeIterator gemdgIt = digis->begin(); gemdgIt != digis->end(); ++gemdgIt){
     const GEMDetId& gemId = (*gemdgIt).first;
