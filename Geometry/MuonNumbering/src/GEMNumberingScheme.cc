@@ -98,14 +98,16 @@ int GEMNumberingScheme::baseNumberToUnitNumber(const MuonBaseNumber& num) {
 	    << ring << " Station " << station << " Layer " << layer
 	    << " Chamber " << chamber << " Roll " << roll << std::endl;
 #endif
+  // temp fix for gem cosmic run
+  station =1;
 
   // Build the actual numbering
   GEMDetId id(region,ring,station,layer,chamber, roll);
   
   
-#ifdef LOCAL_DEBUG
+  //#ifdef LOCAL_DEBUG
   std::cout << id.rawId() << " DetId " << id << std::endl;
-#endif
+  //#endif
       
   return id.rawId();
 }
