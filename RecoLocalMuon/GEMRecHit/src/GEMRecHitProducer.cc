@@ -196,7 +196,8 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
     for (int i = 0; i < Size; i++ ) {
       if ( GEMMaskedStripsObj->MaskVec[i].rawId == rawId ) {
 	int bit = GEMMaskedStripsObj->MaskVec[i].strip;
-	mask.set(bit-1);
+	//std::cout << "GEMMaskedStripsObj "<< bit <<endl;
+	mask.set(bit);
       }
     }
 
@@ -204,7 +205,8 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
     for (int i = 0; i < Size; i++ ) {
       if ( GEMDeadStripsObj->DeadVec[i].rawId == rawId ) {
 	int bit = GEMDeadStripsObj->DeadVec[i].strip;
-	mask.set(bit-1);
+	//std::cout << "GEMDeadStripsObj "<< bit <<endl;
+	mask.set(bit);
       }
     }
 
