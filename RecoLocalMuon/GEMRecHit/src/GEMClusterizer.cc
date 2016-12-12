@@ -15,7 +15,7 @@ GEMClusterizer::doAction(const GEMDigiCollection::Range& digiRange, const EtaPar
 
   // Start from single digi recHits
   for ( auto digi = digiRange.first; digi != digiRange.second; ++digi ) {
-    if (mask.test(digi->strip()-1) ) continue;
+    if (mask.test(digi->strip()) ) continue;
 
     GEMCluster cl(digi->strip(), digi->strip(), digi->bx());
     initialCluster.insert(cl);
