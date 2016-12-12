@@ -211,8 +211,8 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
         std::unique_ptr<GEMDigiCollection> producedGEMDigis(new GEMDigiCollection);
         std::unique_ptr<GEMDigiCollection> producedGEMDigisMissing(new GEMDigiCollection);
 
-         if(inpf_.eof()) { inpf_.close(); iEvent.put(std::move(pOut),"GEMTBData"); iEvent.put(std::move(producedGEMDigis)); iEvent.put(std::move(producedGEMDigisMissing),"WrongGEMDigis");  std::cout<<"END OF FILE"<<std::endl;  return; } // We should put out a collection even if it is empty
-         if(!inpf_.good()) { iEvent.put(std::move(pOut),"GEMTBData");  iEvent.put(std::move(producedGEMDigis)); iEvent.put(std::move(producedGEMDigisMissing),"WrongGEMDigis"); std::cout<<"EMPTY"<<std::endl;  return; }
+        if(inpf_.eof()) { inpf_.close(); iEvent.put(std::move(pOut),"GEMTBData"); iEvent.put(std::move(producedGEMDigis)); iEvent.put(std::move(producedGEMDigisMissing),"WrongGEMDigis");  std::cout<<"END OF FILE"<<std::endl;  return; } // We should put out a collection even if it is empty
+        if(!inpf_.good()) { iEvent.put(std::move(pOut),"GEMTBData");  iEvent.put(std::move(producedGEMDigis)); iEvent.put(std::move(producedGEMDigisMissing),"WrongGEMDigis"); std::cout<<"EMPTY"<<std::endl;  return; }
 
         std::vector<unsigned char> byteVec;  
 
@@ -470,7 +470,7 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                         f1.data()[i] = byteVec[i];
                 }
 
-                //     std::auto_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
+                //     std::unique_ptr<FEDRawDataCollection> pOut(new FEDRawDataCollection());
                 pOut->FEDData(999) = f1;
                 //     iEvent.put(pOut,"GEMTBData");
 
