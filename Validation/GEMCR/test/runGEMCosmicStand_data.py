@@ -137,6 +137,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     recHitsInputLabel = cms.InputTag('gemRecHits'),
     tracksInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
     seedInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
+    gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO"),
     #genParticleLabel = cms.InputTag('genParticles','','RECO'),
     # st1, st2_short, st2_long of xbin, st1,st2_short,st2_long of ybin
     nBinGlobalZR = cms.untracked.vdouble(200,200,200,150,180,250),
