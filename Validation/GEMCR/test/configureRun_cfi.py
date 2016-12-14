@@ -9,18 +9,21 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 #RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
 RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
-RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12_chunk_0.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000209_Cosmics_TIF_2016-12-13.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12_chunk_0.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000193_Cosmics_TIF_2016-12-12_chunk_0.dat"
-#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000113_Cosmics_TIF_2016-12-07.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000208_LatencyScan_TIF_2016-12-13.dat"
+RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000186_LatencyScan_TIF_2016-12-12.dat"
+RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000189_LatencyScan_TIF_2016-12-12.dat"
 MaxEvents=-1
 
-makeTrack = True
+makeTrack = False
 #flags for tracking
 minClusterSize = 1
 maxClusterSize = 10
 maxResidual = 3.0 # cm
 trackChi2 = 5
-trackResX = 1.0 #cm
+trackResX = 3.0 #cm
 trackResY = 1.5 
 
 ########################################################################################
@@ -45,7 +48,7 @@ if not runWithMasking :
   GEMHot = "Validation/GEMCR/data/GEMMaskEmp.dat"
 
 runWithMasking = False
-makeMaskList = False
+makeMaskList = True
 
 if runWithMasking : print "This run is running with masking"
 else : print  "This run dose not have mask lists" 
@@ -53,6 +56,8 @@ else : print  "This run dose not have mask lists"
 if makeTrack and runWithMasking : OutputFileName='Reco_Run%06d.root'%RunNumber
 elif runWithMasking : OutputFileName='Reco_Run%06d_maskedRecHit.root'%RunNumber
 else : OutputFileName='Reco_Run%06d_test.root'%RunNumber
+
+if ratePlot : OutputFileName='Reco_Run%06d_RandomTrigger.root'%RunNumber
 
 #MaxEvents=-1
 #MaxEvents=92000
