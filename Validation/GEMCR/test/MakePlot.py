@@ -362,7 +362,10 @@ def roll1D(hist):
   nY = hist.GetNbinsY()
   nX = hist.GetNbinsX()
   name = hist.GetName()
-  histL = [TH1D(name+"_iEta_%d"%(x+1), "",nX,0,nX) for x in xrange(nY)]
+  if nY == 8:
+    histL = [TH1D(name+"_iEta_%d"%(x+1), "",nX,0,nX) for x in xrange(nY)]
+  if nY == 9:
+    histL = [TH1D(name+"_iEta_%d"%(x), "",nX,0,nX) for x in xrange(nY)]
   for y in xrange(nY):
     for x in xrange(nX):
       histL[y].SetBinContent(x+1, hist.GetBinContent(x+1,y+1))
@@ -537,6 +540,15 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(tmph,"y",[1,24],-1)
       draw_occ(oDir, tmph,".png", "colz", 0,1)
 
+    elif ( hist.startswith("chamber") and hist.endswith("stripHit_mul")):
+      tmph = d1.Get(hist)
+      for h in roll1D(tmph):
+        if h.GetName().endswith("_iEta_0") : h.SetTitle("strip multiplicity")
+        else:  h.SetTitle("roll %d strip multiplicity"%int(h.GetName()[-1]))
+        h.SetXTitle("hit")
+        h.SetYTitle("count")
+        draw_occ(oDir, h, ".png", "",1,0)
+        saveRoot(h, findName2(tmph.GetName()))
 
     elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
@@ -711,8 +723,6 @@ def makeSummary():
 \scalebox{0.18}{
 \includegraphics{\\baseLoc#1}
 \includegraphics{\\baseLoc#2}
-}
-\scalebox{0.18}{
 \includegraphics{\\baseLoc#3}
 }
 }
@@ -862,10 +872,15 @@ def makeSummary():
 
   hitMul_t = """
 \\begin{frame}[plain]{%s hit multiplicity}
-\imageTwo{%s_hit_mul_log.png}{%s_vfatHit_mul_log.png}
+\imageThree{%s_hit_mul_log.png}{%s_vfatHit_mul_log.png}{%s_stripHit_mul_iEta_0_log.png}
 \end{frame}
 """
-
+  hitRoll_t = """
+\\begin{frame}[plain]{%s strip multiplicity}
+\imageEight{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}
+{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}
+\end{frame}
+"""
   chamber.sort()
   for c in emptyChamber:
     chamber.remove(c)
@@ -892,7 +907,8 @@ def makeSummary():
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
     t = t.replace("GE11", "GE1/1")
-    outF.write(hitMul_t%(t,x,x))
+    outF.write(hitMul_t%(t,x,x,x))
+    outF.write(hitRoll_t%(t, x,1, x,2, x,3, x,4, x,5, x,6, x,7, x,8))
     #if maskPlot : outF.write(t_recHitMask%(t,x,x,x,x,x,x))
     #else : outF.write(t_recHit%(t,x,x,x,x,x,x))
     if makeMaskList: outF.write(t_recHitMask%(t,x,x,x,x,x,x))

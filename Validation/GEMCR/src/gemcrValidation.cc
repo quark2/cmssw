@@ -122,6 +122,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_digi_CLS.push_back(ibooker.book2D(h_name+"_CLS_gemDigi", h_name+" gemDigi (CLS)", 384,0,384,8,1,9));
      gem_chamber_hitMul.push_back(ibooker.book1D(h_name+"_hit_mul", h_name+" hit multiplicity",25,0,25 ));
      gem_chamber_vfatHitMul.push_back(ibooker.book2D(h_name+"_vfatHit_mul", h_name+" vfat hit multiplicity",25,0,25, 24,0,24));
+     gem_chamber_stripHitMul.push_back(ibooker.book2D(h_name+"_stripHit_mul", h_name+" strip hit multiplicity", 150,0,150,9,0,9));
   }
 }
 
@@ -269,6 +270,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   vector<bool> firedCh;
   vector<int> rMul;
   vector<vector<int>> vMul(n_ch, vector<int>(24, 0));
+  vector<vector<int>> sMul(n_ch, vector<int>(9, 0));
   for (int c=0;c<n_ch;c++){
     firedCh.push_back(0);
     rMul.push_back(0);
@@ -312,6 +314,8 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     if (clusterSize > maxCLS) continue;
     rh2_chamber->Fill(index);
     for(int i = firstClusterStrip; i < (firstClusterStrip + clusterSize); i++){
+      sMul[index][rh_roll] +=1;
+      sMul[index][0] +=1;
       gem_chamber_digi_CLS[index]->Fill(i,rh_roll);
     }
   }
@@ -320,6 +324,9 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     gem_chamber_hitMul[c]->Fill(rMul[c]);
     for(int v=0; v<24;v++){
       gem_chamber_vfatHitMul[c]->Fill(vMul[c][v],v);    
+    }
+    for(int r=0; r<9;r++){
+      gem_chamber_stripHitMul[c]->Fill(sMul[c][r],r);
     } 
     if (firedCh[c]){ 
       firedChamber->Fill(c+0.5);
