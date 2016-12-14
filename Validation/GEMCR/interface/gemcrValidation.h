@@ -53,6 +53,7 @@ private:
   std::vector<MonitorElement*> gem_chamber_digi_CLS;
   std::vector<MonitorElement*> gem_chamber_hitMul;
   std::vector<MonitorElement*> gem_chamber_vfatHitMul;
+  std::vector<MonitorElement*> gem_chamber_stripHitMul;
 
 
   MonitorElement* gemcr_g;
