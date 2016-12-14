@@ -33,10 +33,13 @@ oDir = "Run%06d_Plots/"%run
 rate = []
 vfatRate = []
 emptyChamber = []
-maskPlot = runConfig.runWithMasking
+#maskPlot = runConfig.runWithMasking
 #maskPlot = True
 showRate = runConfig.ratePlot
 makeMaskList = runConfig.makeMaskList
+
+maskL = {}
+
 SLOTLIST=[]
 VFATLIST=[] 
 COLUMNLIST=[] 
@@ -69,10 +72,9 @@ for x in tmpID:
   GEMRAWID[p[0][1:]] = int(p[1])
   GEMNAME[int(p[1])] = p[0][1:]
 
-if maskPlot:
+def readMaskList():
   tmpM = open("../data/GEMMaskVecRun%06d.dat"%run, "r")
   tmpH = open("../data/GEMHotVecRun%06d.dat"%run, "r")
-  maskL = {}
   for x in tmpM:
     tmpL = x.split()
     key = int(tmpL[0])
@@ -164,57 +166,109 @@ def hotStripCut(l, name):
   tmp = scipy.signal.medfilt(tmp,7)
   tmp = scipy.signal.medfilt(tmp,15)
   tmp = scipy.signal.medfilt(tmp,31)
+  tmp = scipy.signal.medfilt(tmp,63)
   m = np.mean(tmp)
-  s = np.std(tmp)
-  mul = TH1D("%s_%d"%(findName(name)+"_roll_"+name.split("_")[-1]+"_multiplicity", findRawId(name)), "%s %d"%(findName(name)+" roll "+name.split("_")[-1]+" multiplicity", findRawId(name)),int(2.*m) ,0,int(2.*m))
+  mul = TH1D("%s_%d"%(findName2(name)+"_roll_"+name.split("_")[-1]+"_multiplicity", findRawId(name)), "%s %d"%(findName(name)+" roll "+name.split("_")[-1]+" multiplicity", findRawId(name)),int(2.*m) ,0,int(2.*m))
   for x in l:
     mul.Fill(x)
-  print mul.GetMean(), mul.GetRMS()
   if mul.GetEntries() == 0: return 0
-  mul.Fit("gaus","","",mul.GetMean()-mul.GetRMS(), mul.GetMean()+mul.GetRMS())
+  mul.Fit("gaus","","",mul.GetMean()-2.0*mul.GetRMS(), mul.GetMean()+2.0*mul.GetRMS())
   fitresult = TVirtualFitter.GetFitter()
   fm = fitresult.GetParameter(1) 
   sig = fitresult.GetParameter(2) 
   saveRoot(mul, findName(name))
-  print m, fitresult.GetParameter(1), s, sig
   cut = fm+2*sig
-  return fm+2*sig
+  return [cut, int(m), mul]
     
-def writeMask(hist):
+def writeMask(hist,clsHist):
   tName = hist.GetName().split("_")
   nX = hist.GetNbinsX()
   nY = hist.GetNbinsY()
   hotVfat = TH2D(findName(hist.GetName()).replace("/","")+"_hotVfat", findName(hist.GetName())+" hot vfat",3,1,4,8,1,9)
+  mHist = hist.Clone(hist.GetName()+"_masked")
+  mHist.SetTitle("masked strip")
+  c = TCanvas("local_X","local_x",600,600)
+  c.SetRightMargin(0.35)
   for y in xrange(nY):
     name = "chamber_%d_layer_%d_roll_%d"%(int(tName[1]), int(tName[3]), y+1)
     a = []
     for x in xrange(nX):
       v = hist.GetBinContent(x+1,y+1)
       if v == 0 : 
-        if x == 384:
-          print "check digi hist! \n"*10
-          continue
         mask.write("%d %d\n"%(findRawId(name), x))
       a.append(v)
     cut = hotStripCut(a, name)
-    if cut < 100:
+    if (cut[0] < cut[1]) or (cut[0] < 10) :
       print "hot strip cut fitting was wrong!\n"*10
-      continue
+    if (cut[0] < cut[1]):
+      cut[0] = cut[1]*3.0
+    if (cut[0] < 10) :
+      cut[0] = 10
+    clsh = TH1D(findName2(hist.GetName())+"_iEta_%d"%(y+1)+"_CLS_gemDigi_multiplicity", findName(hist.GetName())+"roll %d cls cls cut multiplicity"%(y+1),cut[1]*2, 0, cut[1]*2 )
     for x in xrange(nX):
       v = hist.GetBinContent(x+1,y+1)
-      if v>cut: 
+      clsh.Fill(clsHist.GetBinContent(x+1,y+1))
+      if v>cut[0]: 
         hotStrip.write("%d %d\n"%(findRawId(name), x))
         hotVfat.Fill(findVfat(x,0,128*3),y+1)
+        mHist.SetBinContent(x+1,y+1,0)
+    saveRoot(clsh, findName2(hist.GetName()))
+    if divmod(cut[1],2)[1] == 0 : rebinN = 4
+    else : rebinN = 5
+    c.SetLogy(1)
+    digih = cut[2]
+    digih.Fit("gaus","","", digih.GetMean()-2.0*digih.GetRMS(), digih.GetMean()+2.0*digih.GetRMS())
+    digih.SetLineColor(kBlue-4)
+    digih.SetLineWidth(2)
+    digih.Rebin(rebinN)
+    digih.SetMaximum(digih.GetMaximum()*100)
+    digih.Draw()
+    clsh.SetLineColor(kGreen+3)
+    clsh.SetLineWidth(2)
+    clsh.Rebin(rebinN)
+    clsh.Draw("HIST SAME")
+    cutLine = TLine(cut[0], 0, cut[0], digih.GetMaximum()*1.2)
+    cutLine.SetLineWidth(3)
+    cutLine.SetLineStyle(7)
+    cutLine.SetLineColor(kRed)
+    cutLine.Draw()
+    le = TLegend(0.2, 0.75, 0.6, 0.9)
+    le.SetTextSize(0.035)
+    le.SetFillStyle(0)
+    le.SetFillColor(kWhite)
+    le.SetBorderSize(0)
+    le.SetHeader("cut : %.2f"%cut[0])
+    le.AddEntry(digih, "Digi collection")
+    le.AddEntry(clsh, "%d < CLS < %d"%(runConfig.minClusterSize-1,runConfig.maxClusterSize+1))
+    le.Draw()
+
+    c.SaveAs(oDir+"/"+findName2(hist.GetName())+"/"+findName2(hist.GetName())+"_iEta_%d_gemDigi_multiplicity.png"%(y+1)) 
+    c.SetLogy(0)
   hotVfat.SetXTitle("vfat number")
   hotVfat.SetYTitle("roll number")
   setAxiNum(hotVfat,"y",[1,8])
   setAxiNum(hotVfat,"x",[1,3])
   hotVfatf = fHist(hotVfat)
   saveRoot(hotVfat, findName(hist.GetName()).replace("/",""))
-  c = TCanvas("local_X","local_x",600,600)
-  c.SetRightMargin(0.35)
   hotVfatf.Draw("colz text")
   c.SaveAs(oDir+"/"+findName(hist.GetName()).replace("/","")+"/"+findName(hist.GetName()).replace("/","")+"_hotStrips.png") 
+  mRoll = roll1D(mHist)
+  dRoll = roll1D(hist)
+  for x in xrange(len(mRoll)):
+    dRoll[x].SetLineColor(kRed)
+    mRoll[x].SetLineColor(kBlue)
+    c.SetLogy(1)
+    dRoll[x].SetTitle("Roll %d"%(x+1))
+    dRoll[x].Draw("HIST")
+    mRoll[x].Draw("HIST SAME")
+    c.SaveAs(oDir+"/"+findName2(hist.GetName())+"/"+findName2(hist.GetName())+"_iEta_%d_hot_strip_cut.png"%(x+1))
+    c.SetLogy(0)
+  for h in mRoll:
+    draw_occ(oDir, h, ".png", "", True)
+    saveRoot(h, findName2(mHist.GetName()))
+  fmHist = fHist(mHist)
+  draw_occ(oDir, fmHist)
+  saveRoot(fmHist, findName2(fmHist.GetName()))
 
 def maskHist(hist):
   tName = hist.GetName().split("_")
@@ -248,9 +302,7 @@ def makeMapHist(hist):
   return h2
 
 def myFitter(hist,fun):
-  fun.SetParameter(0,1)
-  fun.SetParameter(1,0)
- 
+
   if hist.GetEntries() == 0: return 0,0
   hist.Fit(fun.GetName())
   fitresult = TVirtualFitter.GetFitter()
@@ -316,7 +368,17 @@ def roll1D(hist):
       histL[y].SetBinContent(x+1, hist.GetBinContent(x+1,y+1))
   return histL
 
-def draw_occ(target_dir, h, ext =".png", opt = "colz", log = False):
+def vfat2roll(hist):
+  name = findName2(hist.GetName())
+  rollHist = [TH1D(name+"_iEta_%d_CLS"%(x+1), "CLS roll %d"%(x+1), 50, 0, 50)  for x in xrange(8)]
+  for y in xrange(hist.GetNbinsY()):
+    iroll = 8-divmod(y,8)[1]
+    for x in xrange(hist.GetNbinsX()):
+      rollHist[iroll-1].Fill(x,hist.GetBinContent(x+1,y+1))
+  return rollHist
+
+
+def draw_occ(target_dir, h, ext =".png", opt = "colz", logy = False, logz = False):
   gStyle.SetStatStyle(0)
   gStyle.SetOptStat(1110)
   name = findName(h.GetName())
@@ -333,14 +395,19 @@ def draw_occ(target_dir, h, ext =".png", opt = "colz", log = False):
     sys.exit('h does not exist')
   h.SetLineWidth(2)
   h.SetLineColor(kBlue)
-  if log:
+  if logy:
     c.SetLogy(1)
+    ext = "_log"+ext
+  if logz:
+    c.SetLogz(1)
     ext = "_log"+ext
   h.Draw(opt)
   if name.startswith("GE1"): c.SaveAs(target_dir + name.split("_")[0].replace("GE1/1", "GE11")+"/"+ h.GetName() + ext)
   else : c.SaveAs(target_dir + h.GetName() + ext)
-  if log:
+  if logy:
     c.SetLogy(0)
+  if logz:
+    c.SetLogz(0)
 
 def draw_plot( file, tDir,oDir ) :
   c = TCanvas("c","c",600,600)
@@ -402,8 +469,7 @@ def draw_plot( file, tDir,oDir ) :
       thEff = d1.Get(hist.replace("trxy_eff", "thxy_eff"))
       tmpe = effErr(tmph,thEff,"x")
       tmpe.SetXTitle("x [cm]")
-      tmpe.SetYTitle("roll number")
-      setAxiNum(tmpe,"y",[1,8])
+      tmpe.SetYTitle("y [cm]")
       tmpef = fHist(tmpe)
       draw_occ(oDir, tmpef)
       tmph.Divide(thEff)
@@ -413,36 +479,26 @@ def draw_plot( file, tDir,oDir ) :
       tmpf = fHist(tmph)
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf)
-      saveRoot(tmpf, findName(tmp1.GetName()).replace("GE1/1", "GE11"))
+      saveRoot(tmpf, findName(tmp1.GetName()))
 
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
-      if makeMaskList and hist.endswith("digi_gemDigi"):
-        writeMask(tmph)
       tmph.SetXTitle("Strip")
       tmph.SetYTitle("Roll Number (iEta)") 
+      if makeMaskList and hist.endswith("digi_gemDigi"):
+        if tmph.Integral() == 0: continue
+        clsHist = d1.Get(hist.replace("digi_gemDigi", "CLS_gemDigi"))
+        writeMask(tmph, clsHist)
       histL = roll1D(tmph)
       ent = d1.Get("firedMul").Integral()
       for h in histL:
         draw_occ(oDir, h) 
-        saveRoot(h, findName(tmph.GetName()).replace("GE1/1", "GE11"))
+        saveRoot(h, findName(tmph.GetName()))
         tmpR = h.Clone(h.GetName()+"_rates")
         tmpR.Scale(40000.0/(4092.5/8.0/384.0)/ent)
         tmpR.SetYTitle("rate [KHz/cm^{2}]")
         draw_occ(oDir,tmpR)
         draw_occ(oDir,tmpR,".png","",True)
-      if maskPlot :
-        tmpm = maskHist(tmph)
-        histmL = roll1D(tmpm)
-        for h in histmL:
-          h.Scale(40000.0/(4092.5/8.0/384.0)/ent)
-          h.SetYTitle("rate [KHz/cm^{2}]")
-          draw_occ(oDir, h)
-          draw_occ(oDir, h,".png","",True)
-          saveRoot(h, findName(tmph.GetName()).replace("GE1/1", "GE11"))
-        tmpmf = fHist(tmpm)
-        draw_occ(oDir, tmpmf)
-        saveRoot(tmpmf, findName(tmph.GetName()).replace("GE1/1", "GE11")) 
       vfatRate = TH2D(findName(tmph.GetName()).replace("/","")+"_vfatRate", findName(tmph.GetName())+"vfat rate [KHz/cm^{2}]",3,1,4,8,1,9)
       for y in xrange(tmph.GetNbinsY()):
         for x in xrange(tmph.GetNbinsX()):
@@ -456,21 +512,6 @@ def draw_plot( file, tDir,oDir ) :
       vfatRate.Scale(40000.0/(4092.5/8.0/3.0)/ent)
       vfatRatef = fHist(vfatRate)
       draw_occ(oDir,vfatRatef,".png", "colz text")  
-      """
-      vfatRateM = TH2D(findName(tmph.GetName()).replace("/","")+"_masked_vfatRate", findName(tmph.GetName())+"masked vfat rate [KHz/cm^{2}]",3,1,4,8,1,9)
-      for y in xrange(tmph.GetNbinsY()):
-        for x in xrange(tmph.GetNbinsX()):
-          v = tmpm.GetBinContent(x+1,y+1)
-          vfatRateM.Fill(findVfat(x,0,128*3), y+1,v)
-      
-      vfatRateM.SetXTitle("vfat number")
-      vfatRateM.SetYTitle("roll number")
-      setAxiNum(vfatRateM,"y",[1,8])
-      setAxiNum(vfatRateM,"x",[1,3])
-      vfatRateM.Scale(40000.0/(4092.5/8.0/3.0)/ent)
-      vfatRateMf = fHist(vfatRateM)
-      draw_occ(oDir,vfatRateMf,".png", "colz text")  
-      """
       tmpf = fHist(tmph)
       draw_occ(oDir, tmpf)
       saveRoot(tmpf, findName(tmph.GetName()).replace("GE1/1", "GE11"))
@@ -481,10 +522,30 @@ def draw_plot( file, tDir,oDir ) :
       tmph.SetYTitle("Roll Number (iEta)") 
       tmpf = fHist(tmph)
       draw_occ(oDir, tmpf)
-      saveRoot(tmpf, findName(tmph.GetName()).replace("GE1/1", "GE11"))
+      saveRoot(tmpf, findName(tmph.GetName()))
+
+    elif ( hist.startswith("chamber") and hist.endswith("hit_mul")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("hit")
+      tmph.SetYTitle("count")
+      draw_occ(oDir, tmph,".png","",1,0)
+
+    elif ( hist.startswith("chamber") and hist.endswith("vfatHit_mul")):
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("hit")
+      tmph.SetYTitle("vfat number")
+      setAxiNum(tmph,"y",[1,24],-1)
+      draw_occ(oDir, tmph,".png", "colz", 0,1)
+
+
     elif ( hist.startswith("chamber") and hist.endswith("recHit_size")):
       tmph = d1.Get(hist)
       dName = tmph.GetName()
+      for h in vfat2roll(tmph):
+        h.SetXTitle("recHit size")
+        h.SetYTitle("count")
+        saveRoot(h, findName(dName))
+        draw_occ(oDir, h,".png","HIST",True)
       h2 = makeMapHist(tmph)
       tmph.SetXTitle("recHit size")
       tmph.SetYTitle("vfat number")
@@ -493,7 +554,7 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(h2,"x",[1,3])
       tmpf = fHist(h2)
       draw_occ(oDir, tmpf, ".png", "colz text")
-      saveRoot(tmpf, findName(dName).replace("GE1/1", "GE11"))
+      saveRoot(tmpf, findName(dName))
 
     elif (hist == "rh1_chamber"):
       tmph = d1.Get(hist)
@@ -553,27 +614,16 @@ def draw_plot( file, tDir,oDir ) :
       c.SetBottomMargin(0.18)
       c.SetRightMargin(0.18)
       tmph.Draw()
-     
       c.SaveAs(oDir+"firedChamber.png")
-      """
-      c = TCanvas("n","n",800,600)
-      hist = "noiseRatesChamber"
-      tmph = d1.Get(hist)  
-      tmph.SetXTitle("rate") 
-      c.SetRightMargin(0.18)  
-      c.SetLeftMargin(0.25)  
-      for x in xrange(tmph.GetNbinsY()):
-        cName = tmph.GetYaxis().GetBinLabel(x+1)
-        tmph.GetYaxis().SetBinLabel(x+1, findName(cName))      
-      tmph.Draw("colz")
-      c.SaveAs(oDir+"noiseRatesChamber.png")
-      """
+
     elif (hist.startswith("chamber") and hist.endswith("local_x")):
       if not runConfig.makeTrack : continue
       c = TCanvas("local_X","local_x",600,600)
       tmph = d1.Get(hist)
       tmph.Draw()
       fun = TF1("localx", "[0]*x + [1]")
+      fun.SetParameter(0,1)
+      fun.SetParameter(1,0)
       fitR = myFitter(tmph, fun) 
       tmph.SetXTitle("recHit [cm]")     
       tmph.SetYTitle("Track hit [cm]") 
@@ -585,7 +635,6 @@ def draw_plot( file, tDir,oDir ) :
       title = name+" "+tmph.GetTitle()
       tmph.SetTitle(title)
       tmph.SetName(name.replace("GE1/1", "GE11")+etc[:-1])
-      #c.SetRightMargin(0.35)
       extraText = TLatex()
       extraText.SetNDC()
       extraText.SetTextFont(52)
@@ -594,14 +643,14 @@ def draw_plot( file, tDir,oDir ) :
       dName = name.replace("GE1/1", "GE11")+"/"
       outRoot.cd(dName)
       tmph.Write()
-      print fitR
-      #fitR[2].Write()
       outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")   
     
       hist =hist.replace("local_x", "residual")
       tmph = d1.Get(hist)
       fun2 = TF1("residual", "[0]*x + [1]")
+      fun2.SetParameter(0,0)
+      fun2.SetParameter(1,0)
       tmph.Fit(fun2.GetName())
       fitR = myFitter(tmph, fun2)
       tmph.SetXTitle("Track hit [cm]")
@@ -614,7 +663,6 @@ def draw_plot( file, tDir,oDir ) :
       title = name+" "+tmph.GetTitle()
       tmph.SetTitle(title)
       tmph.SetName(name.replace("GE1/1", "GE11")+etc[:-1])
-      #c.SetRightMargin(0.35)
       extraText = TLatex()
       extraText.SetNDC()
       extraText.SetTextFont(52)
@@ -622,17 +670,14 @@ def draw_plot( file, tDir,oDir ) :
       extraText.DrawLatex(0.1,0.9,"fit result : y = mx + b (m = %1.2f, b = %1.2f)"%(fitR[0], fitR[1]))
       dName = name.replace("GE1/1", "GE11")+"/"
       outRoot.cd(dName)
-      #fitR[2].Wirte()
       tmph.Write()
       outRoot.cd("..")
       c.SaveAs(oDir+dName+tmph.GetName()+".png")
-     
-
 
     else : continue
-    #  draw_occ( oDir, d1.Get(hist) )
 
 def makeSummary():
+
   head = """
 \documentclass{beamer}
 \usefonttheme[onlylarge]{structurebold}
@@ -712,6 +757,23 @@ def makeSummary():
 }
 }
 
+\\newcommand{\imageEight}[8]{
+\scalebox{0.14}{
+\includegraphics{\\baseLoc#1}
+\includegraphics{\\baseLoc#2}
+\includegraphics{\\baseLoc#3}
+\includegraphics{\\baseLoc#4}
+}
+\\
+\scalebox{0.14}{
+\includegraphics{\\baseLoc#5}
+\includegraphics{\\baseLoc#6}
+\includegraphics{\\baseLoc#7}
+\includegraphics{\\baseLoc#8}
+}
+}
+
+
 \\begin{document}
 """
   t_recHit = """
@@ -721,7 +783,7 @@ def makeSummary():
 """
   t_recHitMask = """
 \\begin{frame}[plain]{%s recHit}
-\imageSix{%s_digi_gemDigi.png}{%s_recHit_gemDigi_masked.png}{%s_hotStrips.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_size_map.png}
+\imageSix{%s_digi_gemDigi.png}{%s_digi_gemDigi_masked.png}{%s_hotStrips.png}{%s_recHit.png}{%s_recHit_size.png}{%s_recHit_size_map.png}
 \end{frame}
 """
 
@@ -779,6 +841,30 @@ def makeSummary():
 \imageTwo{%s/%s_vfatRate.png}{%s/%s_masked_vfatRate.png}
 \end{frame}
 """
+  CLS_t = """
+\\begin{frame}[plain]{%s CLS}
+\imageEight{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}
+{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}{%s_iEta_%d_CLS_log.png}
+\end{frame}
+"""
+  digimul_t = """
+\\begin{frame}[plain]{%s gemDigi multiplicity}
+\imageEight{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}
+{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}{%s_iEta_%d_gemDigi_multiplicity.png}
+\end{frame}
+"""
+  rollCut_t = """
+\\begin{frame}[plain]{%s hot stipt cut}
+\imageEight{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}
+{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}{%s_iEta_%d_hot_strip_cut.png}
+\end{frame}
+"""
+
+  hitMul_t = """
+\\begin{frame}[plain]{%s hit multiplicity}
+\imageTwo{%s_hit_mul_log.png}{%s_vfatHit_mul_log.png}
+\end{frame}
+"""
 
   chamber.sort()
   for c in emptyChamber:
@@ -792,14 +878,6 @@ def makeSummary():
 
   outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"),runConfig.MaxEvents, int(rate[0][2]),runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual, trackCheck, runConfig.trackChi2, runConfig.trackResX, runConfig.trackResY ))
 
-  """
-  if makeMaskList:
-    for x in chamber:
-      d = x.replace("/","")
-      outF.write(ratevfat_t%(x,d,d,d,d))
-      for r in xrange(1,9):
-        outF.write(rate_t%(x,r,d,d,r,d,d,r,d,d,r,d,d,r,r))
-  """
   if showRate:
     outF.write("\\begin{frame}[plain]{noise rates}\n\\begin{itemize}")
     for x in rate:
@@ -814,8 +892,15 @@ def makeSummary():
     t = x.replace("GE1/1", "GE11")
     x = t+"/"+t
     t = t.replace("GE11", "GE1/1")
-    if maskPlot : outF.write(t_recHitMask%(t,x,x,x,x,x,x))
+    outF.write(hitMul_t%(t,x,x))
+    #if maskPlot : outF.write(t_recHitMask%(t,x,x,x,x,x,x))
+    #else : outF.write(t_recHit%(t,x,x,x,x,x,x))
+    if makeMaskList: outF.write(t_recHitMask%(t,x,x,x,x,x,x))
     else : outF.write(t_recHit%(t,x,x,x,x,x,x))
+    outF.write(CLS_t%(t, x,1, x,2, x,3, x,4, x,5, x,6, x,7, x,8))
+    if makeMaskList: 
+      outF.write(digimul_t%(t, x,1, x,2, x,3, x,4, x,5, x,6, x,7, x,8))
+      outF.write(rollCut_t%(t, x,1, x,2, x,3, x,4, x,5, x,6, x,7, x,8))
     if runConfig.makeTrack :
       outF.write(t_track%(t,x,x,x,x,x))
       outF.write(t_localx%(t,x,x))
@@ -829,17 +914,17 @@ if __name__ == '__main__' :
   
   os.system("mkdir -p "+oDir )
   outRoot = TFile(oDir+oDir[:-1]+".root", "recreate")
-  if makeMaskList:
-    outMask = "../data/GEMMaskVecRun%06d.dat"%run
-    outHotStrip = "../data/GEMHotVecRun%06d.dat"%run
-    if os.path.isfile(outMask) : 
+  if makeMaskList :
+    fMaskList = "../data/GEMMaskVecRun%06d.dat"%run
+    fHotStripList = "../data/GEMHotVecRun%06d.dat"%run
+    if os.path.isfile(fMaskList) : 
       print "MaskList file exist \n"*10
       sys.exit()
-    if os.path.isfile(outHotStrip) : 
+    if os.path.isfile(fHotStripList) : 
       print "HotStripList file exist \n"*10
       sys.exit()
-    mask = open(outMask, "w")
-    hotStrip = open(outHotStrip, "w")
+    mask = open(fMaskList, "w")
+    hotStrip = open(fHotStripList, "w")
   for c in chamber:
     outRoot.mkdir(c.replace("/",""))
     os.system("mkdir -p "+oDir+"/"+c.replace("/",""))  
