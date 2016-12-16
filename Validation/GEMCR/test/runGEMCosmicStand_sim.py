@@ -51,7 +51,7 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(40000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -184,6 +184,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     minClusterSize = cms.double(runConfig.minClusterSize),
     maxResidual = cms.double(runConfig.maxResidual),
     makeTrack = cms.bool(runConfig.makeTrack),
+    isMC = cms.bool(True),
     trackChi2 = cms.double(runConfig.trackChi2),
     trackResX = cms.double(runConfig.trackResX),
     trackResY = cms.double(runConfig.trackResY),
@@ -231,7 +232,7 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
                                 process.digitisation_step,#process.L1simulation_step,
                                 #process.digi2raw_step,process.raw2digi_step,#process.L1Reco_step,
                                 process.reconstruction_step,
-                                process.validation_step,
+                                #process.validation_step,
                                 process.endjob_step,
                                 process.FEVTDEBUGHLToutput_step,
                                 )

@@ -48,6 +48,7 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   maxCLS = cfg.getParameter<double>("maxClusterSize");
   maxRes = cfg.getParameter<double>("maxResidual");
   makeTrack = cfg.getParameter<bool>("makeTrack");
+  isMC = cfg.getParameter<bool>("isMC");
   trackChi2 = cfg.getParameter<double>("trackChi2");
   trackResY = cfg.getParameter<double>("trackResY"); 
   trackResX = cfg.getParameter<double>("trackResX");
@@ -83,7 +84,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   trajectoryh->setBinLabel(4, "passed chi2");
   firedMul = ibooker.book1D("firedMul","fired chamber multiplicity",n_ch+1,0,n_ch+1);
   firedChamber = ibooker.book1D("firedChamber", "fired chamber",n_ch,0,n_ch);
-
+  bestChi2 = ibooker.book1D("bestChi2", "#chi^{2} distirbution", trackChi2*10,0,trackChi2);
 
   tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,0,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
@@ -221,8 +222,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         if (abs(hitGP.x() - tsosGP.x()) > x_err*2.0) continue;
         if (abs(hitGP.z() - tsosGP.z()) > y_err*2.0) continue;*/
 
-        float deltaR = (hitGP - tsosGP).mag();
-        double x_err = hit->localPositionError().xx();
+        //double x_err = hit->localPositionError().xx();
         double y_err = hit->localPositionError().yy();
       
         //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
@@ -230,6 +230,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
         if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
+        float deltaR = (hitGP - tsosGP).mag();
         if (maxR > deltaR){
           tmpRecHit = hit;
           maxR = deltaR;
@@ -251,21 +252,22 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   theService->update(iSetup);
 
   edm::Handle<GEMRecHitCollection> gemRecHits;
-  edm::Handle<GEMDigiCollection> digis;
+  if (!isMC){
+    edm::Handle<GEMDigiCollection> digis;
+    e.getByToken( this->InputTagToken_DG, digis);
+    for (GEMDigiCollection::DigiRangeIterator gemdgIt = digis->begin(); gemdgIt != digis->end(); ++gemdgIt){
+      const GEMDetId& gemId = (*gemdgIt).first;
+      int index = findIndex(gemId);
+      const GEMDigiCollection::Range& range = (*gemdgIt).second;
+      for ( auto digi = range.first; digi != range.second; ++digi ) {
+        gem_chamber_digi_digi[index]->Fill(digi->strip(),gemId.roll());
+      }
+    }
+  }
   e.getByToken( this->InputTagToken_RH, gemRecHits);
   if (!gemRecHits.isValid()) {
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
-  }
-  e.getByToken( this->InputTagToken_DG, digis);
-
-  for (GEMDigiCollection::DigiRangeIterator gemdgIt = digis->begin(); gemdgIt != digis->end(); ++gemdgIt){
-    const GEMDetId& gemId = (*gemdgIt).first;
-    int index = findIndex(gemId);
-    const GEMDigiCollection::Range& range = (*gemdgIt).second;
-    for ( auto digi = range.first; digi != range.second; ++digi ) {
-      gem_chamber_digi_digi[index]->Fill(digi->strip(),gemId.roll());
-    }
   }
   vector<bool> firedCh;
   vector<int> rMul;
@@ -402,6 +404,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     //cout <<maxChi2 << endl;
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
     trajectoryh->Fill(3,1);
+    bestChi2->Fill(maxChi2);
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
     const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();

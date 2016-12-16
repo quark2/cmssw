@@ -407,7 +407,11 @@ GEMCosmicStandUnpacker::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
                                         if(verbose_) std::cout<<"----------->"<<chan<<"   "<<(unsigned)chan0xf<<std::endl;
 
-                                        int strip=dc.stripId;//
+                                        int strip=dc.stripId +1;//
+                                        if (strip > 2*128) strip-=128*2;
+                                        else if (strip < 128) strip+=128*2;
+
+
                                         int etaP=dc.etaId;
 
                                         if(etaP == 0) {
