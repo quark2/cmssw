@@ -86,7 +86,8 @@ void popcon::GEMEMapSourceHandler::getNewObjects()
   }
   else if(WhichConf.Contains("CosmicStand")){
     //mapfiles.push_back("COSMIC_VFAT_CHANNELS_7Nov2016.csv");
-    mapfiles.push_back("COSMIC_VFAT_CHANNELS_8Nov2016.csv");
+    //mapfiles.push_back("COSMIC_VFAT_CHANNELS_8Nov2016.csv");
+      mapfiles.push_back("COSMIC_VFAT_CHANNELS_LONG_15Dec2016.csv");
   }
   
   // mapfiles.push_back("GEM_GE1P01_Depth1_ChannelsFromDB_Sept_01_2016.csv");
