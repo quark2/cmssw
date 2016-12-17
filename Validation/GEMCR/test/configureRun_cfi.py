@@ -9,20 +9,25 @@ import csv,os
 #RAWFileName="/afs/cern.ch/work/d/dorney/CMS_GEM/Data/QC8/run000037_Test_TIF_2016-11-28.dat"
 #RAWFileName="run000044_Cosmics_TIF_2016-12-03.dat"
 RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-05.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000113_Cosmics_TIF_2016-12-07.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000209_Cosmics_TIF_2016-12-13.dat"
 RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12_chunk_0.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000193_Cosmics_TIF_2016-12-12_chunk_0.dat"
-#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000113_Cosmics_TIF_2016-12-07.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000208_LatencyScan_TIF_2016-12-13.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000186_LatencyScan_TIF_2016-12-12.dat"
+#RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000189_LatencyScan_TIF_2016-12-12.dat"
 MaxEvents=-1
 
 makeTrack = True
+#makeTrack = False
 #flags for tracking
 minClusterSize = 1
-maxClusterSize = 10
-maxResidual = 3.0 # cm
-trackChi2 = 5
-trackResX = 1.0 #cm
-trackResY = 1.5 
-
+maxClusterSize = 10000
+maxResidual = 5.0 # cm
+trackChi2 = 1000
+trackResX = 25 #cm
+trackResY = 2 
+tag = "eventDisplay"
 ########################################################################################
 # 
 ########################################################################################
@@ -45,6 +50,7 @@ if not runWithMasking :
   GEMHot = "Validation/GEMCR/data/GEMMaskEmp.dat"
 
 runWithMasking = False
+#makeMaskList = True
 makeMaskList = False
 
 if runWithMasking : print "This run is running with masking"
@@ -54,11 +60,12 @@ if makeTrack and runWithMasking : OutputFileName='Reco_Run%06d.root'%RunNumber
 elif runWithMasking : OutputFileName='Reco_Run%06d_maskedRecHit.root'%RunNumber
 else : OutputFileName='Reco_Run%06d_test.root'%RunNumber
 
-#MaxEvents=-1
-#MaxEvents=92000
+if ratePlot : OutputFileName='Reco_Run%06d_RandomTrigger.root'%RunNumber
 
-#makeTrack = False
+if not tag == "":
+  OutputFileName.replace(".root", "_%s.root"%tag)
 
+print OutputFileName, " will be generted."
 sqlite_file = os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+'/src/EventFilter/GEMRawToDigi/test/GEMEMap_CosmicStand_8Nov2016.db'
 
 def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=[], chamber=[], columnStand=[], rowStand=[], layerSC=[]):
@@ -68,27 +75,27 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     schamber=[]
     slot=[]
     barcode=[]
-   
+
     #Configuration of the Stand: write down every VFAT
     #The ones below are a editted version with respect to what is there in the elog
-    
-    NUMBEROFDETECTORS=10
+
+    NUMBEROFDETECTORS=4
     #NUMBEROFDETECTORS=10
 
 
 
-    schamber.append("GE1/1-SCS03")
-    chamber.append("GE1/1-VII-S-CERN-0003")
-    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
-    barcode.append(["#146","#204","#296","#284","#263","#093","#090","#035","#027","#088","#138","#336","#098","#040","#077","#211","#082","#029","#076","#048","#066","#290","#286","#316"])
-    columnStand.append(2)
-    rowStand.append(5)
-    layerSC.append(2)
-
+#    schamber.append("GE1/1-SCS03")
+#    chamber.append("GE1/1-VII-S-CERN-0003")
+#    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+#    barcode.append(["#146","#204","#296","#284","#263","#093","#090","#035","#027","#088","#138","#336","#098","#040","#077","#211","#082","#029","#076","#048","#066","#290","#286","#316"])
+#    columnStand.append(2)
+#    rowStand.append(5)
+#    layerSC.append(2)
+    """
     schamber.append("GE1/1-SCS03")
     chamber.append("GE1/1-VII-S-CERN-0004")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
-    barcode.append(["#071","#319","#294","#321","#139","#096","#258","#271","#075","#269","#251","#325","#111","#318","#295","#274","#001", "#240","#310","#288","#188","#273","#058","#070"])
+    barcode.append(["#071","#319","#294","#321","#139","#096","#258","#271","#075","#265","#251","#325","#111","#318","#295","#274","#001", "#240","#310","#288","#188","#273","#058","#070"])
     columnStand.append(2)
     rowStand.append(5)
     layerSC.append(1) #Interior?
@@ -109,7 +116,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(4)
     layerSC.append(1) #Interior?
-
+    """
     schamber.append("GE1/1-SCL01")
     chamber.append("GE1/1-VII-L-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -141,7 +148,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(2)
     layerSC.append(1) #Interior?
-
+    """
     schamber.append("GE1/1-SCS02")
     chamber.append("GE1/1-VII-S-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -157,10 +164,12 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     columnStand.append(2)
     rowStand.append(1)
     layerSC.append(1) #Interior?
+    """
+    VFATHEX=[]
+    BARCODE=[]
 
-    VFATHEX=[] 
-    BARCODE=[]   
- 
+
+
     for i in range(0,NUMBEROFDETECTORS):
       for item in range(0,len(barcode[i])):
           with open(fileVFATS, 'rt') as f:
@@ -176,10 +185,4 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
                                     COLUMNLIST.append(columnStand[i])
                                     ROWLIST.append(rowStand[i])
                                     LAYERLIST.append(layerSC[i])
-    
-   
 
-#    for i in range(0,len(VFATHEX)):
-#            print "%s %d %s" %(VFATHEX[i] ,SLOTLIST[i] , BARCODE[i])
-
- 
