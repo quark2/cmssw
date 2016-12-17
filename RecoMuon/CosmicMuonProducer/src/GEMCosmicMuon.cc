@@ -303,10 +303,10 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
 	GlobalPoint hitGP = hit->globalPosition();
 	// cut is deltaX is too big - can be tighter?
         //double x_err = hit->localPositionError().xx();
-        //double y_err = hit->localPositionError().yy();
+        double y_err = hit->localPositionError().yy();
 	if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
 	//if (abs(hitGP.z() - tsosGP.z()) > abs(y_err)) continue;
-	if (abs(hitGP.z() - tsosGP.z()) > trackResY) continue;
+	if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
 	// need to find best hits per chamber
 	float deltaR = (hitGP - tsosGP).mag();
 	if (maxR > deltaR){

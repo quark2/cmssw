@@ -34,7 +34,7 @@ public:
   int findvfat(float x, float a, float b);
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX;
-  bool makeTrack;
+  bool makeTrack, isMC;
 private:
   const GEMGeometry* GEMGeometry_;
   std::vector<MonitorElement*> gem_chamber_x_y;
@@ -70,6 +70,7 @@ private:
   MonitorElement* trajectoryh;
   MonitorElement* firedMul;
   MonitorElement* firedChamber;
+  MonitorElement* bestChi2;
   
 
 
