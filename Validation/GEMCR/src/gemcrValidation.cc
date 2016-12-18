@@ -124,6 +124,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_vfatHitMul.push_back(ibooker.book2D(h_name+"_vfatHit_mul", h_name+" vfat hit multiplicity",25,0,25, 24,0,24));
      gem_chamber_stripHitMul.push_back(ibooker.book2D(h_name+"_stripHit_mul", h_name+" strip hit multiplicity", 150,0,150,9,0,9));
      gem_chamber_bestChi2.push_back(ibooker.book1D(h_name+"_bestChi2", h_name+" #chi^{2} distribution", trackChi2*10,0,trackChi2));
+     gem_chamber_track.push_back(ibooker.book1D(h_name+"_track", h_name+" track",5,0,5));
   }
 }
 
@@ -367,6 +368,13 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     if (muRecHits.size()<3){ 
       //cout << "tracking passed due to # recHit under 3" << endl;
       continue;}
+    int TCN = 0;
+    for(int c=0;c<n_ch;c++){
+      if (c == (countTC - 1)) continue;
+      if (firedCh[c]){ TCN += 1;}
+    }
+    if (TCN < 3) continue;
+    gem_chamber_track[findIndex(tch.id())]->Fill(0.5);
     auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
     trajectorySeeds =findSeeds(muRecHits);
     Trajectory bestTrajectory;
@@ -387,6 +395,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       //cout << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
       if (smoothed.isValid()){
         trajectoryh->Fill(2,1);
+        gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
         //cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
           maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
@@ -403,6 +412,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
     trajectoryh->Fill(3,1);
     gem_chamber_bestChi2[findIndex(tch.id())]->Fill(maxChi2);
+    gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
     const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();
@@ -428,6 +438,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         double min_x = ch.etaPartition(mRoll)->centreOfStrip(0).x();
         double max_x = ch.etaPartition(mRoll)->centreOfStrip(n_strip).x();
         if ((tlp.x()>(min_x)) & (tlp.x() < (max_x)) ){
+          gem_chamber_track[findIndex(tch.id())]->Fill(3.5);
           int index = findIndex(tch.id());
           double vfat = findvfat(tlp.x(), min_x, max_x);
           gem_chamber_th2D_eff[index]->Fill(vfat, mRoll);                
@@ -448,6 +459,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
             }
           }
           if(tmpRecHit){
+            gem_chamber_track[findIndex(tch.id())]->Fill(4.5);
             LocalPoint hitLP = tmpRecHit->localPosition();
             gem_chamber_tr2D_eff[index]->Fill(vfat, mRoll);
             gem_chamber_trxroll_eff[index]->Fill(tlp.x(), mRoll);
