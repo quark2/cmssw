@@ -488,7 +488,7 @@ def draw_plot( file, tDir,oDir ) :
       draw_occ(oDir, tmpf)
       saveRoot(tmpf, findName(tmp1.GetName()))
 
-    elif ( hist == "bestChi2"):
+    elif ( hist.endswith("bestChi2")):
       if not runConfig.makeTrack : continue
       tmph = d1.Get(hist)
       tmph.SetXTitle("#chi^{2}")
@@ -892,8 +892,8 @@ def makeSummary():
 \end{frame}
 """
   chi2_t = """
-\\begin{frame}[plain]{$\chi^{2}$ distribution}
-\imageOne{bestChi2.png}
+\\begin{frame}[plain]{%s $\chi^{2}$ distribution}
+\imageOne{%s_bestChi2.png}
 \end{frame}
 """
 
@@ -908,8 +908,6 @@ def makeSummary():
   else : trackCheck = "False"
 
   outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"),runConfig.MaxEvents, int(rate[0][2]),runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual, trackCheck, runConfig.trackChi2, runConfig.trackResX, runConfig.trackResY ))
-  if runConfig.makeTrack:
-    outF.write(chi2_t)
   if showRate:
     outF.write("\\begin{frame}[plain]{noise rates}\n\\begin{itemize}")
     for x in rate:
@@ -937,6 +935,7 @@ def makeSummary():
     if runConfig.makeTrack :
       outF.write(t_track%(t,x,x,x,x,x))
       outF.write(t_localx%(t,x,x))
+      outF.write(chi2_t%(t,x))
   outF.write("\end{document}")
   outF.close() 
   os.system("latex --output-format=pdf "+runConfig.OutputFileName.replace(".root", ".tex"))
