@@ -12,6 +12,7 @@ RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000080_Cosmics_TIF_2016-12-0
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000113_Cosmics_TIF_2016-12-07.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000209_Cosmics_TIF_2016-12-13.dat"
 RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12_chunk_0.dat"
+RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-12.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000193_Cosmics_TIF_2016-12-12_chunk_0.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000208_LatencyScan_TIF_2016-12-13.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000186_LatencyScan_TIF_2016-12-12.dat"
@@ -22,12 +23,12 @@ makeTrack = True
 #makeTrack = False
 #flags for tracking
 minClusterSize = 1
-maxClusterSize = 10000
+maxClusterSize = 10
 maxResidual = 5.0 # cm
-trackChi2 = 1000
-trackResX = 25 #cm
-trackResY = 2 
-tag = "eventDisplay"
+trackChi2 = 3
+trackResX = 3.0 #cm
+trackResY = 1.5
+tag = ""
 ########################################################################################
 # 
 ########################################################################################

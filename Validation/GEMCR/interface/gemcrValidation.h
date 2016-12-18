@@ -54,6 +54,7 @@ private:
   std::vector<MonitorElement*> gem_chamber_hitMul;
   std::vector<MonitorElement*> gem_chamber_vfatHitMul;
   std::vector<MonitorElement*> gem_chamber_stripHitMul;
+  std::vector<MonitorElement*> gem_chamber_bestChi2;
 
 
   MonitorElement* gemcr_g;
@@ -70,7 +71,6 @@ private:
   MonitorElement* trajectoryh;
   MonitorElement* firedMul;
   MonitorElement* firedChamber;
-  MonitorElement* bestChi2;
   
 
 

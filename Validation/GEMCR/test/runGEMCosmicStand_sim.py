@@ -51,7 +51,7 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
 
 # Input source
 process.source = cms.Source("EmptySource")
@@ -173,6 +173,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     tracksInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
     seedInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
     genParticleLabel = cms.InputTag('genParticles','','RECO'),
+    gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO"),
     # st1, st2_short, st2_long of xbin, st1,st2_short,st2_long of ybin
     nBinGlobalZR = cms.untracked.vdouble(200,200,200,150,180,250),
     # st1 xmin, xmax, st2_short xmin, xmax, st2_long xmin, xmax, st1 ymin, ymax...
@@ -232,7 +233,7 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
                                 process.digitisation_step,#process.L1simulation_step,
                                 #process.digi2raw_step,process.raw2digi_step,#process.L1Reco_step,
                                 process.reconstruction_step,
-                                #process.validation_step,
+                                process.validation_step,
                                 process.endjob_step,
                                 process.FEVTDEBUGHLToutput_step,
                                 )
