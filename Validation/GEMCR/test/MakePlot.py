@@ -452,6 +452,7 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(tmpe,"x",[1,3])
       setAxiNum(tmpe,"y",[1,8])    
       tmpef = fHist(tmpe)   
+      tmpef.SetEntries(thEff.Integral())
       draw_occ(oDir, tmpef,".png", "colz text")
       saveRoot(tmpef, findName(tmp1.GetName()).replace("GE1/1", "GE11"))
       tmph.Divide(thEff)
@@ -461,12 +462,13 @@ def draw_plot( file, tDir,oDir ) :
       setAxiNum(tmph,"y",[1,8])
 
       tmpf = fHist(tmph)
+      tmpf.SetEntries(thEff.Integral())
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf, ".png", "colz text")
       saveRoot(tmpf, findName(tmp1.GetName()).replace("GE1/1", "GE11"))
  
 
-    if ( hist.startswith("chamber") and hist.endswith("trxy_eff")):
+    elif ( hist.startswith("chamber") and hist.endswith("trxy_eff")):
       if not runConfig.makeTrack : continue
       tmph = d1.Get(hist)
       thEff = d1.Get(hist.replace("trxy_eff", "thxy_eff"))
@@ -474,6 +476,8 @@ def draw_plot( file, tDir,oDir ) :
       tmpe.SetXTitle("x [cm]")
       tmpe.SetYTitle("y [cm]")
       tmpef = fHist(tmpe)
+      tmpef.SetEntries(thEff.Integral())
+      draw_occ(oDir, tmpef,".png", "colz text")
       draw_occ(oDir, tmpef)
       tmph.Divide(thEff)
       tmph.SetXTitle("x [cm]")
@@ -483,6 +487,12 @@ def draw_plot( file, tDir,oDir ) :
       tmpf.GetZaxis().SetRangeUser(0.0,1.0)
       draw_occ(oDir, tmpf)
       saveRoot(tmpf, findName(tmp1.GetName()))
+
+    elif ( hist == "bestChi2"):
+      if not runConfig.makeTrack : continue
+      tmph = d1.Get(hist)
+      tmph.SetXTitle("#chi^{2}")
+      draw_occ(oDir, tmph)
 
     elif ( hist.startswith("chamber") and hist.endswith("gemDigi")):
       tmph = d1.Get(hist)
@@ -637,8 +647,8 @@ def draw_plot( file, tDir,oDir ) :
       fun.SetParameter(0,1)
       fun.SetParameter(1,0)
       fitR = myFitter(tmph, fun) 
-      tmph.SetXTitle("recHit [cm]")     
-      tmph.SetYTitle("Track hit [cm]") 
+      tmph.SetXTitle("Track hit [cm]") 
+      tmph.SetYTitle("recHit [cm]")     
       name = findName(hist)
       tname = hist.split("_")
       etc = "_"
@@ -881,6 +891,12 @@ def makeSummary():
 {%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}{%s_stripHit_mul_iEta_%d_log.png}
 \end{frame}
 """
+  chi2_t = """
+\\begin{frame}[plain]{$\chi^{2}$ distribution}
+\imageOne{bestChi2.png}
+\end{frame}
+"""
+
   chamber.sort()
   for c in emptyChamber:
     chamber.remove(c)
@@ -892,7 +908,8 @@ def makeSummary():
   else : trackCheck = "False"
 
   outF.write(t_info%(runConfig.RAWFileName.split("/")[-1].replace("_","\_"), runConfig.OutputFileName.replace("_","\_"),runConfig.MaxEvents, int(rate[0][2]),runConfig.minClusterSize, runConfig.maxClusterSize, runConfig.maxResidual, trackCheck, runConfig.trackChi2, runConfig.trackResX, runConfig.trackResY ))
-
+  if runConfig.makeTrack:
+    outF.write(chi2_t)
   if showRate:
     outF.write("\\begin{frame}[plain]{noise rates}\n\\begin{itemize}")
     for x in rate:
