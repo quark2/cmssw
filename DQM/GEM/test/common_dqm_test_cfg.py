@@ -1,6 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 
-process = cms.Process('DQM')
+
+from Configuration.StandardSequences.Eras import eras
+process = cms.Process('DQM', eras.phase2_muon)
+
+
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
+process.load('Geometry.GEMGeometry.gemGeometryCustoms')
+process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')
+process.load('Geometry.MuonCommonData.testMFXML_cfi')
+process.load('Geometry.MuonNumbering.muonNumberingInitialization_cfi')
+
 
 # minimum of logs
 process.MessageLogger = cms.Service("MessageLogger",
@@ -18,6 +28,16 @@ process.dqmEnv.eventInfoFolder = "EventInfo"
 process.dqmSaver.path = ""
 process.dqmSaver.tag = "GEM"
 
+#process.load("DQM.Integration.config.FrontierCondition_GT_autoExpress_cfi")
+import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.FrontierConditions_GlobalTag_cff import * 
+GlobalTag.globaltag = "auto:phase2_realistic"
+GlobalTag.globaltag = "91X_upgrade2023_realistic_v1_D17-v1"
+
+#from Configuration.AlCa.GlobalTag import GlobalTag
+#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+
+
 # raw data source
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
@@ -27,9 +47,9 @@ process.source = cms.Source("PoolSource",
 
     # run 283877, fill 5442, 23 Oct 2016 (after TS2)
     #'/store/data/Run2016H/HLTPhysics/RAW/v1/000/283/877/00000/F28F8896-999B-E611-93D8-02163E013706.root',
-    'root:///cms/scratch/hyunyong/GEMCosmicRayStand/Reco_Run000080_test.root'
     # test file for 2017 mapping (vertical RPs only)
     #'root://eostotem.cern.ch//eos/totem/data/ctpps/run290874.root'
+    'root:///xrootd/store/relval/CMSSW_9_1_1/RelValZMM_14/GEN-SIM-RECO/91X_upgrade2023_realistic_v1_D17-v1/10000/14A91939-1D3F-E711-A09A-0025905A610A.root'
   ),
   inputCommands = cms.untracked.vstring(
     'keep *',
