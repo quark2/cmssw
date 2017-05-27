@@ -144,8 +144,8 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
   ibooker.setCurrentFolder("GEM/recHit");
   for (auto ch : gemChambers){
     GEMDetId gid = ch.id();
-    string hName = "recHit_"+to_string(gid.chamber());
-    string hTitle = "recHit "+to_string(gid.chamber());
+    string hName = "recHit_SCH_"+to_string(gid.superChamberId())+"_la_"+to_string(gid.layer());
+    string hTitle = "recHit SCH ID : "+to_string(gid.superChamberId())+", layer : "+to_string(gid.layer());
     recHitME[ ch.id() ] = ibooker.book1D(hName, hTitle, 24,0,24);
   }
   /*
