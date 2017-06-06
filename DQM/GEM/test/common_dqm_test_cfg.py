@@ -2,15 +2,24 @@ import FWCore.ParameterSet.Config as cms
 
 
 from Configuration.StandardSequences.Eras import eras
-process = cms.Process('DQM', eras.phase2_muon)
 
+process = cms.Process('SIM',eras.Run2_2017,eras.run2_GEM_2017_MCTest)
 
+# import of standard configurations
+process.load('Configuration.StandardSequences.Services_cff')
+process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
+process.load('FWCore.MessageService.MessageLogger_cfi')
+process.load('Configuration.EventContent.EventContent_cff')
+process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
-process.load('Geometry.GEMGeometry.gemGeometryCustoms')
-process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')
-process.load('Geometry.MuonCommonData.testMFXML_cfi')
-process.load('Geometry.MuonNumbering.muonNumberingInitialization_cfi')
-
+process.load('Configuration.StandardSequences.GeometrySimDB_cff')
+process.load('Configuration.StandardSequences.MagneticField_cff')
+process.load('Configuration.StandardSequences.Generator_cff')
+process.load('IOMC.EventVertexGenerators.VtxSmearedRealistic50ns13TeVCollision_cfi')
+process.load('GeneratorInterface.Core.genFilterSummary_cff')
+process.load('Configuration.StandardSequences.SimIdeal_cff')
+process.load('Configuration.StandardSequences.EndOfProcess_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 # minimum of logs
 process.MessageLogger = cms.Service("MessageLogger",
@@ -28,15 +37,10 @@ process.dqmEnv.eventInfoFolder = "EventInfo"
 process.dqmSaver.path = ""
 process.dqmSaver.tag = "GEM"
 
-#process.load("DQM.Integration.config.FrontierCondition_GT_autoExpress_cfi")
-import FWCore.ParameterSet.Config as cms
-from Configuration.StandardSequences.FrontierConditions_GlobalTag_cff import * 
-GlobalTag.globaltag = "auto:phase2_realistic"
-GlobalTag.globaltag = "91X_upgrade2023_realistic_v1_D17-v1"
-
-#from Configuration.AlCa.GlobalTag import GlobalTag
-#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
-
+process.XMLFromDBSource.label = cms.string("Extended")
+process.genstepfilter.triggerConditions=cms.vstring("generation_step")
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_realistic', '')
 
 # raw data source
 process.source = cms.Source("PoolSource",
