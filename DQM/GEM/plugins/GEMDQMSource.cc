@@ -188,6 +188,11 @@ void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& event
 //     return ;
 //   }  
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
+    // Sometimes this value is null
+    if ( GEMGeometry_->idToDet((*recHit).gemId()) == NULL ) continue;
+    
+    std::cout << "DetId : " << (*recHit).gemId() << std::endl;
+    
     GEMDetId id((*recHit).geographicalId());
     LocalPoint recHitLP = recHit->localPosition();
     GlobalPoint recHitGP = GEMGeometry_->idToDet((*recHit).gemId())->surface().toGlobal(recHitLP);

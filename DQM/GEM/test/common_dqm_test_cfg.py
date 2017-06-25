@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('SIM',eras.Run2_2017,eras.run2_GEM_2017_MCTest)
+process = cms.Process('DQM',eras.Run2_2017,eras.run2_GEM_2017_MCTest)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -62,7 +62,7 @@ process.source = cms.Source("PoolSource",
 )
 
 process.maxEvents = cms.untracked.PSet(
-  input = cms.untracked.int32(8000)
+  input = cms.untracked.int32(-1)
 )
 
 # raw-to-digi conversion
