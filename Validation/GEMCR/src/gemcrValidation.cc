@@ -31,6 +31,12 @@
 
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
+#include "CLHEP/Random/RandFlat.h"
+
+
+
 
 #include <iomanip>
 
@@ -212,7 +218,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
     //if (ch == testChamber) continue;
     std::shared_ptr<MuonTransientTrackingRecHit> tmpRecHit;
     tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch.surface());
-    if (!tsosCurrent.isValid()) continue;
+    if (!tsosCurrent.isValid()) return Trajectory();
     GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
     float maxR = 9999;
     for (auto hit : muRecHits){
@@ -220,12 +226,12 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
       if (hitID.chamberId() == ch.id() ){
         GlobalPoint hitGP = hit->globalPosition();
 
-        double y_err = hit->localPositionError().yy();
+        //double y_err = hit->localPositionError().yy();
         //double x_err = hit->localPositionError().xx();
         //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
         //cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
-        if (abs(hitGP.x() - tsosGP.x()) > trackResX) continue;
-        if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
+        if (abs(hitGP.x() - tsosGP.x()) > 5.0) continue;
+        if (abs(hitGP.z() - tsosGP.z()) > 45.0) continue;
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         float deltaR = (hitGP - tsosGP).mag();
         //cout <<"chamber : " << findIndex(ch.id()) << ", recHit : "<<hitGP << ", trackHit : " << tsosGP << ", delR : "<< deltaR << ", err :" << x_err << ", "<< y_err << endl; 
@@ -246,6 +252,10 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
 }
 
 void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup){
+
+
+  edm::Service<edm::RandomNumberGenerator> rng;
+  CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
 
   theService->update(iSetup);
 
@@ -336,11 +346,22 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
  if (fChMul > 3) cout << "more then 3 chambers fired !"<< endl;
  firedMul->Fill(fChMul);
   /// Tracking start
+ vector<double> chamSetEff = {0,0, 0,0, 0,0, 0,0, 0,0, 
+                              //97.0,95.0, 96.0,97.0, 97.0,96.0, 98.0,96.0, 96.0,97.0, 
+                              97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 
+                              //97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 0,0, 
+                              //97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 
+                              0,0, 0,0, 0,0, 0,0, 0,0};
+  int fCha = 10;
+  int lCha = 19;
+  
+
   if (!makeTrack) return; 
   int countTC = 0;
   for (auto tch : gemChambers){
     countTC += 1;
     MuonTransientTrackingRecHit::MuonRecHitContainer testRecHits;
+    if (isMC){if (tch.id().chamber()<9 and tch.id().chamber()>20) continue;}
     for (auto etaPart : tch.etaPartitions()){
       GEMDetId etaPartID = etaPart->id();
       GEMRecHitCollection::range range = gemRecHits->get(etaPartID);
@@ -348,11 +369,15 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           const GeomDet* geomDet(etaPart);
           if ((*rechit).clusterSize()<minCLS) continue;
           if ((*rechit).clusterSize()>maxCLS) continue;
+          //if (isMC){if (CLHEP::RandFlat::shoot(engine, 0., 100.) > chamSetEff[countTC-1]) continue;}
           testRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));        
       }
     }
     MuonTransientTrackingRecHit::MuonRecHitContainer muRecHits;
+    int countC = 0;
     for (auto ch : gemChambers){
+      countC += 1;
+      if (isMC){if (ch.id().chamber()<9 and ch.id().chamber()>20) continue;}
       if (tch == ch) continue;
       for (auto etaPart : ch.etaPartitions()){
         GEMDetId etaPartID = etaPart->id();
@@ -361,6 +386,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           const GeomDet* geomDet(etaPart);
           if ((*rechit).clusterSize()<minCLS) continue;
           if ((*rechit).clusterSize()>maxCLS) continue;
+          //if (isMC){if (CLHEP::RandFlat::shoot(engine, 0., 100.) > chamSetEff[countC-1]) continue;}
           muRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
         }
       }
@@ -382,20 +408,15 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     trajectoryh->Fill(0, trajectorySeeds->size());  
     //cout <<"test chamber #" << findIndex(tch.id()) << ", "<< countTC <<" # of seeds : " << trajectorySeeds->size() << ", # of recHit for track :" << muRecHits.size() << ", # of recHit for testChamber : " << testRecHits.size()<< endl;
     //if (trajectorySeeds->size() > 100) continue;
-    float maxChi2 = trackChi2;
+    float maxChi2 = 10000000.0;
     int countTR = 0;
     for (auto seed : *trajectorySeeds){
-      Trajectory smoothed;
-      try{smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);}
-      catch(int n){
-        cout << "bad trajectory" << endl;
-        throw; 
-      }
+      Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
+      
       countTR += 1;
       //cout << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
       if (smoothed.isValid()){
         trajectoryh->Fill(2,1);
-        gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
         //cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
           maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
@@ -410,8 +431,11 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     //cout << "# of trajectories : " << countTR << endl;
     //cout <<maxChi2 << endl;
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
+    gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
+    if (maxChi2 > trackChi2) continue;
     trajectoryh->Fill(3,1);
     gem_chamber_bestChi2[findIndex(tch.id())]->Fill(maxChi2);
+    //cout << maxChi2 << endl;
     gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
@@ -433,6 +457,16 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           Local3DPoint rtlp = ch.etaPartition(r+1)->surface().toLocal(gtrp);
           if(minDely > abs(rtlp.y())){minDely = abs(rtlp.y()); mRoll = r+1;}
         }
+
+        if(mRoll == 1 or mRoll == 8){
+          bool tester = 1;
+          for (int chId = fCha; chId < lCha+1; chId++){
+            if (chId == findIndex(tch.id())) continue;
+            if (!firedCh[chId]) tester = 0;
+          }
+          if (!tester) continue;
+        }
+
         if (mRoll == -1){cout << "no mRoll" << endl;continue;}
         int n_strip = ch.etaPartition(mRoll)->nstrips();
         double min_x = ch.etaPartition(mRoll)->centreOfStrip(0).x();
@@ -451,13 +485,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
             if (hitID.chamberId() != tch.id()) continue;
             GlobalPoint hitGP = hit->globalPosition();
             if (abs(hitGP.x() - gtrp.x()) > maxRes) continue;
-            if ((hitID.roll() - mRoll)>1) continue;
+            if (abs(hitID.roll() - mRoll)>1) continue;
             double deltaR = (hitGP - gtrp).mag();
             if (maxR > deltaR){
               tmpRecHit = hit;
               maxR = deltaR;
             }
           }
+          //if(mRoll != -1){
           if(tmpRecHit){
             gem_chamber_track[findIndex(tch.id())]->Fill(4.5);
             LocalPoint hitLP = tmpRecHit->localPosition();
