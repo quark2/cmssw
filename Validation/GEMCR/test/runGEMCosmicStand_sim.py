@@ -34,6 +34,10 @@ process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
 #process.load('Configuration.StandardSequences.Validation_cff')
 
+nRunNum = int(file("runNum.txt").read())
+nMaxEvt = int(file("numEvtPerJob.txt").read())
+nIdxJob = int(file("idxJob.txt").read())
+
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r1.xml')
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r2.xml')
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r3.xml')
@@ -51,10 +55,14 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(nMaxEvt))
 
 # Input source
-process.source = cms.Source("EmptySource")
+process.source = cms.Source("EmptySource", 
+    firstRun = cms.untracked.uint32(nRunNum), 
+    firstEvent = cms.untracked.uint32(nMaxEvt * nIdxJob + 1), 
+    firstLuminosityBlock = cms.untracked.uint32(nIdxJob + 1), 
+)
 process.options = cms.untracked.PSet()
 
 # Production Info
@@ -194,6 +202,18 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
                       PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
                       RescalingFactor = cms.double(5.0)
                       ),
+    
+    ScincilUpperY      = cms.double(100.0), 
+    ScincilUpperLeft   = cms.double(-100.0), 
+    ScincilUpperRight  = cms.double(100.0), 
+    ScincilUpperTop    = cms.double(-40.0), 
+    ScincilUpperBottom = cms.double(40.0), 
+    
+    ScincilLowerY      = cms.double(0.0), 
+    ScincilLowerLeft   = cms.double(-100.0), 
+    ScincilLowerRight  = cms.double(100.0), 
+    ScincilLowerTop    = cms.double(-40.0), 
+    ScincilLowerBottom = cms.double(40.0), 
 
 )
 
@@ -242,7 +262,7 @@ process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary
 #	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
 
 process.RandomNumberGeneratorService.generator = cms.PSet(
-    initialSeed = cms.untracked.uint32(123456789),
+    initialSeed = cms.untracked.uint32(12345 * ( nIdxJob + 1 )),
     engineName = cms.untracked.string('HepJamesRandom')
 )
 process.RandomNumberGeneratorService.simMuonGEMDigis = process.RandomNumberGeneratorService.generator

@@ -31,13 +31,6 @@
 
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
-#include "CLHEP/Random/RandFlat.h"
-
-
-
-
 #include <iomanip>
 
 #include <TCanvas.h>
@@ -58,6 +51,19 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   trackChi2 = cfg.getParameter<double>("trackChi2");
   trackResY = cfg.getParameter<double>("trackResY"); 
   trackResX = cfg.getParameter<double>("trackResX");
+  
+  fScinHPosY   = cfg.getParameter<double>("ScincilUpperY");
+  fScinHLeft   = cfg.getParameter<double>("ScincilUpperLeft");
+  fScinHRight  = cfg.getParameter<double>("ScincilUpperRight");
+  fScinHTop    = cfg.getParameter<double>("ScincilUpperTop");
+  fScinHBottom = cfg.getParameter<double>("ScincilUpperBottom");
+  
+  fScinLPosY   = cfg.getParameter<double>("ScincilLowerY");
+  fScinLLeft   = cfg.getParameter<double>("ScincilLowerLeft");
+  fScinLRight  = cfg.getParameter<double>("ScincilLowerRight");
+  fScinLTop    = cfg.getParameter<double>("ScincilLowerTop");
+  fScinLBottom = cfg.getParameter<double>("ScincilLowerBottom");
+  
   edm::ParameterSet smootherPSet = cfg.getParameter<edm::ParameterSet>("MuonSmootherParameters");
   theSmoother = new CosmicMuonSmoother(smootherPSet, theService);
   theUpdator = new KFUpdator();
@@ -91,7 +97,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   firedMul = ibooker.book1D("firedMul","fired chamber multiplicity",n_ch+1,0,n_ch+1);
   firedChamber = ibooker.book1D("firedChamber", "fired chamber",n_ch,0,n_ch);
 
-  tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,0,n_ch); 
+  tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,1,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
   rh_chamber = ibooker.book1D("rh_eff_ch", "rec hit/chamber",n_ch,0,n_ch); 
   rh1_chamber = ibooker.book1D("rh1_chamber", "all recHits",n_ch,0,n_ch); 
@@ -251,19 +257,47 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
   return fitted.front();
 }
 
+
+bool gemcrValidation::isPassedScincillators(GlobalPoint trajGP1, GlobalPoint trajGP2) {
+    // Getting the direction of trajectory by using the hits in the seed
+    float fTrajDirX = trajGP2.x() - trajGP1.x();
+    float fTrajDirY = trajGP2.y() - trajGP1.y();
+    float fTrajDirZ = trajGP2.z() - trajGP1.z();
+    
+    // Time to solve 1-order equation
+    float fTHTraj = ( fScinHPosY - trajGP1.y() ) / fTrajDirY;
+    float fTLTraj = ( fScinLPosY - trajGP1.y() ) / fTrajDirY;
+    
+    // Finding the coordinates of the hit position on the y-plane containing the upper scincillator
+    float fXHitH = trajGP1.x() + fTHTraj * fTrajDirX;
+    float fZHitH = trajGP1.z() + fTHTraj * fTrajDirZ;
+    
+    // Checking whether the hit position in the upper scincillator
+    if ( !( ( fScinHLeft <= fXHitH && fXHitH <= fScinHRight ) && ( fScinHTop <= fZHitH && fZHitH <= fScinHBottom )  ) ) return false;
+    
+    // Finding the coordinates of the hit position on the y-plane containing the lower scincillator
+    float fXHitL = trajGP1.x() + fTLTraj * fTrajDirX;
+    float fZHitL = trajGP1.z() + fTLTraj * fTrajDirZ;
+    
+    // Checking whether the hit position in the lower scincillator
+    if ( !( ( fScinLLeft <= fXHitL && fXHitL <= fScinLRight ) && ( fScinLTop <= fZHitL && fZHitL <= fScinLBottom )  ) ) return false;
+    
+    return true;
+}
+
+
 void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup){
 
-
-  edm::Service<edm::RandomNumberGenerator> rng;
-  CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
-
+  //std::cout << "analyze on!" << std::endl;
   theService->update(iSetup);
 
   edm::Handle<GEMRecHitCollection> gemRecHits;
   if (!isMC){
     edm::Handle<GEMDigiCollection> digis;
     e.getByToken( this->InputTagToken_DG, digis);
+    int nNumDigi = 0;
     for (GEMDigiCollection::DigiRangeIterator gemdgIt = digis->begin(); gemdgIt != digis->end(); ++gemdgIt){
+      nNumDigi++;
       const GEMDetId& gemId = (*gemdgIt).first;
       int index = findIndex(gemId);
       const GEMDigiCollection::Range& range = (*gemdgIt).second;
@@ -271,6 +305,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         gem_chamber_digi_digi[index]->Fill(digi->strip(),gemId.roll());
       }
     }
+    //std::cout << "num of digi : " << nNumDigi << std::endl;
   }
   e.getByToken( this->InputTagToken_RH, gemRecHits);
   if (!gemRecHits.isValid()) {
@@ -285,6 +320,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     firedCh.push_back(0);
     rMul.push_back(0);
   }
+  //std::cout << "num of hit : " << gemRecHits->size() << std::endl;
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
     Float_t  rh_l_x = recHit->localPosition().x();
@@ -299,6 +335,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     //checkRH[index] = 1;
     Short_t rh_roll = (Short_t) id.roll();
     LocalPoint recHitLP = recHit->localPosition();
+    //printf("%i, %lf, %i, %i\n", index, rh_l_x, clusterSize, firstClusterStrip);
 
     if ( GEMGeometry_->idToDet((*recHit).gemId()) == nullptr) {
       std::cout<<"This gem recHit did not matched with GEMGeometry."<<std::endl;
@@ -433,10 +470,15 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
     gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
     if (maxChi2 > trackChi2) continue;
+    
+    // Checking whether the trajectory passed scincillators
+    if ( !isPassedScincillators(bestSeed.recHits().first->globalPosition(), bestSeed.recHits().second->globalPosition()) ) continue;
+    
     trajectoryh->Fill(3,1);
     gem_chamber_bestChi2[findIndex(tch.id())]->Fill(maxChi2);
     //cout << maxChi2 << endl;
     gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
+    
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
     const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();

@@ -62,7 +62,10 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
    //
    // 1st, primary vertex
    //
-   HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(0.,0.,0.));
+   //HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(0.,0.,0.));
+   double dVx = CLHEP::RandFlat::shoot(engine, -1000.0, 1000.0) ;
+   double dVz = CLHEP::RandFlat::shoot(engine, -1000.0, 1000.0) ;
+   HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(dVx,-100.0,dVz));
 
    // loop over particles
    //
@@ -81,6 +84,9 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
        double px     = pt*cos(phi) ;
        double py     = pt*sin(phi) ;
        double pz     = mom*cos(theta) ;
+       px = 0;
+       py = pt;
+       pz = 0;
        double energy2= mom*mom + mass*mass ;
        double energy = sqrt(energy2) ; 
        HepMC::FourVector p(px,py,pz,energy) ;

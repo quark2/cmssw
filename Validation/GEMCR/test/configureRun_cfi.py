@@ -17,14 +17,36 @@ RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-1
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000208_LatencyScan_TIF_2016-12-13.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000186_LatencyScan_TIF_2016-12-12.dat"
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000189_LatencyScan_TIF_2016-12-12.dat"
+#RAWFileName="/cms/scratch/quark2930/Work/gemcr/run000002_LocalRun_CERNP5_2017-06-17_chunk_0.dat"
+RAWFileName="/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000002_LocalRun_CERNP5_2017-06-17.dat"
 MaxEvents=-1
 
-makeTrack = True
-#makeTrack = False
+arrRAW = [
+    "", 
+    "", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000002_LocalRun_CERNP5_2017-06-17.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000003_LocalRun_CERNP5_2017-06-17.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000004_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000005_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000006_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000007_LocalRun_CERNP5_2017-06-20.dat", 
+]
+
+if os.path.exists("rawidx.txt"):
+  nIdx = int(open("rawidx.txt", "r").read())
+  if nIdx < len(arrRAW): 
+    RAWFileName = arrRAW[ nIdx ]
+    #MaxEvents = arrRAWSize[ nIdx ] / 320
+    MaxEvents = os.path.getsize(RAWFileName) / 320
+  else: 
+    RAWFileName = "run%i"%nIdx
+
+#makeTrack = True
+makeTrack = False
 #flags for tracking
 minClusterSize = 1
 maxClusterSize = 10
-maxResidual = 5.0 # cm
+maxResidual = 5.0 # cm 
 trackChi2 = 3
 trackResX = 3.0 #cm
 trackResY = 1.5
@@ -72,6 +94,7 @@ sqlite_file = os.environ['SRT_CMSSW_BASE_SCRAMRTDEL']+'/src/EventFilter/GEMRawTo
 def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=[], chamber=[], columnStand=[], rowStand=[], layerSC=[]):
 
     fileVFATS=os.environ.get('CMSSW_BASE')+"/src/EventFilter/GEMRawToDigi/data/VFAT2LIST.csv"
+    #fileVFATS=os.environ.get('CMSSW_BASE')+"/src/Validation/GEMCR/test/test/vfat.csv"
 
     schamber=[]
     slot=[]
@@ -80,7 +103,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     #Configuration of the Stand: write down every VFAT
     #The ones below are a editted version with respect to what is there in the elog
 
-    NUMBEROFDETECTORS=4
+    NUMBEROFDETECTORS=10
     #NUMBEROFDETECTORS=10
 
 
@@ -118,6 +141,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     rowStand.append(4)
     layerSC.append(1) #Interior?
     """
+    """
     schamber.append("GE1/1-SCL01")
     chamber.append("GE1/1-VII-L-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -150,6 +174,7 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     rowStand.append(2)
     layerSC.append(1) #Interior?
     """
+    """
     schamber.append("GE1/1-SCS02")
     chamber.append("GE1/1-VII-S-CERN-0002")
     slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
@@ -166,6 +191,91 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
     rowStand.append(1)
     layerSC.append(1) #Interior?
     """
+    
+    ################
+    ## For new geo
+    ################
+    
+    schamber.append("GE1/1-SCS-001")
+    chamber.append("GE1/1-VII-S-CERN-0006")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#242","#302","#304","#069","#281","#059","#283","#100","#338","#259","#309","#073","#089","#214","#272","#312","#145","#217","#282","#086","#279","#278","#234","#246"])
+    columnStand.append(2)
+    rowStand.append(1)
+    layerSC.append(1) #Interior?
+
+    schamber.append("GE1/1-SCS-001")
+    chamber.append("GE1/1-VII-S-CERN-0005")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#339","#308","#051","#068","#322","#337","#299","#197","#056","#303","#087","#301","#266","#195","#270","#050","#252","#135","#275","#253","#061","#140","#329","#215"])
+    columnStand.append(2)
+    rowStand.append(1)
+    layerSC.append(2) #Interior?
+
+    schamber.append("GE1/1-SCS-002")
+    chamber.append("GE1/1-VII-S-CERN-0001")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#060","#306","#057","#289","#030","#047","#053","#315","#327","#311","#144","#108","#256","#323","#264","#328","#254","#004","#225","#277","#287","#285","#041","#317"])
+    columnStand.append(2)
+    rowStand.append(2)
+    layerSC.append(1) #Interior?
+
+    schamber.append("GE1/1-SCS-002")
+    chamber.append("GE1/1-VII-S-CERN-0002")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#326","#331","#297","#034","#049","#046","#314","#072","#192","#142","#333","#334","#292","#268","#305","#102","#055","#280","#307","#332","#265","#324","#078","#313"])
+    columnStand.append(2)
+    rowStand.append(2)
+    layerSC.append(2) #Interior?
+
+    schamber.append("GE1/1-SCS-003")
+    chamber.append("GE1/1-VII-S-CERN-0004")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#071","#319","#294","#321","#139","#096","#258","#271","#075","#269","#251","#325","#111","#318","#295","#274","#001","#240","#310","#288","#188","#273","#058","#070"])
+    columnStand.append(2)
+    rowStand.append(3)
+    layerSC.append(1) #Interior?
+
+    schamber.append("GE1/1-SCS-003")
+    chamber.append("GE1/1-VII-S-CERN-0003")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#146","#204","#296","#284","#263","#093","#090","#035","#027","#088","#138","#336","#098","#040","#077","#211","#082","#029","#076","#048","#066","#290","#286","#316"])
+    columnStand.append(2)
+    rowStand.append(3)
+    layerSC.append(2) #Interior?
+
+    schamber.append("GE1/1-SCL-001")
+    chamber.append("GE1/1-VII-L-CERN-0002")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#155","#119","#118","#228","#205","#099","#131","#067","#200","#109","#226","#262","#223","#106","#133","#110","#125","#148","#115","#136","#220","#094","#147","#191"])
+    columnStand.append(2)
+    rowStand.append(4)
+    layerSC.append(1) #Interior?
+
+    schamber.append("GE1/1-SCL-001")
+    chamber.append("GE1/1-VII-L-CERN-0004")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#121","#036","#031","#164","#045","#028","#170","#180","#257","#169","#183","#168","#127","#161","#255","#157","#172","#120","#167","#154","#330","#182","#026","#038"])
+    columnStand.append(2)
+    rowStand.append(4)
+    layerSC.append(2) #Interior?
+
+    schamber.append("GE1/1-SCL-002")
+    chamber.append("GE1/1-VII-L-CERN-0003")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#171","#186","#362","#163","#358","#174","#364","#361","#152","#175","#177","#150","#179","#210","#178","#042","#173","#003","#165","#181","#122","#153","#149","#176"])
+    columnStand.append(2)
+    rowStand.append(5)
+    layerSC.append(1) #Interior?
+
+    schamber.append("GE1/1-SCL-002")
+    chamber.append("GE1/1-VII-L-CERN-0001")
+    slot.append([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    barcode.append(["#117","#212","#363","#239","#063","#237","#360","#104","#128","#202","#130","#221","#189","#193","#187","#235","#349","#222","#201","#198","#213","#105","#194","#236"])
+    columnStand.append(2)
+    rowStand.append(5)
+    layerSC.append(2) #Interior?
+
     VFATHEX=[]
     BARCODE=[]
 
@@ -176,14 +286,19 @@ def configureRun(SLOTLIST=[], VFATLIST=[], COLUMNLIST=[], ROWLIST=[], LAYERLIST=
           with open(fileVFATS, 'rt') as f:
                     reader = csv.reader(f, delimiter=',')
                     for row in reader:
+                            if len(row) < 5: continue
+                            #words=row[11].split()
                             words=row[2].split()
-                            if len(words)==2:
-                              if words[1]==barcode[i][item]:
-                                    VFATLIST.append(int(row[1],16))
-                                    VFATHEX.append(row[1])
-                                    BARCODE.append(barcode[i][item])
-                                    SLOTLIST.append(slot[i][item])
-                                    COLUMNLIST.append(columnStand[i])
-                                    ROWLIST.append(rowStand[i])
-                                    LAYERLIST.append(layerSC[i])
-
+                            #print words
+                            if len(words)!=2: continue
+                            #print words[1], barcode[i][item]
+                            if words[1]==barcode[i][item]:
+                              #VFATLIST.append(int(row[10],16))
+                              #VFATHEX.append(row[10])
+                              VFATLIST.append(int(row[1],16))
+                              VFATHEX.append(row[1])
+                              BARCODE.append(barcode[i][item])
+                              SLOTLIST.append(slot[i][item])
+                              COLUMNLIST.append(columnStand[i])
+                              ROWLIST.append(rowStand[i])
+                              LAYERLIST.append(layerSC[i])

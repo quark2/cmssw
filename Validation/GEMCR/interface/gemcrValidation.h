@@ -83,6 +83,11 @@ private:
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber);
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG;
+  
+  float fScinHPosY, fScinHLeft, fScinHRight, fScinHTop, fScinHBottom;
+  float fScinLPosY, fScinLLeft, fScinLRight, fScinLTop, fScinLBottom;
+  
+  bool isPassedScincillators(GlobalPoint trajGP1, GlobalPoint trajGP2);
 };
 
 #endif
