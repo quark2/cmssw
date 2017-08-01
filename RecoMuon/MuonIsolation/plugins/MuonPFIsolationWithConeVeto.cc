@@ -52,7 +52,7 @@ bool MuonPFIsolationWithConeVeto::isInIsolationCone(const reco::CandidatePtr& ph
   bool result = true;
   if( aspacked.isNonnull() && aspacked.get() ) {
     if( aspacked->charge() != 0 ) {
-      bool is_vertex_allowed = false;
+      bool is_vertex_allowed = true;
       for( const unsigned vtxtype : _miniAODVertexCodes ) {
         if( vtxtype == aspacked->fromPV() ) {
           is_vertex_allowed = true;
