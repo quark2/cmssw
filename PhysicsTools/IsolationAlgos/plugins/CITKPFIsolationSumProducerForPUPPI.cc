@@ -17,6 +17,7 @@
 #include "RecoMuon/MuonIsolation/interface/Range.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "CommonTools/Statistics/interface/ChiSquaredProbability.h"
+#include "DataFormats/RecoCandidate/interface/IsoDepositDirection.h"
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -43,7 +44,7 @@ namespace citk {
 
     static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
 
-    bool trackSelector(const reco::Track & tk, double vtx_z, reco::TrackBase::Point beamPoint) const;
+    bool trackSelector(const reco::Track & tk, double vtx_z, reco::isodeposit::Direction muonDir, reco::TrackBase::Point beamPoint) const;
     
   private:  
     // datamembers
@@ -207,12 +208,13 @@ namespace citk {
 	for( unsigned i = 0; i < isolations.size(); ++ i  ) {
 	  if( isolations[i]->isInIsolationCone(cand_to_isolate,isocand) ) {
 
-	    double vtx_z = isocand->vz();
+	    double vtx_z = cand_to_isolate->vz();
+	    reco::isodeposit::Direction muonDir(cand_to_isolate->eta(), cand_to_isolate->phi());
 
 	    // check if it has track
 	    const reco::Track * trk = isocand->bestTrack();
 	    if (trk){
-	      if (!trackSelector(*trk, vtx_z, beamPoint))
+	      if (!trackSelector(*trk, vtx_z, muonDir, beamPoint))
 		continue;	      
 	    }
 	    
@@ -251,14 +253,14 @@ namespace citk {
     }
   }
 
-  bool PFIsolationSumProducerForPUPPI::trackSelector(const reco::Track & tk, double vtx_z, reco::TrackBase::Point beamPoint) const
+  bool PFIsolationSumProducerForPUPPI::trackSelector(const reco::Track & tk, double vtx_z, reco::isodeposit::Direction muonDir, reco::TrackBase::Point beamPoint) const
   {    
     float tZ = tk.vz(); 
     float tPt = tk.pt();
     //float tD0 = fabs(tk.d0());  
     float tD0Cor = fabs(tk.dxy(beamPoint));
-    //float tEta = tk.eta();
-    //float tPhi = tk.phi();
+    float tEta = tk.eta();
+    float tPhi = tk.phi();
     float tChi2Ndof = tk.normalizedChi2();
 
     Range zRange = Range(vtx_z-theDiff_z, vtx_z+theDiff_z);
@@ -267,7 +269,7 @@ namespace citk {
     if ( !zRange.inside( tZ ) ) return false; 
     if ( tPt < ptMin ) return false;
     if ( !rRange.inside( tD0Cor) ) return false;
-    //if ( dir.deltaR( reco::isodeposit::Direction(tEta, tPhi) ) > drMax ) return false;
+    if ( muonDir.deltaR( reco::isodeposit::Direction(tEta, tPhi) ) > drMax ) return false;
     if ( tChi2Ndof > chi2NdofMax ) return false;
 
     //! skip if min Hits == 0; assumes any track has at least one valid hit
