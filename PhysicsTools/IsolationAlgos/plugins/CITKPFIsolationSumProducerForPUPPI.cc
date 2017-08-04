@@ -59,6 +59,7 @@ namespace citk {
     // indexed by pf candidate type
     std::array<IsoTypes,kNPFTypes> _isolation_types; 
     std::array<std::vector<std::string>,kNPFTypes> _product_names;
+    double pfminPt;
     bool usePUPPI = true;
     bool useValueMapForPUPPI = true;
     bool usePUPPINoLepton = false;// in case puppi weights are taken from packedCandidate can take weights for puppiNoLeptons
@@ -103,6 +104,7 @@ namespace citk {
       usePUPPINoLepton = c.getParameter<bool>("usePUPPINoLepton");
     }
     usePUPPI = c.getParameter<bool>("usePUPPI");    
+    pfminPt = c.getParameter<double>("pfminPt");    
     
     const std::vector<edm::ParameterSet>& isoDefs = 
       c.getParameterSetVector("isolationConeDefinitions");
@@ -210,7 +212,9 @@ namespace citk {
 
 	    double vtx_z = cand_to_isolate->vz();
 	    reco::isodeposit::Direction muonDir(cand_to_isolate->eta(), cand_to_isolate->phi());
-
+	    
+	    if ( isocand->pt() < pfminPt ) continue;
+	    
 	    // check if it has track
 	    const reco::Track * trk = isocand->bestTrack();
 	    if (trk){
@@ -332,6 +336,7 @@ namespace citk {
     iDesc.add("isolationTrackSelections", descIsoTrkSelDefinitions);
     iDesc.add<bool>("usePUPPINoLepton",false);
     iDesc.add<bool>("usePUPPI",true);
+    iDesc.add<double>("pfminPt",-1.0);
 
     descriptions.add("CITKPFIsolationSumProducerForPUPPI", iDesc);
   }
