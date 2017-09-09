@@ -57,6 +57,12 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(nMaxEvt))
 
+import configureRun_cfi as runConfig
+
+strOutput = "out_reco_MC.root" if nIdxJob >= 0 else runConfig.OutputFileName
+
+if nIdxJob < 0: nIdxJob = 0
+
 # Input source
 process.source = cms.Source("EmptySource", 
     firstRun = cms.untracked.uint32(nRunNum), 
@@ -82,7 +88,9 @@ process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(10485760),
-    fileName = cms.untracked.string('out_reco_MC.root'),
+    #fileName = cms.untracked.string('out_reco_MC.root'),
+    #fileName = cms.untracked.string('file:'+runConfig.OutputFileName),
+    fileName = cms.untracked.string('file:'+strOutput),
     #outputCommands = process.FEVTDEBUGHLTEventContent.outputCommands,
     outputCommands = cms.untracked.vstring( ('keep *')),
     splitLevel = cms.untracked.int32(0)
@@ -104,10 +112,12 @@ process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
         MaxEta = cms.double(0.3),
-        MaxPhi = cms.double(1.5707963267948966+0.3),
+        #MaxPhi = cms.double(1.5707963267948966+0.3),
+        MaxPhi = cms.double(-3.141592),
         MaxPt = cms.double(100.01),
         MinEta = cms.double(-0.3),
-        MinPhi = cms.double(1.5707963267948966-0.3),
+        #MinPhi = cms.double(1.5707963267948966-0.3),
+        MinPhi = cms.double(3.141592),
         MinPt = cms.double(99.99),
         PartID = cms.vint32(-13)
     ),
@@ -152,8 +162,6 @@ process.simSiStripDigis = cms.EDAlias()
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
-import configureRun_cfi as runConfig
-
 process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
@@ -172,6 +180,8 @@ process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
 process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
 process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
 #process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
+
+fScale = 1.0
 
 process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     process.MuonServiceProxy,
@@ -203,17 +213,66 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
                       RescalingFactor = cms.double(5.0)
                       ),
     
-    ScincilUpperY      = cms.double(100.0), 
-    ScincilUpperLeft   = cms.double(-100.0), 
-    ScincilUpperRight  = cms.double(100.0), 
-    ScincilUpperTop    = cms.double(-40.0), 
-    ScincilUpperBottom = cms.double(40.0), 
+    # Probably there is more efficient way to put that infos
+    ScintilUpper00Y      = cms.double(-11.485), 
+    ScintilUpper00Left   = cms.double(-100.0), 
+    ScintilUpper00Right  = cms.double(-60.0), 
+    ScintilUpper00Top    = cms.double(-60.0), 
+    ScintilUpper00Bottom = cms.double(70.0), 
     
-    ScincilLowerY      = cms.double(0.0), 
-    ScincilLowerLeft   = cms.double(-100.0), 
-    ScincilLowerRight  = cms.double(100.0), 
-    ScincilLowerTop    = cms.double(-40.0), 
-    ScincilLowerBottom = cms.double(40.0), 
+    ScintilUpper01Y      = cms.double(-11.485), 
+    ScintilUpper01Left   = cms.double(-60.0), 
+    ScintilUpper01Right  = cms.double(-20.0), 
+    ScintilUpper01Top    = cms.double(-60.0), 
+    ScintilUpper01Bottom = cms.double(70.0), 
+    
+    ScintilUpper02Y      = cms.double(-11.485), 
+    ScintilUpper02Left   = cms.double(-20.0), 
+    ScintilUpper02Right  = cms.double( 20.0), 
+    ScintilUpper02Top    = cms.double(-60.0), 
+    ScintilUpper02Bottom = cms.double(70.0), 
+    
+    ScintilUpper03Y      = cms.double(-11.485), 
+    ScintilUpper03Left   = cms.double( 20.0), 
+    ScintilUpper03Right  = cms.double( 60.0), 
+    ScintilUpper03Top    = cms.double(-60.0), 
+    ScintilUpper03Bottom = cms.double(70.0), 
+    
+    ScintilUpper04Y      = cms.double(-11.485), 
+    ScintilUpper04Left   = cms.double( 60.0), 
+    ScintilUpper04Right  = cms.double(100.0), 
+    ScintilUpper04Top    = cms.double(-60.0), 
+    ScintilUpper04Bottom = cms.double(70.0), 
+    
+    ScintilLower00Y      = cms.double(154.015), 
+    ScintilLower00Left   = cms.double(-100.0), 
+    ScintilLower00Right  = cms.double(-60.0), 
+    ScintilLower00Top    = cms.double(-60.0), 
+    ScintilLower00Bottom = cms.double(70.0), 
+    
+    ScintilLower01Y      = cms.double(154.015), 
+    ScintilLower01Left   = cms.double(-60.0), 
+    ScintilLower01Right  = cms.double(-20.0), 
+    ScintilLower01Top    = cms.double(-60.0), 
+    ScintilLower01Bottom = cms.double(70.0), 
+    
+    ScintilLower02Y      = cms.double(154.015), 
+    ScintilLower02Left   = cms.double(-20.0), 
+    ScintilLower02Right  = cms.double( 20.0), 
+    ScintilLower02Top    = cms.double(-60.0), 
+    ScintilLower02Bottom = cms.double(70.0), 
+    
+    ScintilLower03Y      = cms.double(154.015), 
+    ScintilLower03Left   = cms.double( 20.0), 
+    ScintilLower03Right  = cms.double( 60.0), 
+    ScintilLower03Top    = cms.double(-60.0), 
+    ScintilLower03Bottom = cms.double(70.0), 
+    
+    ScintilLower04Y      = cms.double(154.015), 
+    ScintilLower04Left   = cms.double( 60.0), 
+    ScintilLower04Right  = cms.double(100.0), 
+    ScintilLower04Top    = cms.double(-60.0), 
+    ScintilLower04Bottom = cms.double(70.0), 
 
 )
 

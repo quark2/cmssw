@@ -292,7 +292,7 @@ Trajectory GEMCosmicMuon::makeTrajectory(TrajectorySeed seed, MuonTransientTrack
     //const DetLayer* layer = theService->detLayerGeometry()->idToLayer( ch->id().rawId() );
     std::shared_ptr<MuonTransientTrackingRecHit> tmpRecHit;
     tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch->surface());
-    if (!tsosCurrent.isValid()) continue;
+    if (!tsosCurrent.isValid()) return Trajectory();
     GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
     //TrackingRecHit *tmpRecHit = new TrackingRecHit(ch);
     //cout << "tsosGP "<< tsosGP <<endl;

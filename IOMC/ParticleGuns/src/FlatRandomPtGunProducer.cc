@@ -40,6 +40,37 @@ FlatRandomPtGunProducer::~FlatRandomPtGunProducer()
    // no need to cleanup GenEvent memory - done in HepMCProduct
 }
 
+
+int myIsMuonPassScint(double dVx, double dVy, double dVz, double dPx, double dPy, double dPz) {
+  // To test the drop-down of efficiency at edges, we set the cut looser
+  double dL = -1200.0;
+  double dR =  1200.0;
+  double dB =  -750.0;
+  double dT =   850.0;
+  
+  double dYLower = -114.85;
+  double dYUpper = 1540.15;
+  
+  double dTLower = ( dYLower - dVy ) / dPy;
+  double dTUpper = ( dYUpper - dVy ) / dPy;
+  
+  double dXLower = dVx + dTLower * dPx;
+  double dZLower = dVz + dTLower * dPz;
+  
+  if ( !( dL <= dXLower && dXLower <= dR && dB <= dZLower && dZLower <= dT ) ) {
+    return 0;
+  }
+  
+  double dXUpper = dVx + dTUpper * dPx;
+  double dZUpper = dVz + dTUpper * dPz;
+  
+  if ( !( dL <= dXUpper && dXUpper <= dR && dB <= dZUpper && dZUpper <= dT ) ) {
+    return 0;
+  }
+  
+  return 1;
+}
+
 void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es) 
 {
    edm::Service<edm::RandomNumberGenerator> rng;
@@ -63,30 +94,58 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
    // 1st, primary vertex
    //
    //HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(0.,0.,0.));
-   double dVx = CLHEP::RandFlat::shoot(engine, -1000.0, 1000.0) ;
-   double dVz = CLHEP::RandFlat::shoot(engine, -1000.0, 1000.0) ;
-   HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(dVx,-100.0,dVz));
+   /*double dVx = CLHEP::RandFlat::shoot(engine, -1200.0, 1200.0) ;
+   double dVy = -100.0;
+   double dVz = CLHEP::RandFlat::shoot(engine, -650.0, 750.0) ;
+   HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(dVx,dVy,dVz));*/
+   double dVx;
+   double dVy = -200.0;
+   double dVz;
+   HepMC::GenVertex* Vtx = NULL;
 
    // loop over particles
    //
    int barcode = 1 ;
    for (unsigned int ip=0; ip<fPartIDs.size(); ++ip)
    {
-       double pt     = CLHEP::RandFlat::shoot(engine, fMinPt, fMaxPt) ;
-       double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
-       double phi    = CLHEP::RandFlat::shoot(engine, fMinPhi, fMaxPhi) ;
+       double px, py, pz, mom;
+       int j = 0;
+       
+       // To avoid meeting a muon which does not pass the detectors apparently
+       while ( 1 ) {
+         dVx = CLHEP::RandFlat::shoot(engine, -1300.0, 1300.0) ;
+         dVz = CLHEP::RandFlat::shoot(engine, -850.0, 950.0) ;
+         
+         double pt     = CLHEP::RandFlat::shoot(engine, fMinPt, fMaxPt) ;
+         //double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
+         double phi    = CLHEP::RandFlat::shoot(engine, fMinPhi, fMaxPhi) ;
+         //double theta  = 2.*atan(exp(-eta)) ;
+         double theta  = CLHEP::RandFlat::shoot(engine, 0.0, 3.141592 / 2.0) ;
+         //mom    = pt/sin(theta) ;
+         mom    = pt;
+         /*double px     = pt*cos(phi) ;
+         double py     = pt*sin(phi) ;
+         double pz     = mom*cos(theta) ;*/
+         px     = mom*sin(theta)*cos(phi) ;
+         py     = mom*cos(theta) ;
+         pz     = mom*sin(theta)*sin(phi) ;
+         
+         if ( myIsMuonPassScint(dVx, dVy, dVz, px, py, pz) != 0 ) break;
+         
+         if ( j >= 10000 ) break;
+         j++;
+       }
+       std::cout << "out - " << ip << "(" << j << "); (" 
+         << dVx << ", " << dVy << ", " << dVz << "), ("
+         << px << ", " << py << ", " << pz << ")" << std::endl;
        int PartID = fPartIDs[ip] ;
        const HepPDT::ParticleData* 
           PData = fPDGTable->particle(HepPDT::ParticleID(abs(PartID))) ;
        double mass   = PData->mass().value() ;
-       double theta  = 2.*atan(exp(-eta)) ;
-       double mom    = pt/sin(theta) ;
-       double px     = pt*cos(phi) ;
-       double py     = pt*sin(phi) ;
-       double pz     = mom*cos(theta) ;
-       px = 0;
-       py = pt;
-       pz = 0;
+       Vtx = new HepMC::GenVertex(HepMC::FourVector(dVx,dVy,dVz));
+       //px = 0;
+       //py = pt;
+       //pz = 0;
        double energy2= mom*mom + mass*mass ;
        double energy = sqrt(energy2) ; 
        HepMC::FourVector p(px,py,pz,energy) ;

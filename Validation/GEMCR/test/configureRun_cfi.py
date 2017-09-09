@@ -19,11 +19,31 @@ RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000192_Cosmics_TIF_2016-12-1
 #RAWFileName="/afs/cern.ch/user/h/hyunyong/public/run000189_LatencyScan_TIF_2016-12-12.dat"
 #RAWFileName="/cms/scratch/quark2930/Work/gemcr/run000002_LocalRun_CERNP5_2017-06-17_chunk_0.dat"
 RAWFileName="/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000002_LocalRun_CERNP5_2017-06-17.dat"
-#MaxEvents=-1
-MaxEvents = os.path.getsize(RAWFileName) / 320
+MaxEvents=-1
+#MaxEvents = os.path.getsize(RAWFileName) / 320
 
-#makeTrack = True
+arrRAW = [
+    "", 
+    "", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000002_LocalRun_CERNP5_2017-06-17.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000003_LocalRun_CERNP5_2017-06-17.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000004_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000005_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000006_LocalRun_CERNP5_2017-06-19.dat", 
+    "/cms/scratch/quark2930/Work/gemcr/gemcr/src/Validation/GEMCR/test/run000007_LocalRun_CERNP5_2017-06-20.dat", 
+]
+
+if os.path.exists("rawidx.txt"):
+  nIdx = int(open("rawidx.txt", "r").read())
+  if nIdx < len(arrRAW): 
+    RAWFileName = arrRAW[ nIdx ]
+    #MaxEvents = arrRAWSize[ nIdx ] / 320
+    MaxEvents = os.path.getsize(RAWFileName) / 320
+  else: 
+    RAWFileName = "run%i"%nIdx
+
 makeTrack = False
+makeTrack = True
 #flags for tracking
 minClusterSize = 1
 maxClusterSize = 10
