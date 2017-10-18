@@ -48,7 +48,7 @@ namespace citk {
     
   private:  
     // datamembers
-    static constexpr unsigned kNPFTypes = 8;
+    static constexpr unsigned kNPFTypes = 9;
     typedef std::unordered_map<std::string,int> TypeMap;
     typedef std::vector<std::unique_ptr<IsolationConeDefinitionBase> > IsoTypes;
     typedef edm::View<reco::Candidate> CandView;
@@ -59,10 +59,14 @@ namespace citk {
     // indexed by pf candidate type
     std::array<IsoTypes,kNPFTypes> _isolation_types; 
     std::array<std::vector<std::string>,kNPFTypes> _product_names;
+    double trackDeltaR2;
     double pfminPt;
     bool usePUPPI = true;
+    bool useOnlyTrack = false;
+    bool useMiniIso = false;
     bool useValueMapForPUPPI = true;
     bool usePUPPINoLepton = false;// in case puppi weights are taken from packedCandidate can take weights for puppiNoLeptons
+    bool usePU = false;
     // track selection
     std::string theBeamlineOption;
     edm::EDGetTokenT<reco::BeamSpot> theBeamSpotToken;
@@ -89,8 +93,9 @@ namespace citk {
 	    {"gamma",4},
 	      {"electron",2},
 		{"muon",3},
-		  {"HFh",6},
-		    {"HFgamma",7} } ){
+		  {"HFh",6}, 
+		    {"HFgamma",7}, 
+		      {"pu",8} } ){
     _to_isolate = 
       consumes<CandView>(c.getParameter<edm::InputTag>("srcToIsolate"));
     _isolate_with = 
@@ -104,6 +109,9 @@ namespace citk {
       usePUPPINoLepton = c.getParameter<bool>("usePUPPINoLepton");
     }
     usePUPPI = c.getParameter<bool>("usePUPPI");    
+    useMiniIso = c.getParameter<bool>("useMiniIso");    
+    useOnlyTrack = c.getParameter<bool>("useOnlyTrack");    
+    trackDeltaR2 = c.getParameter<double>("trackDeltaR2");    
     pfminPt = c.getParameter<double>("pfminPt");    
     
     const std::vector<edm::ParameterSet>& isoDefs = 
@@ -119,6 +127,7 @@ namespace citk {
       if( decimal != std::string::npos ) coneName.erase(decimal,1);
       const std::string& isotype = 
 	isodef.getParameter<std::string>("isolateAgainst");
+      if ( isotype == "pu" ) usePU = true;
       IsolationConeDefinitionBase* theisolator =
 	CITKIsolationConeDefinitionFactory::get()->create(name,isodef);
       theisolator->setConsumes(consumesCollector());
@@ -197,6 +206,25 @@ namespace citk {
       auto cand_to_isolate = to_isolate->ptrAt(c);
       std::array<std::vector<float>,kNPFTypes> cand_values;      
       unsigned k = 0;
+      
+      double vtx_z;
+      double toIsoEta, toIsoPhi;
+      double toIsoPt;
+      
+      if ( !useOnlyTrack ) {
+        vtx_z = cand_to_isolate->vz();
+        toIsoEta = cand_to_isolate->eta();
+        toIsoPhi = cand_to_isolate->phi();
+        toIsoPt = cand_to_isolate->pt();
+      } else {
+        vtx_z = cand_to_isolate->bestTrack()->vz();
+        toIsoEta = cand_to_isolate->bestTrack()->eta();
+        toIsoPhi = cand_to_isolate->bestTrack()->phi();
+        toIsoPt = cand_to_isolate->bestTrack()->pt();
+      }
+      
+      reco::isodeposit::Direction toIsoDir(toIsoEta, toIsoPhi);
+      
       for( const auto& isolators_for_type : _isolation_types ) {
 	cand_values[k].resize(isolators_for_type.size());
 	for( auto& value : cand_values[k] ) value = 0.0;
@@ -207,19 +235,65 @@ namespace citk {
 	edm::Ptr<pat::PackedCandidate> aspackedCandidate(isocand);
 	auto isotype = helper.translatePdgIdToType(isocand->pdgId());	
 	const auto& isolations = _isolation_types[isotype];	
+        
+	const reco::Track * isocandTrk = isocand->bestTrack();
+        bool bIsOkForTrk = false;
+        double dDRSqrTrk = -100.0;
+        
+        if ( useOnlyTrack && isocandTrk ) {
+          dDRSqrTrk = reco::deltaR2(*( cand_to_isolate->bestTrack() ),*( isocand->bestTrack() ));
+          
+          if ( 0.0001 < dDRSqrTrk && dDRSqrTrk < trackDeltaR2 ) {
+            bIsOkForTrk = true;
+          }
+        }
+          
 	for( unsigned i = 0; i < isolations.size(); ++ i  ) {
-	  if( isolations[i]->isInIsolationCone(cand_to_isolate,isocand) ) {
-
-	    double vtx_z = cand_to_isolate->vz();
-	    reco::isodeposit::Direction muonDir(cand_to_isolate->eta(), cand_to_isolate->phi());
+	  //if( isolations[i]->isInIsolationCone(cand_to_isolate,isocand) )
+	  if( ( !useOnlyTrack && isolations[i]->isInIsolationCone(cand_to_isolate,isocand) ) || 
+              ( useOnlyTrack && bIsOkForTrk )) // useOnlyTrack is always true when bIsOkForTrk is true, but for understanding...
+          {
+            
+            // The following is added for mimi isolation
+            // Warning! To make the following work user must set the coneSize bigger than 0.2
+            if ( useMiniIso ) {
+              double dDRSqr;
+              double dCut, dCutSqr;
+              
+              if ( !useOnlyTrack ) {
+                dDRSqr = reco::deltaR2(*cand_to_isolate,*isocand);
+              } else {
+                //dDRSqr = reco::deltaR2(*( cand_to_isolate->bestTrack() ),*( isocand->bestTrack() ));
+                dDRSqr = dDRSqrTrk;
+                if ( dDRSqrTrk < 0.0 ) continue; // If then, something is terribly wrong...
+              }
+              
+              if ( toIsoPt < 50 ) {
+                dCut = 0.2;
+              } else if ( 50 <= toIsoPt && toIsoPt < 200 ) {
+                dCut = 10 / toIsoPt;
+              } else { // toIsoPt >= 200
+                dCut = 0.05;
+              }
+              
+              dCutSqr = dCut * dCut;
+              
+              if ( dDRSqr > dCutSqr ) {
+                continue;
+              }
+            }
 	    
 	    if ( isocand->pt() < pfminPt ) continue;
 	    
 	    // check if it has track
-	    const reco::Track * trk = isocand->bestTrack();
-	    if (trk){
-	      if (!trackSelector(*trk, vtx_z, muonDir, beamPoint))
-		continue;	      
+	    if (isocandTrk){
+	      if (!trackSelector(*isocandTrk, vtx_z, toIsoDir, beamPoint)) {
+                if ( !useOnlyTrack && usePU ) {
+                  isotype = (reco::PFCandidate::ParticleType)_typeMap.find("pu")->second; // in this case this candidate is from PU
+                } else {
+		  continue;	      
+                }
+              }
 	    }
 	    
 	    double puppiWeight = 0.;
@@ -227,12 +301,25 @@ namespace citk {
 	    else if (!useValueMapForPUPPI && usePUPPINoLepton) puppiWeight = aspackedCandidate -> puppiWeightNoLep(); // if miniAOD, take puppiWeightNoLep directly from the object
 	    else  puppiWeight = (*puppiValueMap)[isocand]; // if AOD, take puppiWeight from the valueMap
 	    
-	    if (usePUPPI){
+	    if (!useOnlyTrack && usePUPPI){
 	      if (puppiWeight > 0.)cand_values[isotype][i] += (isocand->pt())*puppiWeight; // this is basically the main change to Lindsey's code: scale pt with puppiWeight for candidates with puppiWeight > 0.
 	    }
-	    else {
-	      cand_values[isotype][i] += (isocand->pt());
-	    }
+	    else if ( !useOnlyTrack ) {
+              if ( !( isotype == (reco::PFCandidate::ParticleType)_typeMap.find("h0")->second || 
+                    isotype == (reco::PFCandidate::ParticleType)_typeMap.find("gamma")->second ) ) {
+                /*printf("%i; ch : %lf (%i, %i, %i, %i)\n", isocand->pdgId(), isocand->pt(), 
+                    usePUPPI, useMiniIso, isotype, i);*/
+	        cand_values[isotype][i] += (isocand->pt());
+              } else {
+                /*printf("%i; non-ch : %lf (%i, %i) - %lf, %lf with %lf\n", 
+                    isocand->pdgId(), isocand->et(), usePUPPI, useMiniIso, 
+                    isocand->eta(), isocand->phi(), reco::deltaR2(*cand_to_isolate,*isocand));*/
+                cand_values[isotype][i] += (isocand->et());
+
+              }
+	    } else {
+	      cand_values[isotype][i] += (isocandTrk->pt());
+            }
 	  }
 	}
       }
@@ -336,6 +423,9 @@ namespace citk {
     iDesc.add("isolationTrackSelections", descIsoTrkSelDefinitions);
     iDesc.add<bool>("usePUPPINoLepton",false);
     iDesc.add<bool>("usePUPPI",true);
+    iDesc.add<bool>("useOnlyTrack",false);
+    iDesc.add<bool>("useMiniIso",false);
+    iDesc.add<double>("trackDeltaR2",3.0);
     iDesc.add<double>("pfminPt",-1.0);
 
     descriptions.add("CITKPFIsolationSumProducerForPUPPI", iDesc);
