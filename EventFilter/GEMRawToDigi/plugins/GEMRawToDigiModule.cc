@@ -135,7 +135,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
 	    // no hits
 	    if(chan0xf==0) continue;
 
-	    ec.channelId = chan;
+	    ec.channelId = chan+1;
 	    GEMROmap::dCoord dc = m_gemROMap->hitPosition(ec);
 	    int bx = bc-25;
 	    gemId = dc.gemDetId;
