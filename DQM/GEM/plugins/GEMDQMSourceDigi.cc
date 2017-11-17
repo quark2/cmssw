@@ -16,6 +16,7 @@
 //#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 #include "DataFormats/GEMDigi/interface/GEMVfatStatusDigiCollection.h"
+#include "DataFormats/GEMDigi/interface/GEMGEBStatusDigiCollection.h"
 
 
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
@@ -47,6 +48,7 @@ private:
 
   edm::EDGetToken tagDigi;
   edm::EDGetToken tagError;
+  edm::EDGetToken tagGEB;
 
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
@@ -60,6 +62,20 @@ private:
   std::unordered_map<UInt_t,  MonitorElement*> h1B1100;
   std::unordered_map<UInt_t,  MonitorElement*> h1B1110;
   std::unordered_map<UInt_t,  MonitorElement*> h1Flag;
+  
+  MonitorElement *h1B1010All;
+  MonitorElement *h1B1100All;
+  MonitorElement *h1B1110All;
+  
+  MonitorElement *h1FlagAll;
+  MonitorElement *h1CRCAll;
+  
+  MonitorElement *h1InputID;
+  MonitorElement *h1Vwh;
+  MonitorElement *h1Vwt;
+  
+  MonitorElement *h1GEBError;
+  MonitorElement *h1GEBWarning;
 
 };
 
@@ -98,6 +114,7 @@ GEMDQMSourceDigi::GEMDQMSourceDigi(const edm::ParameterSet& cfg)
 
   tagDigi = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("digisInputLabel")); 
   tagError = consumes<GEMVfatStatusDigiCollection>(cfg.getParameter<edm::InputTag>("errorsInputLabel")); 
+  tagGEB = consumes<GEMGEBStatusDigiCollection>(cfg.getParameter<edm::InputTag>("GEBInputLabel")); 
 
 }
 
@@ -147,6 +164,20 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     //hist_3->SetMarkerStyle(20);
     //hist_3->SetMarkerSize(0.5);
   }
+  
+  h1B1010All = ibooker.book1D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf);   
+  h1B1100All = ibooker.book1D("vfatErrors_all_b1100", "Control Bit 1100", 15, 0x0 , 0xf);   
+  h1B1110All = ibooker.book1D("vfatErrors_all_b1110", "Control Bit 1110", 15, 0x0 , 0xf);   
+  
+  h1FlagAll = ibooker.book1D("vfatErrors_all_flag", "Control Flags", 15, 0x0 , 0xf);   
+  h1CRCAll = ibooker.book1D("vfatErrors_all_CRC", "CRC Mismatches", 0xffff, -32768, 32768);   
+  
+  h1InputID = ibooker.book1D("GEB_InputID", "GEB GLIB input ID", 31,  0x0 , 0b11111);
+  h1Vwh = ibooker.book1D("VFAT_Vwh", "VFAT word count", 4095,  0x0 , 0xfff);
+  h1Vwt = ibooker.book1D("VFAT_Vwt", "VFAT word count", 4095,  0x0 , 0xfff);
+  
+  h1GEBError = ibooker.book1D("GEB_Errors", "GEB Critical Errors", 5, 0, 5);
+  h1GEBWarning = ibooker.book1D("GEB_Warnings", "GEB Warnings", 10,  0, 10);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -168,8 +199,10 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
   ////////////////
   edm::Handle<GEMDigiCollection> gemDigis;
   edm::Handle<GEMVfatStatusDigiCollection> gemErrors;
+  edm::Handle<GEMGEBStatusDigiCollection> gemGEB;
   event.getByToken( this->tagDigi, gemDigis);
   event.getByToken( this->tagError, gemErrors);
+  event.getByToken( this->tagGEB, gemGEB);
   //   if (!gemDigis.isValid()){
   //   		edm::LogError("GEMDQMSourceDigi") << "GEM Digi is not valid.\n";
   //   		return;
@@ -189,7 +222,28 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         h1B1100[ cId ]->Fill(vfatError->getB1110());
         h1B1110[ cId ]->Fill(vfatError->getB1110());
         h1Flag[ cId ]->Fill(vfatError->getFlag());
+        
+        h1B1010All->Fill(vfatError->getB1010());
+        h1B1100All->Fill(vfatError->getB1100());
+        h1B1110All->Fill(vfatError->getB1110());
+        h1FlagAll->Fill(vfatError->getFlag());
+        h1CRCAll->Fill(vfatError->getCrc());
       }
+    }
+    const auto& GEB_in_det = gemGEB->get(cId);
+    for(auto GEBStatus = GEB_in_det.first; GEBStatus != GEB_in_det.second; ++GEBStatus ){
+      h1InputID->Fill(GEBStatus->getInputID());
+      h1Vwh->Fill(GEBStatus->getVwh());
+      h1Vwt->Fill(GEBStatus->getVwt());
+      
+      //h1GEBError->Fill(GEBStatus->getErrorC());
+      for ( int bin = 0 ; bin < 9  ; bin++ ) 
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBWarning->Fill(bin);
+      for ( int bin = 9 ; bin < 13 ; bin++ ) 
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBError->Fill(bin - 9);
+      
+      if ( ( GEBStatus->getInFu()   & 0x1 ) != 0 ) h1GEBError->Fill(9);
+      if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) h1GEBWarning->Fill(9);
     }
   }
   

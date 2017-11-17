@@ -165,11 +165,12 @@ process.dumpRaw = cms.EDAnalyzer(
 )
 
 # raw to digi
-process.load('EventFilter.GEMRawToDigi.gemRawToDigi_cfi')
+#process.load('EventFilter.GEMRawToDigi.gemRawToDigi_cfi')
+process.load('EventFilter.GEMRawToDigi.gemUnpacker_cfi')
 process.load('EventFilter.GEMRawToDigi.GEMSQLiteCabling_cfi')
 process.muonGEMDigis.InputLabel = cms.InputTag('rawDataCollector')
 
-if (options.debug):
+if (True or options.debug):
     process.muonGEMDigis.debug = cms.untracked.bool(True)
 
 #process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')

@@ -60,6 +60,12 @@ private:
     
   std::unordered_map<UInt_t,  MonitorElement*> StripsFired_vs_eta;
   std::unordered_map<UInt_t,  MonitorElement*> rh_vs_eta;
+  
+  MonitorElement *h2BeamProfile;
+  MonitorElement *h1SlotN;
+  
+  MonitorElement *h1ClusterMul;
+  MonitorElement *h1ClusterSize;
 
 };
 
@@ -160,6 +166,14 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
 
   }
   
+  ibooker.setCurrentFolder("GEM/digi");
+  
+  h2BeamProfile = ibooker.book2D("VFAT_BeamProfile", "2D Occupancy", 384, 0.5, 384.5, 8, 0.5, 8.5);
+  h1SlotN = ibooker.book1D("VFAT_Slots", "VFAT Slots", 24, 0, 24);
+  
+  h1ClusterMul = ibooker.book1D("ClusterMul", "Cluster Multiplicity", 384, 0, 384);
+  h1ClusterSize = ibooker.book1D("ClusterSize", "Cluster Size", 11, -0.5, 10.5);
+  
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -201,6 +215,7 @@ void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& event
     Phi->Fill(rhPhi);
     Eta->Fill(rhEta);
   }
+  int nMulCluster = 0;
   for (auto ch : gemChambers){
     GEMDetId cId = ch.id();
     for(auto roll : ch.etaPartitions()){
@@ -208,16 +223,21 @@ void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& event
       const auto& recHitsRange = gemRecHits->get(rId); 
       auto gemRecHit = recHitsRange.first;
       for ( auto hit = gemRecHit; hit != recHitsRange.second; ++hit ) {
+        nMulCluster++;
         int nVfat = findVFAT(1.0, 385.0, hit->firstClusterStrip()+0.5*hit->clusterSize(), rId.roll());
         recHitME[ cId ]->Fill(nVfat);
+        h1SlotN->Fill(nVfat);
         rh_vs_eta[ cId ]->Fill(hit->localPosition().x(), rId.roll());
         VFAT_vs_ClusterSize[ cId ]->Fill(hit->clusterSize(), nVfat);
+        h1ClusterSize->Fill(hit->clusterSize());
         for(int i = hit->firstClusterStrip(); i < (hit->firstClusterStrip() + hit->clusterSize()); i++){
 	  StripsFired_vs_eta[ cId ]->Fill(i, rId.roll());
+          h2BeamProfile->Fill(i, rId.roll());
         }
       }  
     }   
   }
+  h1ClusterMul->Fill(nMulCluster);
 
   
 }
