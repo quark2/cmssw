@@ -24,6 +24,7 @@ GEMRawToDigiModule::GEMRawToDigiModule(const edm::ParameterSet & pset)
   if (unpackStatusDigis_){
     produces<GEMVfatStatusDigiCollection>("vfatStatus"); 
     produces<GEMGEBStatusDigiCollection>("GEBStatus"); 
+    produces<GEMAMCStatusDigiCollection>("AMCStatus"); 
   }
 }
 
@@ -53,6 +54,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
   auto outGEMDigis = std::make_unique<GEMDigiCollection>();
   auto outVfatStatus = std::make_unique<GEMVfatStatusDigiCollection>();
   auto outGEBStatus = std::make_unique<GEMGEBStatusDigiCollection>();
+  auto outAMCStatus = std::make_unique<GEMAMCStatusDigiCollection>();
   // Take raw from the event
   edm::Handle<FEDRawDataCollection> fed_buffers;
   e.getByToken( fed_token, fed_buffers );
@@ -135,7 +137,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
 	    // no hits
 	    if(chan0xf==0) continue;
 
-	    ec.channelId = chan;
+	    ec.channelId = chan + 1;
 	    GEMROmap::dCoord dc = m_gemROMap->hitPosition(ec);
 	    int bx = bc-25;
 	    gemId = dc.gemDetId;
@@ -178,6 +180,26 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
       
       amcData->setGEMeventTrailer(*(++word));
       amcData->setAMCTrailer(*(++word));
+      if (unpackStatusDigis_){
+        GEMAMCStatusDigi amcStatus(amcData->AMCnum(),
+                                   amcData->L1A(),
+                                   amcData->BX(),
+                                   amcData->Dlength(),
+                                   amcData->FV(),
+                                   amcData->Rtype(),
+                                   amcData->Param1(),
+                                   amcData->Param2(),
+                                   amcData->Param3(),
+                                   amcData->Onum(),
+                                   amcData->BID(),
+                                   amcData->GEMDAV(),
+                                   amcData->Bstatus(),
+                                   amcData->GDcount(),
+                                   amcData->Tstate(),
+                                   amcData->ChamT(),
+                                   amcData->OOSG());
+        outAMCStatus.get()->insertDigi(amcData->BID(), amcStatus);
+      }
       amc13Event->addAMCpayload(*amcData);
     }
     
@@ -189,5 +211,6 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
   if (unpackStatusDigis_){
     e.put(std::move(outVfatStatus), "vfatStatus");
     e.put(std::move(outGEBStatus), "GEBStatus");
+    e.put(std::move(outAMCStatus), "AMCStatus");
   }
 }

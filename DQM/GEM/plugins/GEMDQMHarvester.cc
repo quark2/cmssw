@@ -117,9 +117,9 @@ void GEMDQMHarvester::prova(DQMStore::IBooker &ibooker, edm::Run const &, edm::E
     string hName_eff = "Eff_Strip_Gemini_"+to_string(gid.superChamberId())+"_la_"+to_string(gid.layer());
     string hTitle_eff = "Eff Strips Gemini ID : "+to_string(gid.superChamberId())+", layer : "+to_string(gid.layer());
     Eff_Strips_vs_eta[ ch.id() ] = ibooker.book2D(hName_eff, hTitle_eff, 384, 0.5, 384.5, 8, 0.5,8.5);
-    TH2F *hist_2 = Eff_Strips_vs_eta[ ch.id() ]->getTH2F();
-    hist_2->SetMarkerStyle(20);
-    hist_2->SetMarkerSize(0.5);
+    //TH2F *hist_2 = Eff_Strips_vs_eta[ ch.id() ]->getTH2F();
+    //hist_2->SetMarkerStyle(20);
+    //hist_2->SetMarkerSize(0.5);
   }
 
   // 	MonitorElement* eta_1 = igetter.get("/GEM/testEta"); 

@@ -142,16 +142,16 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
     string hName_2 = "VFAT_vs_ClusterSize_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_2 = "VFAT vs ClusterSize Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
     VFAT_vs_ClusterSize[ ch.id() ] = ibooker.book2D(hName_2, hTitle_2, 11, -0.5, 10.5, 24, -0.5, 23.5);
-    TH2F *hist = VFAT_vs_ClusterSize[ ch.id() ]->getTH2F();
-    hist->SetMarkerStyle(20);
-    hist->SetMarkerSize(0.5);
+    //TH2F *hist = VFAT_vs_ClusterSize[ ch.id() ]->getTH2F();
+    //hist->SetMarkerStyle(20);
+    //hist->SetMarkerSize(0.5);
     
     string hName_fired = "StripFired_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_fired = "StripsFired Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
     StripsFired_vs_eta[ ch.id() ] = ibooker.book2D(hName_fired, hTitle_fired, 384, 0.5, 384.5, 8, 0.5,8.5);
-    TH2F *hist_2 = StripsFired_vs_eta[ ch.id() ]->getTH2F();
-    hist_2->SetMarkerStyle(20);
-    hist_2->SetMarkerSize(0.5);
+    //TH2F *hist_2 = StripsFired_vs_eta[ ch.id() ]->getTH2F();
+    //hist_2->SetMarkerStyle(20);
+    //hist_2->SetMarkerSize(0.5);
 
     string hName_rh = "recHit_x_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_rh = "recHit local x Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());

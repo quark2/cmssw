@@ -77,12 +77,11 @@ pname="Raw2Digi"
 if (options.process!=""):
     pname=options.process
 #process = cms.Process(pname)
-
 #from Configuration.StandardSequences.Eras import eras
 #process = cms.Process(pname, eras.Run2_2017, eras.run2_GEM_2017_MCTest)
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.Run2_2017,eras.run2_GEM_2017_MCTest)
+process = cms.Process('TEST',eras.Run2_2017,eras.run2_GEM_2017_MCTest)
 
 process.load('Configuration.StandardSequences.L1Reco_cff')
 process.load('Configuration.StandardSequences.Reconstruction_cff')
@@ -117,6 +116,20 @@ else :
         fileNames = cms.untracked.vstring (options.inputFiles),
         skipEvents=cms.untracked.uint32(options.skipEvents)
     )
+
+process.source = cms.Source("PoolSource",
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/data/Run2017F/Cosmics/RAW-RECO/CosmicSP-PromptReco-v1/000/306/438/00000/E4101CDA-63C7-E711-B9A9-FA163E1ED279.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/data/Run2017F/Cosmics/RAW-RECO/CosmicTP-PromptReco-v1/000/306/438/00000/D247D237-62C7-E711-99B4-02163E016DDB.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/data/Run2017F/Cosmics/RAW-RECO/CosmicTP-PromptReco-v1/000/306/438/00000/00B1CFDD-63C7-E711-8C8A-02163E013D40.root'),
+    fileNames = cms.untracked.vstring(),
+    secondaryFileNames = cms.untracked.vstring(),
+    inputCommands=cms.untracked.vstring(
+                  'drop *',
+                  'keep FEDRawDataCollection_*_*_*')
+)
+process.source.fileNames.append('file:/eos/cms/store/user/hyunyong/gemP5/run306438/00B1CFDD-63C7-E711-8C8A-02163E013D40.root')
+process.source.fileNames.append('file:/eos/cms/store/user/hyunyong/gemP5/run306438/E4101CDA-63C7-E711-B9A9-FA163E1ED279.root')
+process.source.fileNames.append('file:/eos/cms/store/user/hyunyong/gemP5/run306438/D247D237-62C7-E711-99B4-02163E016DDB.root')
 
 if (options.json):
     import FWCore.PythonUtilities.LumiList as LumiList
@@ -189,9 +202,9 @@ process.gemRecHits = cms.EDProducer("GEMRecHitProducer",
 # Path and EndPath definitions
 process.path = cms.Path(
     #process.validationEventFilter
-    process.dumpRaw
-    +process.muonGEMDigis
-    +process.gemRecHits
+    #process.dumpRaw+
+    process.muonGEMDigis
+    #+process.gemRecHits
 )
 
 # enable validation event filtering
