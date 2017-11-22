@@ -22,6 +22,7 @@ GEMRawToDigiModule::GEMRawToDigiModule(const edm::ParameterSet & pset)
   produces<GEMDigiCollection>(); 
   unpackStatusDigis_ = pset.getParameter<bool>("UnpackStatusDigis");
   if (unpackStatusDigis_){
+    produces<AMC13Event>("AMC13Status"); 
     produces<GEMVfatStatusDigiCollection>("vfatStatus"); 
     produces<GEMGEBStatusDigiCollection>("GEBStatus"); 
   }
@@ -51,6 +52,7 @@ void GEMRawToDigiModule::doBeginRun_(edm::Run const& rp, edm::EventSetup const& 
 void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::EventSetup & iSetup) const
 {
   auto outGEMDigis = std::make_unique<GEMDigiCollection>();
+  auto outAMCStatus = std::make_unique<std::vector<AMC13Event>>();
   auto outVfatStatus = std::make_unique<GEMVfatStatusDigiCollection>();
   auto outGEBStatus = std::make_unique<GEMGEBStatusDigiCollection>();
   // Take raw from the event
@@ -183,10 +185,13 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
     
     amc13Event->setAMC13trailer(*(++word));
     amc13Event->setCDFTrailer(*(++word));
+    
+    outAMCStatus.get()->push_back(*amc13Event);
   }
   
   e.put(std::move(outGEMDigis));
   if (unpackStatusDigis_){
+    e.put(std::move(outAMCStatus), "AMC13Status");
     e.put(std::move(outVfatStatus), "vfatStatus");
     e.put(std::move(outGEBStatus), "GEBStatus");
   }

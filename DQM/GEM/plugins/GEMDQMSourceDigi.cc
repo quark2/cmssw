@@ -52,6 +52,7 @@ private:
 
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
+  int findIndex(GEMDetId id_);
      
   const GEMGeometry* GEMGeometry_; 
 
@@ -76,6 +77,20 @@ private:
   
   MonitorElement *h1GEBError;
   MonitorElement *h1GEBWarning;
+  
+  MonitorElement *h2B1010All;
+  MonitorElement *h2B1100All;
+  MonitorElement *h2B1110All;
+  
+  MonitorElement *h2FlagAll;
+  MonitorElement *h2CRCAll;
+  
+  MonitorElement *h2InputID;
+  MonitorElement *h2Vwh;
+  MonitorElement *h2Vwt;
+  
+  MonitorElement *h2GEBError;
+  MonitorElement *h2GEBWarning;
 
 };
 
@@ -122,6 +137,14 @@ GEMDQMSourceDigi::GEMDQMSourceDigi(const edm::ParameterSet& cfg)
 
 GEMDQMSourceDigi::~GEMDQMSourceDigi()
 {
+}
+
+int GEMDQMSourceDigi::findIndex(GEMDetId id_) {
+  int index=-1;
+  for(int c =0;c<nCh;c++){
+    if((gemChambers[c].id().chamber() == id_.chamber())&(gemChambers[c].id().layer() == id_.layer()) ){index = c;}
+  }
+  return index;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -178,6 +201,43 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   
   h1GEBError = ibooker.book1D("GEB_Errors", "GEB Critical Errors", 5, 0, 5);
   h1GEBWarning = ibooker.book1D("GEB_Warnings", "GEB Warnings", 10,  0, 10);
+  
+  h2B1010All = ibooker.book2D("vfatErrors_all_b1010_PerGEB", "Control Bit 1010", 15, 0x0 , 0xf, nCh, 0, nCh);
+  h2B1100All = ibooker.book2D("vfatErrors_all_b1100_PerGEB", "Control Bit 1100", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1110All = ibooker.book2D("vfatErrors_all_b1110_PerGEB", "Control Bit 1110", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  
+  h2FlagAll = ibooker.book2D("vfatErrors_all_flag_PerGEB", "Control Flags", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2CRCAll = ibooker.book2D("vfatErrors_all_CRC_PerGEB", "CRC Mismatches", 0xffff, -32768, 32768, nCh, 0, nCh);   
+  
+  h2InputID = ibooker.book2D("GEB_InputID_PerGEB", "GEB GLIB input ID", 31,  0x0 , 0b11111, nCh, 0, nCh);
+  h2Vwh = ibooker.book2D("VFAT_Vwh_PerGEB", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
+  h2Vwt = ibooker.book2D("VFAT_Vwt_PerGEB", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
+  
+  h2GEBError = ibooker.book2D("GEB_Errors_PerGEB", "GEB Critical Errors", 5, 0, 5, nCh, 0, nCh);
+  h2GEBWarning = ibooker.book2D("GEB_Warnings_PerGEB", "GEB Warnings", 10,  0, 10, nCh, 0, nCh);
+  
+  const char *error_flags[5] = {
+    "Event Size Overflow", 
+    "L1AFIFO Full", 
+    "InFIFO Full", 
+    "Evt FIFO Full", 
+    "InFIFO Underflow"
+  };
+  for (int i = 1; i<6; i++) h1GEBError->setBinLabel(i, error_flags[i-1]);
+  
+  const char *warning_flags[10] = {
+    "BX AMC-OH Mismatch", 
+    "BX AMC-VFAT Mismatch", 
+    "OOS AMC OH", 
+    "OOS AMC VFAT", 
+    "No VFAT Marker", 
+    "Event Size Warn", 
+    "L1AFIFO Near Full", 
+    "InFIFO Near Full", 
+    "EvtFIFO Near Full", 
+    "Stuck Data"
+  };
+  for (int i = 1; i<11; i++) h1GEBWarning->setBinLabel(i, warning_flags[i-1]);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -228,6 +288,12 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         h1B1110All->Fill(vfatError->getB1110());
         h1FlagAll->Fill(vfatError->getFlag());
         h1CRCAll->Fill(vfatError->getCrc());
+        
+        h2B1010All->Fill(vfatError->getB1010(), findIndex(cId));
+        h2B1100All->Fill(vfatError->getB1100(), findIndex(cId));
+        h2B1110All->Fill(vfatError->getB1110(), findIndex(cId));
+        h2FlagAll->Fill(vfatError->getFlag(), findIndex(cId));
+        h2CRCAll->Fill(vfatError->getCrc(), findIndex(cId));
       }
     }
     const auto& GEB_in_det = gemGEB->get(cId);
@@ -236,14 +302,34 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       h1Vwh->Fill(GEBStatus->getVwh());
       h1Vwt->Fill(GEBStatus->getVwt());
       
-      //h1GEBError->Fill(GEBStatus->getErrorC());
-      for ( int bin = 0 ; bin < 9  ; bin++ ) 
-        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBWarning->Fill(bin);
-      for ( int bin = 9 ; bin < 13 ; bin++ ) 
-        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBError->Fill(bin - 9);
+      h2InputID->Fill(GEBStatus->getInputID(), findIndex(cId));
+      h2Vwh->Fill(GEBStatus->getVwh(), findIndex(cId));
+      h2Vwt->Fill(GEBStatus->getVwt(), findIndex(cId));
       
-      if ( ( GEBStatus->getInFu()   & 0x1 ) != 0 ) h1GEBError->Fill(9);
-      if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) h1GEBWarning->Fill(9);
+      //h1GEBError->Fill(GEBStatus->getErrorC());
+      for ( int bin = 0 ; bin < 9  ; bin++ ) {
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) {
+          h1GEBWarning->Fill(bin);
+          h2GEBWarning->Fill(bin, findIndex(cId));
+        }
+      }
+
+      for ( int bin = 9 ; bin < 13 ; bin++ ) {
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) {
+          h1GEBError->Fill(bin - 9);
+          h2GEBError->Fill(bin - 9, findIndex(cId));
+        }
+      }
+      
+      if ( ( GEBStatus->getInFu() & 0x1 ) != 0 ) {
+        h1GEBError->Fill(9);
+        h2GEBError->Fill(9, findIndex(cId));
+      }
+
+      if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) {
+        h1GEBWarning->Fill(9);
+        h2GEBWarning->Fill(9, findIndex(cId));
+      }
     }
   }
   

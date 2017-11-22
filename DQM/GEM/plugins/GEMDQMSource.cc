@@ -66,6 +66,11 @@ private:
   
   MonitorElement *h1ClusterMul;
   MonitorElement *h1ClusterSize;
+  
+  MonitorElement *h2SlotN;
+  
+  MonitorElement *h2ClusterMul;
+  MonitorElement *h2ClusterSize;
 
 };
 
@@ -173,6 +178,12 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
   
   h1ClusterMul = ibooker.book1D("ClusterMul", "Cluster Multiplicity", 384, 0, 384);
   h1ClusterSize = ibooker.book1D("ClusterSize", "Cluster Size", 11, -0.5, 10.5);
+  
+  //h3BeamProfile_PerGEB = ibooker.book3D("VFAT_BeamProfile_PerGEB", "2D Occupancy", 384, 0.5, 384.5, 8, 0.5, 8.5); // 3D...?
+  h2SlotN = ibooker.book2D("VFAT_Slots_PerGEB", "VFAT Slots", 24, 0, 24, nCh, 0, nCh);
+  
+  h2ClusterMul = ibooker.book2D("ClusterMul_PerGEB", "Cluster Multiplicity", 384, 0, 384, nCh, 0, nCh);
+  h2ClusterSize = ibooker.book2D("ClusterSize_PerGEB", "Cluster Size", 11, -0.5, 10.5, nCh, 0, nCh);
   
 }
 
