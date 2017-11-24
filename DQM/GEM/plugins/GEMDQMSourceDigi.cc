@@ -54,6 +54,7 @@ private:
 
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
+  int findIndex(GEMDetId id_);
      
   const GEMGeometry* GEMGeometry_; 
 
@@ -78,12 +79,32 @@ private:
   
   MonitorElement *h1GEBError;
   MonitorElement *h1GEBWarning;
+  
+  MonitorElement *h2B1010All;
+  MonitorElement *h2B1100All;
+  MonitorElement *h2B1110All;
+  
+  MonitorElement *h2FlagAll;
+  MonitorElement *h2CRCAll;
+  
+  MonitorElement *h2InputID;
+  MonitorElement *h2Vwh;
+  MonitorElement *h2Vwt;
+  
+  MonitorElement *h2GEBError;
+  MonitorElement *h2GEBWarning;
 
   MonitorElement *GEMDAV;  
   MonitorElement *Tstate;  
   MonitorElement *GDcount; 
   MonitorElement *ChamT;   
   MonitorElement *OOSG;    
+
+  MonitorElement *GEMDAV2D;  
+  MonitorElement *Tstate2D;  
+  MonitorElement *GDcount2D; 
+  MonitorElement *ChamT2D;   
+  MonitorElement *OOSG2D;    
 
 
 };
@@ -136,6 +157,16 @@ GEMDQMSourceDigi::~GEMDQMSourceDigi()
 
 //----------------------------------------------------------------------------------------------------
 
+int GEMDQMSourceDigi::findIndex(GEMDetId id_) {
+  int index=-1;
+  for(int c =0;c<nCh;c++){
+    if((gemChambers[c].id().chamber() == id_.chamber())&(gemChambers[c].id().layer() == id_.layer()) ){index = c;}
+  }
+  return index;
+}
+
+//----------------------------------------------------------------------------------------------------
+
 void GEMDQMSourceDigi::dqmBeginRun(edm::Run const &, edm::EventSetup const &)
 {
 }
@@ -156,6 +187,7 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     }
   }
   nCh = gemChambers.size();
+  int nMaxAMC = 12;
   ibooker.cd();
   ibooker.setCurrentFolder("GEM/digi");
   for (auto ch : gemChambers){
@@ -178,27 +210,67 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   h1B1010All = ibooker.book1D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf);   
   h1B1100All = ibooker.book1D("vfatErrors_all_b1100", "Control Bit 1100", 15, 0x0 , 0xf);   
   h1B1110All = ibooker.book1D("vfatErrors_all_b1110", "Control Bit 1110", 15, 0x0 , 0xf);   
+  h2B1010All = ibooker.book2D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1100All = ibooker.book2D("vfatErrors_all_b1100", "Control Bit 1100", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1110All = ibooker.book2D("vfatErrors_all_b1110", "Control Bit 1110", 15, 0x0 , 0xf, nCh, 0, nCh);   
   
   h1FlagAll = ibooker.book1D("vfatErrors_all_flag", "Control Flags", 15, 0x0 , 0xf);   
   h1CRCAll = ibooker.book1D("vfatErrors_all_CRC", "CRC Mismatches", 0xffff, -32768, 32768);   
+  h2FlagAll = ibooker.book2D("vfatErrors_all_flag", "Control Flags", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2CRCAll = ibooker.book2D("vfatErrors_all_CRC", "CRC Mismatches", 0xffff, -32768, 32768, nCh, 0, nCh);   
   
   h1InputID = ibooker.book1D("GEB_InputID", "GEB GLIB input ID", 31,  0x0 , 0b11111);
   h1Vwh = ibooker.book1D("VFAT_Vwh", "VFAT word count", 4095,  0x0 , 0xfff);
   h1Vwt = ibooker.book1D("VFAT_Vwt", "VFAT word count", 4095,  0x0 , 0xfff);
+  h2InputID = ibooker.book2D("GEB_InputID", "GEB GLIB input ID", 31,  0x0 , 0b11111, nCh, 0, nCh);
+  h2Vwh = ibooker.book2D("VFAT_Vwh", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
+  h2Vwt = ibooker.book2D("VFAT_Vwt", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
   
+  printf("1\n");
   h1GEBError = ibooker.book1D("GEB_Errors", "GEB Critical Errors", 5, 0, 5);
-  TH1F *histErr = h1GEBError->getTH1F();
+  h2GEBError = ibooker.book2D("GEB_Errors", "GEB Critical Errors", 5, 0, 5, nCh, 0, nCh);
+  TH1F *histErr1D = h1GEBError->getTH1F();
+  //TH2F *histErr2D = h2GEBError->getTH2F();printf("2\n");
   const char *error_flags[5] = {"Event Size Overflow", "L1AFIFO Full", "InFIFO Full", "Evt FIFO Full","InFIFO Underflow"};
-  for (int i = 1; i<6; i++) histErr->GetXaxis()->SetBinLabel(i, error_flags[i-1]);
+  for (int i = 1; i<6; i++) {histErr1D->GetXaxis()->SetBinLabel(i, error_flags[i-1]); /*histErr2D->GetXaxis()->SetBinLabel(i, error_flags[i-1]);*/}
   h1GEBWarning = ibooker.book1D("GEB_Warnings", "GEB Warnings", 10,  0, 10);
-  TH1F *histWar = h1GEBWarning->getTH1F();
+  h2GEBWarning = ibooker.book2D("GEB_Warnings", "GEB Warnings", 10,  0, 10, nCh, 0, nCh);
+  TH1F *histWar1D = h1GEBWarning->getTH1F();
+  //TH2F *histWar2D = h2GEBWarning->getTH2F();printf("3\n");
   const char *warning_flags[10] = {"BX AMC-OH Mismatch", "BX AMC-VFAT Mismatch", "OOS AMC OH", "OOS AMC VFAT","No VFAT Marker","Event Size Warn", "L1AFIFO Near Full", "InFIFO Near Full", "EvtFIFO Near Full", "Stuck Data"};
-  for (int i = 1; i<11; i++) histWar->GetXaxis()->SetBinLabel(i, warning_flags[i-1]);
+  for (int i = 1; i<11; i++) {histWar1D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]); /*histWar2D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]);*/}
+  
+  /*for (auto ch : gemChambers){
+    GEMDetId gid = ch.id();
+    string ylabel = "Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
+    int nIdx = findIndex(gid) + 1;
+    
+    ( (TH2F *)h2B1010All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("4\n");
+    ( (TH2F *)h2B1100All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("5\n");
+    ( (TH2F *)h2B1110All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("6\n");
+    
+    ( (TH2F *)h2FlagAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("7\n");
+    ( (TH2F *)h2CRCAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("8\n");
+    
+    ( (TH2F *)h2InputID->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("9\n");
+    ( (TH2F *)h2Vwh->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("10\n");
+    ( (TH2F *)h2Vwt->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("11\n");
+    
+    ( (TH2F *)h2GEBError->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("12\n");
+    ( (TH2F *)h2GEBWarning->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("13\n");
+  }*/
+  
   GEMDAV = ibooker.book1D("GEMDAV", "GEM DAV list", 24,  0, 24);
   Tstate     = ibooker.book1D("Tstate", "TTS state", 15,  0, 15);
   GDcount    = ibooker.book1D("GDcount", "GEM DAV count", 32,  0, 32);
   ChamT      = ibooker.book1D("ChamT", "Chamber Timeout", 24, 0, 24);
   OOSG       = ibooker.book1D("OOSG", "OOS GLIB", 1, 0, 1);
+  
+  GEMDAV2D = ibooker.book2D("GEMDAV", "GEM DAV list", 24,  0, 24, nMaxAMC, 0, nMaxAMC);
+  Tstate2D     = ibooker.book2D("Tstate", "TTS state", 15,  0, 15, nMaxAMC, 0, nMaxAMC);
+  GDcount2D    = ibooker.book2D("GDcount", "GEM DAV count", 32,  0, 32, nMaxAMC, 0, nMaxAMC);
+  ChamT2D      = ibooker.book2D("ChamT", "Chamber Timeout", 24, 0, 24, nMaxAMC, 0, nMaxAMC);
+  OOSG2D       = ibooker.book2D("OOSG", "OOS GLIB", 1, 0, 1, nMaxAMC, 0, nMaxAMC);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -232,6 +304,7 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
   //   }
   for (auto ch : gemChambers){
     GEMDetId cId = ch.id();
+    int nIdx = findIndex(cId);
      
     for(auto roll : ch.etaPartitions()){
       GEMDetId rId = roll->id();      
@@ -251,6 +324,12 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         h1B1110All->Fill(vfatError->getB1110());
         h1FlagAll->Fill(vfatError->getFlag());
         h1CRCAll->Fill(vfatError->getCrc());
+        
+        h2B1010All->Fill(vfatError->getB1010(), nIdx);
+        h2B1100All->Fill(vfatError->getB1100(), nIdx);
+        h2B1110All->Fill(vfatError->getB1110(), nIdx);
+        h2FlagAll->Fill(vfatError->getFlag(), nIdx);
+        h2CRCAll->Fill(vfatError->getCrc(), nIdx);
       }
     }
     const auto& GEB_in_det = gemGEB->get(cId);
@@ -259,33 +338,57 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       h1Vwh->Fill(GEBStatus->getVwh());
       h1Vwt->Fill(GEBStatus->getVwt());
       
-      //h1GEBError->Fill(GEBStatus->getErrorC());
-      for ( int bin = 0 ; bin < 9  ; bin++ ) 
-        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBWarning->Fill(bin);
-      for ( int bin = 9 ; bin < 13 ; bin++ ) 
-        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) h1GEBError->Fill(bin - 9);
+      h2InputID->Fill(GEBStatus->getInputID(), nIdx);
+      h2Vwh->Fill(GEBStatus->getVwh(), nIdx);
+      h2Vwt->Fill(GEBStatus->getVwt(), nIdx);
       
-      if ( ( GEBStatus->getInFu()   & 0x1 ) != 0 ) h1GEBError->Fill(9);
-      if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) h1GEBWarning->Fill(9);
+      //h1GEBError->Fill(GEBStatus->getErrorC());
+      for ( int bin = 0 ; bin < 9  ; bin++ ) {
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) {
+          h1GEBWarning->Fill(bin);
+          h2GEBWarning->Fill(bin, nIdx);
+        }
+      }
+      for ( int bin = 9 ; bin < 13 ; bin++ ) {
+        if ( ( ( GEBStatus->getErrorC() >> bin ) & 0x1 ) != 0 ) {
+          h1GEBError->Fill(bin - 9);
+          h2GEBError->Fill(bin - 9, nIdx);
+        }
+      }
+      
+      if ( ( GEBStatus->getInFu()   & 0x1 ) != 0 ) {
+        h1GEBError->Fill(9);
+        h2GEBError->Fill(9, nCh);
+      }
+      if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) {
+        h1GEBWarning->Fill(9);
+        h2GEBWarning->Fill(9, nCh);
+      }
     }
   }
+  
+  int nIdxAMC = 0;
 
   for (GEMAMCStatusDigiCollection::DigiRangeIterator amcIt = gemAMC->begin(); amcIt != gemAMC->end(); ++amcIt){
     const GEMAMCStatusDigiCollection::Range& range = (*amcIt).second;
     for ( auto amc = range.first; amc != range.second; ++amc ) {
-    uint8_t binFired = 0;
-    for (int bin = 0; bin < 24; bin++){
-      binFired = ((amc->GEMDAV() >> bin) & 0x1);
-      if (binFired) GEMDAV->Fill(bin);
-      //binFired = ((amc->Bstatus() >> bin) & 0x1);
-      //if (binFired) Bstatus->Fill(bin);
-      binFired = ((amc->ChamT() >> bin) & 0x1);
-      if (binFired) ChamT->Fill(bin);
+      uint8_t binFired = 0;
+      for (int bin = 0; bin < 24; bin++){
+        binFired = ((amc->GEMDAV() >> bin) & 0x1);
+        if (binFired) {GEMDAV->Fill(bin); GEMDAV2D->Fill(bin, nIdxAMC);}
+        //binFired = ((amc->Bstatus() >> bin) & 0x1);
+        //if (binFired) Bstatus->Fill(bin);
+        binFired = ((amc->ChamT() >> bin) & 0x1);
+        if (binFired) {ChamT->Fill(bin); ChamT2D->Fill(bin, nIdxAMC);}
+      }
+      Tstate->Fill(amc->Tstate());
+      GDcount->Fill(amc->GDcount());
+      OOSG->Fill(amc->OOSG());
+      Tstate2D->Fill(amc->Tstate(), nIdxAMC);
+      GDcount2D->Fill(amc->GDcount(), nIdxAMC);
+      OOSG2D->Fill(amc->OOSG(), nIdxAMC);
     }
-    Tstate->Fill(amc->Tstate());
-    GDcount->Fill(amc->GDcount());
-    OOSG->Fill(amc->OOSG());
-  }
+    nIdxAMC++;
   }
 }
 
