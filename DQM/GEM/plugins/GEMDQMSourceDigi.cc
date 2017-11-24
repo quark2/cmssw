@@ -210,55 +210,54 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   h1B1010All = ibooker.book1D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf);   
   h1B1100All = ibooker.book1D("vfatErrors_all_b1100", "Control Bit 1100", 15, 0x0 , 0xf);   
   h1B1110All = ibooker.book1D("vfatErrors_all_b1110", "Control Bit 1110", 15, 0x0 , 0xf);   
-  h2B1010All = ibooker.book2D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf, nCh, 0, nCh);   
-  h2B1100All = ibooker.book2D("vfatErrors_all_b1100", "Control Bit 1100", 15, 0x0 , 0xf, nCh, 0, nCh);   
-  h2B1110All = ibooker.book2D("vfatErrors_all_b1110", "Control Bit 1110", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1010All = ibooker.book2D("vfatErrors_all_b1010_PerGEB", "Control Bit 1010", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1100All = ibooker.book2D("vfatErrors_all_b1100_PerGEB", "Control Bit 1100", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2B1110All = ibooker.book2D("vfatErrors_all_b1110_PerGEB", "Control Bit 1110", 15, 0x0 , 0xf, nCh, 0, nCh);   
   
   h1FlagAll = ibooker.book1D("vfatErrors_all_flag", "Control Flags", 15, 0x0 , 0xf);   
   h1CRCAll = ibooker.book1D("vfatErrors_all_CRC", "CRC Mismatches", 0xffff, -32768, 32768);   
-  h2FlagAll = ibooker.book2D("vfatErrors_all_flag", "Control Flags", 15, 0x0 , 0xf, nCh, 0, nCh);   
-  h2CRCAll = ibooker.book2D("vfatErrors_all_CRC", "CRC Mismatches", 0xffff, -32768, 32768, nCh, 0, nCh);   
+  h2FlagAll = ibooker.book2D("vfatErrors_all_flag_PerGEB", "Control Flags", 15, 0x0 , 0xf, nCh, 0, nCh);   
+  h2CRCAll = ibooker.book2D("vfatErrors_all_CRC_PerGEB", "CRC Mismatches", 0xffff, -32768, 32768, nCh, 0, nCh);   
   
   h1InputID = ibooker.book1D("GEB_InputID", "GEB GLIB input ID", 31,  0x0 , 0b11111);
   h1Vwh = ibooker.book1D("VFAT_Vwh", "VFAT word count", 4095,  0x0 , 0xfff);
   h1Vwt = ibooker.book1D("VFAT_Vwt", "VFAT word count", 4095,  0x0 , 0xfff);
-  h2InputID = ibooker.book2D("GEB_InputID", "GEB GLIB input ID", 31,  0x0 , 0b11111, nCh, 0, nCh);
-  h2Vwh = ibooker.book2D("VFAT_Vwh", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
-  h2Vwt = ibooker.book2D("VFAT_Vwt", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
+  h2InputID = ibooker.book2D("GEB_InputID_PerGEB", "GEB GLIB input ID", 31,  0x0 , 0b11111, nCh, 0, nCh);
+  h2Vwh = ibooker.book2D("VFAT_Vwh_PerGEB", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
+  h2Vwt = ibooker.book2D("VFAT_Vwt_PerGEB", "VFAT word count", 4095,  0x0 , 0xfff, nCh, 0, nCh);
   
-  printf("1\n");
   h1GEBError = ibooker.book1D("GEB_Errors", "GEB Critical Errors", 5, 0, 5);
-  h2GEBError = ibooker.book2D("GEB_Errors", "GEB Critical Errors", 5, 0, 5, nCh, 0, nCh);
+  h2GEBError = ibooker.book2D("GEB_Errors_PerGEB", "GEB Critical Errors", 5, 0, 5, nCh, 0, nCh);
   TH1F *histErr1D = h1GEBError->getTH1F();
-  //TH2F *histErr2D = h2GEBError->getTH2F();printf("2\n");
+  TH2F *histErr2D = h2GEBError->getTH2F();
   const char *error_flags[5] = {"Event Size Overflow", "L1AFIFO Full", "InFIFO Full", "Evt FIFO Full","InFIFO Underflow"};
-  for (int i = 1; i<6; i++) {histErr1D->GetXaxis()->SetBinLabel(i, error_flags[i-1]); /*histErr2D->GetXaxis()->SetBinLabel(i, error_flags[i-1]);*/}
+  for (int i = 1; i<6; i++) {histErr1D->GetXaxis()->SetBinLabel(i, error_flags[i-1]); histErr2D->GetXaxis()->SetBinLabel(i, error_flags[i-1]);}
   h1GEBWarning = ibooker.book1D("GEB_Warnings", "GEB Warnings", 10,  0, 10);
-  h2GEBWarning = ibooker.book2D("GEB_Warnings", "GEB Warnings", 10,  0, 10, nCh, 0, nCh);
+  h2GEBWarning = ibooker.book2D("GEB_Warnings_PerGEB", "GEB Warnings", 10,  0, 10, nCh, 0, nCh);
   TH1F *histWar1D = h1GEBWarning->getTH1F();
-  //TH2F *histWar2D = h2GEBWarning->getTH2F();printf("3\n");
+  TH2F *histWar2D = h2GEBWarning->getTH2F();
   const char *warning_flags[10] = {"BX AMC-OH Mismatch", "BX AMC-VFAT Mismatch", "OOS AMC OH", "OOS AMC VFAT","No VFAT Marker","Event Size Warn", "L1AFIFO Near Full", "InFIFO Near Full", "EvtFIFO Near Full", "Stuck Data"};
-  for (int i = 1; i<11; i++) {histWar1D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]); /*histWar2D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]);*/}
+  for (int i = 1; i<11; i++) {histWar1D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]); histWar2D->GetXaxis()->SetBinLabel(i, warning_flags[i-1]);}
   
-  /*for (auto ch : gemChambers){
+  for (auto ch : gemChambers){
     GEMDetId gid = ch.id();
     string ylabel = "Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     int nIdx = findIndex(gid) + 1;
     
-    ( (TH2F *)h2B1010All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("4\n");
-    ( (TH2F *)h2B1100All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("5\n");
-    ( (TH2F *)h2B1110All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("6\n");
+    ( (TH2F *)h2B1010All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2B1100All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2B1110All->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
     
-    ( (TH2F *)h2FlagAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("7\n");
-    ( (TH2F *)h2CRCAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("8\n");
+    ( (TH2F *)h2FlagAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2CRCAll->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
     
-    ( (TH2F *)h2InputID->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("9\n");
-    ( (TH2F *)h2Vwh->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("10\n");
-    ( (TH2F *)h2Vwt->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("11\n");
+    ( (TH2F *)h2InputID->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2Vwh->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2Vwt->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
     
-    ( (TH2F *)h2GEBError->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("12\n");
-    ( (TH2F *)h2GEBWarning->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());printf("13\n");
-  }*/
+    ( (TH2F *)h2GEBError->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+    ( (TH2F *)h2GEBWarning->getTH2F() )->GetYaxis()->SetBinLabel(nIdx, ylabel.data());
+  }
   
   GEMDAV = ibooker.book1D("GEMDAV", "GEM DAV list", 24,  0, 24);
   Tstate     = ibooker.book1D("Tstate", "TTS state", 15,  0, 15);
@@ -266,11 +265,11 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   ChamT      = ibooker.book1D("ChamT", "Chamber Timeout", 24, 0, 24);
   OOSG       = ibooker.book1D("OOSG", "OOS GLIB", 1, 0, 1);
   
-  GEMDAV2D = ibooker.book2D("GEMDAV", "GEM DAV list", 24,  0, 24, nMaxAMC, 0, nMaxAMC);
-  Tstate2D     = ibooker.book2D("Tstate", "TTS state", 15,  0, 15, nMaxAMC, 0, nMaxAMC);
-  GDcount2D    = ibooker.book2D("GDcount", "GEM DAV count", 32,  0, 32, nMaxAMC, 0, nMaxAMC);
-  ChamT2D      = ibooker.book2D("ChamT", "Chamber Timeout", 24, 0, 24, nMaxAMC, 0, nMaxAMC);
-  OOSG2D       = ibooker.book2D("OOSG", "OOS GLIB", 1, 0, 1, nMaxAMC, 0, nMaxAMC);
+  GEMDAV2D = ibooker.book2D("GEMDAV_PerAMC", "GEM DAV list", 24,  0, 24, nMaxAMC, 0, nMaxAMC);
+  Tstate2D     = ibooker.book2D("Tstate_PerAMC", "TTS state", 15,  0, 15, nMaxAMC, 0, nMaxAMC);
+  GDcount2D    = ibooker.book2D("GDcount_PerAMC", "GEM DAV count", 32,  0, 32, nMaxAMC, 0, nMaxAMC);
+  ChamT2D      = ibooker.book2D("ChamT_PerAMC", "Chamber Timeout", 24, 0, 24, nMaxAMC, 0, nMaxAMC);
+  OOSG2D       = ibooker.book2D("OOSG_PerAMC", "OOS GLIB", 1, 0, 1, nMaxAMC, 0, nMaxAMC);
 }
 
 //----------------------------------------------------------------------------------------------------
