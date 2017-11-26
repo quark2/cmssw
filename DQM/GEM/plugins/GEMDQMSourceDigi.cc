@@ -55,6 +55,7 @@ private:
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
   int findIndex(GEMDetId id_);
+  int findBIDIndex(uint16_t BID_);
      
   const GEMGeometry* GEMGeometry_; 
 
@@ -105,6 +106,9 @@ private:
   MonitorElement *GDcount2D; 
   MonitorElement *ChamT2D;   
   MonitorElement *OOSG2D;    
+  
+  std::vector<int> vnAMCBID;
+  std::vector<std::string> vstrAMCBinLabels;
 
 
 };
@@ -146,6 +150,9 @@ GEMDQMSourceDigi::GEMDQMSourceDigi(const edm::ParameterSet& cfg)
   tagError = consumes<GEMVfatStatusDigiCollection>(cfg.getParameter<edm::InputTag>("errorsInputLabel")); 
   tagGEB = consumes<GEMGEBStatusDigiCollection>(cfg.getParameter<edm::InputTag>("GEBInputLabel")); 
   tagAMC = consumes<GEMAMCStatusDigiCollection>(cfg.getParameter<edm::InputTag>("AMCInputLabel")); 
+  
+  vnAMCBID = cfg.getUntrackedParameter<std::vector<int> >("AMCBID");
+  vstrAMCBinLabels = cfg.getUntrackedParameter<std::vector<std::string> >("AMCBinLabel");
 
 }
 
@@ -161,6 +168,17 @@ int GEMDQMSourceDigi::findIndex(GEMDetId id_) {
   int index=-1;
   for(int c =0;c<nCh;c++){
     if((gemChambers[c].id().chamber() == id_.chamber())&(gemChambers[c].id().layer() == id_.layer()) ){index = c;}
+  }
+  return index;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+int GEMDQMSourceDigi::findBIDIndex(uint16_t BID_) {
+  int index=-1;
+  int nNumAMC = (int)vnAMCBID.size();
+  for(int c =0;c<nNumAMC;c++){
+    if(vnAMCBID[ c ] == (int)BID_){index = c;}
   }
   return index;
 }
@@ -270,6 +288,14 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   GDcount2D    = ibooker.book2D("GDcount_PerAMC", "GEM DAV count", 32,  0, 32, nMaxAMC, 0, nMaxAMC);
   ChamT2D      = ibooker.book2D("ChamT_PerAMC", "Chamber Timeout", 24, 0, 24, nMaxAMC, 0, nMaxAMC);
   OOSG2D       = ibooker.book2D("OOSG_PerAMC", "OOS GLIB", 1, 0, 1, nMaxAMC, 0, nMaxAMC);
+  
+  for ( int i = 0 ; i < nMaxAMC ; i++ ) {
+    ( (TH2F *)GEMDAV2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
+    ( (TH2F *)Tstate2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
+    ( (TH2F *)GDcount2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
+    ( (TH2F *)ChamT2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
+    ( (TH2F *)OOSG2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
+  }
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -365,11 +391,10 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       }
     }
   }
-  
-  int nIdxAMC = 0;
 
   for (GEMAMCStatusDigiCollection::DigiRangeIterator amcIt = gemAMC->begin(); amcIt != gemAMC->end(); ++amcIt){
     const GEMAMCStatusDigiCollection::Range& range = (*amcIt).second;
+    int nIdxAMC = findBIDIndex((*amcIt).first);
     for ( auto amc = range.first; amc != range.second; ++amc ) {
       uint8_t binFired = 0;
       for (int bin = 0; bin < 24; bin++){
@@ -380,14 +405,15 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         binFired = ((amc->ChamT() >> bin) & 0x1);
         if (binFired) {ChamT->Fill(bin); ChamT2D->Fill(bin, nIdxAMC);}
       }
+      
       Tstate->Fill(amc->Tstate());
       GDcount->Fill(amc->GDcount());
       OOSG->Fill(amc->OOSG());
+      
       Tstate2D->Fill(amc->Tstate(), nIdxAMC);
       GDcount2D->Fill(amc->GDcount(), nIdxAMC);
       OOSG2D->Fill(amc->OOSG(), nIdxAMC);
     }
-    nIdxAMC++;
   }
 }
 
