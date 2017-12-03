@@ -56,6 +56,7 @@ private:
   int findVFAT(float min_, float max_, float x_, int roll_);
   int findIndex(GEMDetId id_);
   int findBIDIndex(uint16_t BID_);
+  int addBinLine(uint16_t BID_);
      
   const GEMGeometry* GEMGeometry_; 
 
@@ -108,7 +109,7 @@ private:
   MonitorElement *OOSG2D;    
   
   std::vector<int> vnAMCBID;
-  std::vector<std::string> vstrAMCBinLabels;
+  //std::vector<std::string> vstrAMCBinLabels;
 
 
 };
@@ -151,8 +152,8 @@ GEMDQMSourceDigi::GEMDQMSourceDigi(const edm::ParameterSet& cfg)
   tagGEB = consumes<GEMGEBStatusDigiCollection>(cfg.getParameter<edm::InputTag>("GEBInputLabel")); 
   tagAMC = consumes<GEMAMCStatusDigiCollection>(cfg.getParameter<edm::InputTag>("AMCInputLabel")); 
   
-  vnAMCBID = cfg.getUntrackedParameter<std::vector<int> >("AMCBID");
-  vstrAMCBinLabels = cfg.getUntrackedParameter<std::vector<std::string> >("AMCBinLabel");
+  //vnAMCBID = cfg.getUntrackedParameter<std::vector<int> >("AMCBID");
+  //vstrAMCBinLabels = cfg.getUntrackedParameter<std::vector<std::string> >("AMCBinLabel");
 
 }
 
@@ -185,6 +186,24 @@ int GEMDQMSourceDigi::findBIDIndex(uint16_t BID_) {
 
 //----------------------------------------------------------------------------------------------------
 
+int GEMDQMSourceDigi::addBinLine(uint16_t BID_) {
+  vnAMCBID.push_back(BID_);
+  
+  int nNumAMC = (int)vnAMCBID.size();
+  
+  if ( nNumAMC > 1 ) {
+    ( (TH2F *)GEMDAV2D->getTH2F() )->SetBins(24, 0, 24, nNumAMC, 0, nNumAMC);
+    ( (TH2F *)Tstate2D->getTH2F() )->SetBins(15, 0, 15, nNumAMC, 0, nNumAMC);
+    ( (TH2F *)GDcount2D->getTH2F() )->SetBins(32, 0, 32, nNumAMC, 0, nNumAMC);
+    ( (TH2F *)ChamT2D->getTH2F() )->SetBins(24, 0, 24, nNumAMC, 0, nNumAMC);
+    ( (TH2F *)OOSG2D->getTH2F() )->SetBins(1, 0, 1, nNumAMC, 0, nNumAMC);
+  }
+  
+  return nNumAMC - 1;
+}
+
+//----------------------------------------------------------------------------------------------------
+
 void GEMDQMSourceDigi::dqmBeginRun(edm::Run const &, edm::EventSetup const &)
 {
 }
@@ -205,7 +224,6 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     }
   }
   nCh = gemChambers.size();
-  int nMaxAMC = 12;
   ibooker.cd();
   ibooker.setCurrentFolder("GEM/digi");
   for (auto ch : gemChambers){
@@ -283,19 +301,11 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   ChamT      = ibooker.book1D("ChamT", "Chamber Timeout", 24, 0, 24);
   OOSG       = ibooker.book1D("OOSG", "OOS GLIB", 1, 0, 1);
   
-  GEMDAV2D = ibooker.book2D("GEMDAV_PerAMC", "GEM DAV list", 24,  0, 24, nMaxAMC, 0, nMaxAMC);
-  Tstate2D     = ibooker.book2D("Tstate_PerAMC", "TTS state", 15,  0, 15, nMaxAMC, 0, nMaxAMC);
-  GDcount2D    = ibooker.book2D("GDcount_PerAMC", "GEM DAV count", 32,  0, 32, nMaxAMC, 0, nMaxAMC);
-  ChamT2D      = ibooker.book2D("ChamT_PerAMC", "Chamber Timeout", 24, 0, 24, nMaxAMC, 0, nMaxAMC);
-  OOSG2D       = ibooker.book2D("OOSG_PerAMC", "OOS GLIB", 1, 0, 1, nMaxAMC, 0, nMaxAMC);
-  
-  for ( int i = 0 ; i < nMaxAMC ; i++ ) {
-    ( (TH2F *)GEMDAV2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
-    ( (TH2F *)Tstate2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
-    ( (TH2F *)GDcount2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
-    ( (TH2F *)ChamT2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
-    ( (TH2F *)OOSG2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, vstrAMCBinLabels[ i ].data());
-  }
+  GEMDAV2D = ibooker.book2D("GEMDAV_PerAMC", "GEM DAV list", 24,  0, 24, 1, 0, 1);
+  Tstate2D     = ibooker.book2D("Tstate_PerAMC", "TTS state", 15,  0, 15, 1, 0, 1);
+  GDcount2D    = ibooker.book2D("GDcount_PerAMC", "GEM DAV count", 32,  0, 32, 1, 0, 1);
+  ChamT2D      = ibooker.book2D("ChamT_PerAMC", "Chamber Timeout", 24, 0, 24, 1, 0, 1);
+  OOSG2D       = ibooker.book2D("OOSG_PerAMC", "OOS GLIB", 1, 0, 1, 1, 0, 1);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -357,7 +367,7 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         h2CRCAll->Fill(vfatError->getCrc(), nIdx);
       }
     }
-    const auto& GEB_in_det = gemGEB->get(cId);
+    const auto& GEB_in_det = gemGEB->get(cId.chamberId());
     for(auto GEBStatus = GEB_in_det.first; GEBStatus != GEB_in_det.second; ++GEBStatus ){
       h1InputID->Fill(GEBStatus->getInputID());
       h1Vwh->Fill(GEBStatus->getVwh());
@@ -383,18 +393,21 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       
       if ( ( GEBStatus->getInFu()   & 0x1 ) != 0 ) {
         h1GEBError->Fill(9);
-        h2GEBError->Fill(9, nCh);
+        h2GEBError->Fill(9, nIdx);
       }
       if ( ( GEBStatus->getStuckd() & 0x1 ) != 0 ) {
         h1GEBWarning->Fill(9);
-        h2GEBWarning->Fill(9, nCh);
+        h2GEBWarning->Fill(9, nIdx);
       }
     }
   }
 
   for (GEMAMCStatusDigiCollection::DigiRangeIterator amcIt = gemAMC->begin(); amcIt != gemAMC->end(); ++amcIt){
     const GEMAMCStatusDigiCollection::Range& range = (*amcIt).second;
+    
     int nIdxAMC = findBIDIndex((*amcIt).first);
+    if ( nIdxAMC < 0 ) nIdxAMC = addBinLine((*amcIt).first);
+    
     for ( auto amc = range.first; amc != range.second; ++amc ) {
       uint8_t binFired = 0;
       for (int bin = 0; bin < 24; bin++){
@@ -427,6 +440,19 @@ void GEMDQMSourceDigi::endLuminosityBlock(edm::LuminosityBlock const& lumiSeg, e
 
 void GEMDQMSourceDigi::endRun(edm::Run const& run, edm::EventSetup const& eSetup)
 {
+  int i;
+  
+  int nNumAMC = (int)vnAMCBID.size();
+  
+  for ( i = 0 ; i < nNumAMC ; i++ ) {
+    string strLabel = "BID" + to_string(vnAMCBID[ i ]);
+    
+    ( (TH2F *)GEMDAV2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, strLabel.data());
+    ( (TH2F *)Tstate2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, strLabel.data());
+    ( (TH2F *)GDcount2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, strLabel.data());
+    ( (TH2F *)ChamT2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, strLabel.data());
+    ( (TH2F *)OOSG2D->getTH2F() )->GetYaxis()->SetBinLabel(i + 1, strLabel.data());
+  }
 }
 
 //----------------------------------------------------------------------------------------------------
