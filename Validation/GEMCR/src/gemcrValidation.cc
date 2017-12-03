@@ -31,98 +31,105 @@
 
 #include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
 
+//#include "SimDataFormats/Track/interface/SimTrack.h"
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+
 #include <iomanip>
 
 #include <TCanvas.h>
 using namespace std;
 gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidation(cfg)
 {
+  isMC = cfg.getParameter<bool>("isMC");
   InputTagToken_RH = consumes<GEMRecHitCollection>(cfg.getParameter<edm::InputTag>("recHitsInputLabel"));
   InputTagToken_TR = consumes<vector<reco::Track>>(cfg.getParameter<edm::InputTag>("tracksInputLabel"));
   InputTagToken_TS = consumes<vector<TrajectorySeed>>(cfg.getParameter<edm::InputTag>("seedInputLabel"));
   InputTagToken_DG = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("gemDigiLabel"));
+  //InputTagToken_ST = consumes<vector<SimTrack>>(cfg.getParameter<edm::InputTag>("simTrack"));
+  if ( isMC ) InputTagToken_US = consumes<edm::HepMCProduct>(cfg.getParameter<edm::InputTag>("genVtx"));
   edm::ParameterSet serviceParameters = cfg.getParameter<edm::ParameterSet>("ServiceParameters");
   theService = new MuonServiceProxy(serviceParameters);
   minCLS = cfg.getParameter<double>("minClusterSize"); 
   maxCLS = cfg.getParameter<double>("maxClusterSize");
   maxRes = cfg.getParameter<double>("maxResidual");
   makeTrack = cfg.getParameter<bool>("makeTrack");
-  isMC = cfg.getParameter<bool>("isMC");
   trackChi2 = cfg.getParameter<double>("trackChi2");
   trackResY = cfg.getParameter<double>("trackResY"); 
   trackResX = cfg.getParameter<double>("trackResX");
   
-  /*fScinHPosY   = cfg.getParameter<double>("ScintilUpperY");
-  fScinHLeft   = cfg.getParameter<double>("ScintilUpperLeft");
-  fScinHRight  = cfg.getParameter<double>("ScintilUpperRight");
-  fScinHTop    = cfg.getParameter<double>("ScintilUpperTop");
-  fScinHBottom = cfg.getParameter<double>("ScintilUpperBottom");
-  
-  fScinLPosY   = cfg.getParameter<double>("ScintilLowerY");
-  fScinLLeft   = cfg.getParameter<double>("ScintilLowerLeft");
-  fScinLRight  = cfg.getParameter<double>("ScintilLowerRight");
-  fScinLTop    = cfg.getParameter<double>("ScintilLowerTop");
-  fScinLBottom = cfg.getParameter<double>("ScintilLowerBottom");*/
-  
-  ScinUPosY.push_back(cfg.getParameter<double>("ScintilUpper00Y"));
-  ScinULeft.push_back(cfg.getParameter<double>("ScintilUpper00Left"));
-  ScinURight.push_back(cfg.getParameter<double>("ScintilUpper00Right"));
-  ScinUTop.push_back(cfg.getParameter<double>("ScintilUpper00Top"));
-  ScinUBottom.push_back(cfg.getParameter<double>("ScintilUpper00Bottom"));
-  
-  ScinLPosY.push_back(cfg.getParameter<double>("ScintilLower00Y"));
-  ScinLLeft.push_back(cfg.getParameter<double>("ScintilLower00Left"));
-  ScinLRight.push_back(cfg.getParameter<double>("ScintilLower00Right"));
-  ScinLTop.push_back(cfg.getParameter<double>("ScintilLower00Top"));
-  ScinLBottom.push_back(cfg.getParameter<double>("ScintilLower00Bottom"));
-  
-  ScinUPosY.push_back(cfg.getParameter<double>("ScintilUpper01Y"));
-  ScinULeft.push_back(cfg.getParameter<double>("ScintilUpper01Left"));
-  ScinURight.push_back(cfg.getParameter<double>("ScintilUpper01Right"));
-  ScinUTop.push_back(cfg.getParameter<double>("ScintilUpper01Top"));
-  ScinUBottom.push_back(cfg.getParameter<double>("ScintilUpper01Bottom"));
-  
-  ScinLPosY.push_back(cfg.getParameter<double>("ScintilLower01Y"));
-  ScinLLeft.push_back(cfg.getParameter<double>("ScintilLower01Left"));
-  ScinLRight.push_back(cfg.getParameter<double>("ScintilLower01Right"));
-  ScinLTop.push_back(cfg.getParameter<double>("ScintilLower01Top"));
-  ScinLBottom.push_back(cfg.getParameter<double>("ScintilLower01Bottom"));
-  
-  ScinUPosY.push_back(cfg.getParameter<double>("ScintilUpper02Y"));
-  ScinULeft.push_back(cfg.getParameter<double>("ScintilUpper02Left"));
-  ScinURight.push_back(cfg.getParameter<double>("ScintilUpper02Right"));
-  ScinUTop.push_back(cfg.getParameter<double>("ScintilUpper02Top"));
-  ScinUBottom.push_back(cfg.getParameter<double>("ScintilUpper02Bottom"));
-  
-  ScinLPosY.push_back(cfg.getParameter<double>("ScintilLower02Y"));
-  ScinLLeft.push_back(cfg.getParameter<double>("ScintilLower02Left"));
-  ScinLRight.push_back(cfg.getParameter<double>("ScintilLower02Right"));
-  ScinLTop.push_back(cfg.getParameter<double>("ScintilLower02Top"));
-  ScinLBottom.push_back(cfg.getParameter<double>("ScintilLower02Bottom"));
-  
-  ScinUPosY.push_back(cfg.getParameter<double>("ScintilUpper03Y"));
-  ScinULeft.push_back(cfg.getParameter<double>("ScintilUpper03Left"));
-  ScinURight.push_back(cfg.getParameter<double>("ScintilUpper03Right"));
-  ScinUTop.push_back(cfg.getParameter<double>("ScintilUpper03Top"));
-  ScinUBottom.push_back(cfg.getParameter<double>("ScintilUpper03Bottom"));
-  
-  ScinLPosY.push_back(cfg.getParameter<double>("ScintilLower03Y"));
-  ScinLLeft.push_back(cfg.getParameter<double>("ScintilLower03Left"));
-  ScinLRight.push_back(cfg.getParameter<double>("ScintilLower03Right"));
-  ScinLTop.push_back(cfg.getParameter<double>("ScintilLower03Top"));
-  ScinLBottom.push_back(cfg.getParameter<double>("ScintilLower03Bottom"));
-  
-  ScinUPosY.push_back(cfg.getParameter<double>("ScintilUpper04Y"));
-  ScinULeft.push_back(cfg.getParameter<double>("ScintilUpper04Left"));
-  ScinURight.push_back(cfg.getParameter<double>("ScintilUpper04Right"));
-  ScinUTop.push_back(cfg.getParameter<double>("ScintilUpper04Top"));
-  ScinUBottom.push_back(cfg.getParameter<double>("ScintilUpper04Bottom"));
-  
-  ScinLPosY.push_back(cfg.getParameter<double>("ScintilLower04Y"));
-  ScinLLeft.push_back(cfg.getParameter<double>("ScintilLower04Left"));
-  ScinLRight.push_back(cfg.getParameter<double>("ScintilLower04Right"));
-  ScinLTop.push_back(cfg.getParameter<double>("ScintilLower04Top"));
-  ScinLBottom.push_back(cfg.getParameter<double>("ScintilLower04Bottom"));
+  if ( isMC ) {
+    /*fScinHPosZ   = cfg.getParameter<double>("ScintilUpperZ");
+    fScinHLeft   = cfg.getParameter<double>("ScintilUpperLeft");
+    fScinHRight  = cfg.getParameter<double>("ScintilUpperRight");
+    fScinHTop    = cfg.getParameter<double>("ScintilUpperTop");
+    fScinHBottom = cfg.getParameter<double>("ScintilUpperBottom");
+    
+    fScinLPosZ   = cfg.getParameter<double>("ScintilLowerZ");
+    fScinLLeft   = cfg.getParameter<double>("ScintilLowerLeft");
+    fScinLRight  = cfg.getParameter<double>("ScintilLowerRight");
+    fScinLTop    = cfg.getParameter<double>("ScintilLowerTop");
+    fScinLBottom = cfg.getParameter<double>("ScintilLowerBottom");*/
+    
+    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper00Z"));
+    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper00XMin"));
+    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper00XMax"));
+    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper00YMin"));
+    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper00YMax"));
+    
+    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower00Z"));
+    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower00XMin"));
+    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower00XMax"));
+    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower00YMin"));
+    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower00YMax"));
+    
+    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper01Z"));
+    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper01XMin"));
+    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper01XMax"));
+    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper01YMin"));
+    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper01YMax"));
+    
+    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower01Z"));
+    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower01XMin"));
+    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower01XMax"));
+    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower01YMin"));
+    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower01YMax"));
+    
+    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper02Z"));
+    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper02XMin"));
+    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper02XMax"));
+    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper02YMin"));
+    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper02YMax"));
+    
+    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower02Z"));
+    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower02XMin"));
+    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower02XMax"));
+    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower02YMin"));
+    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower02YMax"));
+    
+    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper03Z"));
+    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper03XMin"));
+    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper03XMax"));
+    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper03YMin"));
+    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper03YMax"));
+    
+    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower03Z"));
+    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower03XMin"));
+    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower03XMax"));
+    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower03YMin"));
+    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower03YMax"));
+    
+    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper04Z"));
+    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper04XMin"));
+    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper04XMax"));
+    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper04YMin"));
+    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper04YMax"));
+    
+    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower04Z"));
+    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower04XMin"));
+    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower04XMax"));
+    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower04YMin"));
+    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower04YMax"));
+  }
   
   edm::ParameterSet smootherPSet = cfg.getParameter<edm::ParameterSet>("MuonSmootherParameters");
   theSmoother = new CosmicMuonSmoother(smootherPSet, theService);
@@ -146,8 +153,10 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
 
   //gemcr_g = ibooker.book3D("gemcr_g","GEMCR GLOBAL RECHITS", 200,-100,100,20,-55,55, 140,0,140);
   gemcr_g = ibooker.book3D("gemcr_g","GEMCR GLOBAL RECHITS", 260,-130,130,30,-82.5,82.5, 140,0,140);
+  gemcrTr_g = ibooker.book3D("gemcrTr_g","GEMCR GLOBAL RECHITS", 260,-130,130,30,-82.5,82.5, 140,0,140);
   gemcrCf_g = ibooker.book3D("gemcrCf_g","GEMCR GLOBAL RECHITS CONFIRMED", 260,-130,130,30,-82.5,82.5, 140,0,140);
-  gemcrCfScint_g = ibooker.book3D("gemcrScintCf_g","GEMCR GLOBAL RECHITS SCINTILLATED", 260,-130,130,30,-82.5,82.5, 140,0,140);
+  gemcrTrScint_g = ibooker.book3D("gemcrTrScint_g","GEMCR GLOBAL RECHITS", 260,-130,130,30,-82.5,82.5, 140,0,140);
+  gemcrCfScint_g = ibooker.book3D("gemcrCfScint_g","GEMCR GLOBAL RECHITS SCINTILLATED", 260,-130,130,30,-82.5,82.5, 140,0,140);
   gem_cls_tot = ibooker.book1D("cluster_size","Cluseter size",20,0,20);  
   gem_bx_tot = ibooker.book1D("bx", "BX" , 30, -15,15);
   tr_size = ibooker.book1D("tr_size", "track size",10,0,10);
@@ -192,6 +201,10 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_x_y.push_back(ibooker.book2D(h_name+"_recHit",h_name+" recHit", 500,-25,25,8,1,9));
      gem_chamber_cl_size.push_back(ibooker.book2D(h_name+"_recHit_size", h_name+" recHit size", 50,0,50,24,0,24));
      gem_chamber_bx.push_back(ibooker.book2D(h_name+"_bx", h_name+" BX", 30,-15,15,10,0,10));
+     gem_chamber_pad_vfat.push_back(ibooker.book2D(h_name+"_pad_vfat", h_name+" pad (vfat)", 3,1,4,8,1,9));
+     gem_chamber_copad_vfat.push_back(ibooker.book2D(h_name+"_copad_vfat", h_name+" copad (vfat)", 3,1,4,8,1,9));
+     gem_chamber_pad_vfat_withmul.push_back(ibooker.book2D(h_name+"_pad_vfat_withmul", h_name+" pad (vfat), with multiplicity", 3,1,4,8,1,9));
+     gem_chamber_copad_vfat_withmul.push_back(ibooker.book2D(h_name+"_copad_vfat_withmul", h_name+" copad (vfat), with multiplicity", 3,1,4,8,1,9));
      gem_chamber_tr2D_eff.push_back(ibooker.book2D(h_name+"_recHit_efficiency", h_name+" recHit efficiency", 3,1,4,8,1,9));
      gem_chamber_th2D_eff.push_back(ibooker.book2D(h_name+"_th2D_eff", h_name+"_th2D_eff", 3,1,4,8,1,9));
      gem_chamber_trxroll_eff.push_back(ibooker.book2D(h_name+"_trxroll_eff", h_name+" recHit efficiency", 50,-25,25,8,1,9));
@@ -207,7 +220,7 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_vfatHitMul.push_back(ibooker.book2D(h_name+"_vfatHit_mul", h_name+" vfat hit multiplicity",25,0,25, 24,0,24));
      gem_chamber_stripHitMul.push_back(ibooker.book2D(h_name+"_stripHit_mul", h_name+" strip hit multiplicity", 150,0,150,9,0,9));
      gem_chamber_bestChi2.push_back(ibooker.book1D(h_name+"_bestChi2", h_name+" #chi^{2} distribution", trackChi2*10,0,trackChi2));
-     gem_chamber_track.push_back(ibooker.book1D(h_name+"_track", h_name+" track",5,0,5));
+     gem_chamber_track.push_back(ibooker.book1D(h_name+"_track", h_name+" track",7,0,7));
      
      gem_chamber_th2D_eff_scint.push_back(ibooker.book2D(h_name+"_th2D_eff_scint", h_name+"_th2D_eff, scintillated", 3,1,4,8,1,9));
      gem_chamber_thxroll_eff_scint.push_back(ibooker.book2D(h_name+"_thxroll_eff_scint", h_name+"_th2D_eff, scintillated", 50,-25,25,8,1,9));
@@ -250,15 +263,44 @@ const GEMGeometry* gemcrValidation::initGeometry(edm::EventSetup const & iSetup)
   return GEMGeometry_;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// To turn on or turn off methods for bad trajectory veto, seek them: 
+// CONE_WINDOW
+// VETO_TOO_FEW_RECHITS
+// VETO_TOO_SHORT_SEED
+////////////////////////////////////////////////////////////////////////////////
+
+int g_nEvt = 0;
+int g_nNumRecHit = 0;
+int g_nNumFiredCh = 0;
+int g_nNumFiredChValid = 0;
+int g_nNumTrajHit = 0;
+int g_nNumTrajHit6 = 0;
+int g_nNumMatched = 0;
+
+double g_dMinY = 100000.0, g_dMaxY = -10000000.0;
+
 gemcrValidation::~gemcrValidation() {
+  printf("res1 : %i\n", g_nEvt);
+  printf("res2 : %i\n", g_nNumRecHit);
+  printf("res3 : %i\n", g_nNumFiredCh);
+  printf("res4 : %i\n", g_nNumFiredChValid);
+  printf("res5 : %i\n", g_nNumTrajHit6);
+  printf("res6 : %i\n", g_nNumTrajHit);
+  printf("res7 : %i\n", g_nNumMatched);
+  
+  printf("Y range : %lf, %lf\n", g_dMinY, g_dMaxY);
 }
 
 auto_ptr<std::vector<TrajectorySeed> > gemcrValidation::findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeed)
 {
   auto_ptr<std::vector<TrajectorySeed> > tmptrajectorySeeds( new vector<TrajectorySeed>());
+  float fSeedCut = 40.0;
   for (auto hit1 : muRecHits){
     for (auto hit2 : muRecHits){
-      if (hit1->globalPosition().y() < hit2->globalPosition().y()){
+      if (hit1->globalPosition().y() < hit2->globalPosition().y())
+      //if (hit2->globalPosition().y() - hit1->globalPosition().y() > fSeedCut ) //// VETO_TOO_SHORT_SEED
+      {
         LocalPoint segPos = hit1->localPosition();
         GlobalVector segDirGV(hit2->globalPosition().x() - hit1->globalPosition().x(),
                               (hit2->globalPosition().y() - hit1->globalPosition().y()),
@@ -299,7 +341,44 @@ auto_ptr<std::vector<TrajectorySeed> > gemcrValidation::findSeeds(MuonTransientT
   return tmptrajectorySeeds;
 }
 
-Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber)
+
+float g_dTestx, g_dTesty, g_dTestz;
+
+
+float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
+  if ( 1 != 1 ) {
+    return 5.0;
+  }
+  
+  float fDev = 5.0;
+  
+  float fZCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
+  float fZDiffSeed = pVecSeed->P2.y() - fZCenterSeed;
+  float fZDiffHit = pPCurr->y() - fZCenterSeed;
+  
+  //printf("%lf\n", abs(fZDiffHit / fZDiffSeed));
+  return max(fDev * abs(fZDiffHit / fZDiffSeed), fDev);
+}
+
+
+float CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
+  if ( 1 != 1 ) {
+    return 5.0;
+  }
+  
+  float fDev = 45.0;
+  
+  float fZCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
+  float fZDiffSeed = pVecSeed->P2.y() - fZCenterSeed;
+  float fZDiffHit = pPCurr->y() - fZCenterSeed;
+  
+  //printf("%lf\n", abs(fZDiffHit / fZDiffSeed));
+  return max(fDev * abs(fZDiffHit / fZDiffSeed), fDev);
+}
+
+
+TString g_strMakeTraj("");
+Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber, GPSeed *pVecSeed)
 {
   PTrajectoryStateOnDet ptsd1(seed.startingState());
   DetId did(ptsd1.detId());
@@ -307,7 +386,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
   TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(ptsd1,&bp,&*theService->magneticField());
   TrajectoryStateOnSurface tsosCurrent = tsos;
   TransientTrackingRecHit::ConstRecHitContainer consRecHits;
-  try {
+  g_strMakeTraj = TString("");
   for (auto ch : gemChambers){
      //cout << ch.id() << endl;
     //if (ch == testChamber) continue;
@@ -325,8 +404,11 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         //double x_err = hit->localPositionError().xx();
         //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
         //cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
-        if (abs(hitGP.x() - tsosGP.x()) > 5.0) continue;
-        if (abs(hitGP.z() - tsosGP.z()) > 45.0) continue;
+        
+        //if (abs(hitGP.x() - tsosGP.x()) > 5.0) continue;
+        //if (abs(hitGP.z() - tsosGP.z()) > 45.0) continue; // actually y-cut
+        if ( abs(hitGP.x() - tsosGP.x()) > CalcWindowWidthX(pVecSeed, &hitGP) ) continue; //// CONE_WINDOW
+        if ( abs(hitGP.z() - tsosGP.z()) > CalcWindowWidthY(pVecSeed, &hitGP) ) continue; //// CONE_WINDOW // actually y-cut
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         float deltaR = (hitGP - tsosGP).mag();
         //cout <<"chamber : " << findIndex(ch.id()) << ", recHit : "<<hitGP << ", trackHit : " << tsosGP << ", delR : "<< deltaR << ", err :" << x_err << ", "<< y_err << endl; 
@@ -339,13 +421,12 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
     if (tmpRecHit){
       tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
       consRecHits.push_back(tmpRecHit);
+      //GlobalPoint recHitGP = GEMGeometry_->idToDet((*tmpRecHit).rawId())->surface().toGlobal(tmpRecHit->localPosition());
+      //g_strMakeTraj += TString::Format("  %lf, %lf, %lf\n", recHitGP.x(), recHitGP.z(), recHitGP.y());
     }
   }
-  }
-  catch (std::exception &e) {
-    std::cout << "Exception occurs! But we will skip this" << std::endl;
-  }
   if (consRecHits.size() <3) return Trajectory();
+  //if (consRecHits.size() <5) return Trajectory(); //// VETO_TOO_FEW_RECHITS
   vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
   return fitted.front();
 }
@@ -369,44 +450,44 @@ bool gemcrValidation::isPassedScintillators(GlobalPoint trajGP1, GlobalPoint tra
   nIsHitUpper = 0;
   nIsHitLower = 0;
   
-  for ( i = 0 ; i < ScinUPosY.size() ; i++ ) {
+  for ( i = 0 ; i < ScinUPosZ.size() ; i++ ) {
     // Time to solve 1-order equation
-    double dTTraj = ( ScinUPosY[ i ] - trajGP1.y() ) / dTrajDirY;
+    double dTTraj = ( ScinUPosZ[ i ] - trajGP1.y() ) / dTrajDirY;
     
     // Finding the coordinates of the hit position on the y-plane containing the upper scintillator
     dXUHit = trajGP1.x() + dTTraj * dTrajDirX;
-    dYUHit = ScinUPosY[ i ];
+    dYUHit = ScinUPosZ[ i ];
     dZUHit = trajGP1.z() + dTTraj * dTrajDirZ;
     
     // The above lines are probably not needed to be calculated in each iteration
-    // because all entries of ScinUPosY may be same.
+    // because all entries of ScinUPosZ may be same.
     // But for... safety...
     
     // Checking whether the hit position in the upper scintillator
-    if ( ( ScinULeft[ i ] <= dXUHit && dXUHit <= ScinURight[ i ]  ) && 
-       ( ScinUTop[ i ]  <= dZUHit && dZUHit <= ScinUBottom[ i ] ) )
+    if ( ( ScinUXMin[ i ] <= dXUHit && dXUHit <= ScinUXMax[ i ]  ) && 
+       ( ScinUYMin[ i ]  <= dZUHit && dZUHit <= ScinUYMax[ i ] ) )
     {
       nIsHitUpper = 1;
       break;
     }
   }
   
-  for ( i = 0 ; i < ScinLPosY.size() ; i++ ) {
+  for ( i = 0 ; i < ScinLPosZ.size() ; i++ ) {
     // Time to solve 1-order equation
-    double dTTraj = ( ScinLPosY[ i ] - trajGP1.y() ) / dTrajDirY;
+    double dTTraj = ( ScinLPosZ[ i ] - trajGP1.y() ) / dTrajDirY;
     
     // Finding the coordinates of the hit position on the y-plane containing the upper scintillator
     dXLHit = trajGP1.x() + dTTraj * dTrajDirX;
-    dYLHit = ScinLPosY[ i ];
+    dYLHit = ScinLPosZ[ i ];
     dZLHit = trajGP1.z() + dTTraj * dTrajDirZ;
     
     // The above lines are probably not needed to be calculated in each iteration
-    // because all entries of ScinLPosY may be same.
+    // because all entries of ScinLPosZ may be same.
     // But for... safety...
     
     // Checking whether the hit position in the upper scintillator
-    if ( ( ScinLLeft[ i ] <= dXLHit && dXLHit <= ScinLRight[ i ]  ) && 
-       ( ScinLTop[ i ]  <= dZLHit && dZLHit <= ScinLBottom[ i ] ) )
+    if ( ( ScinLXMin[ i ] <= dXLHit && dXLHit <= ScinLXMax[ i ]  ) && 
+       ( ScinLYMin[ i ]  <= dZLHit && dZLHit <= ScinLYMax[ i ] ) )
     {
       nIsHitLower = 1;
       break;
@@ -431,7 +512,11 @@ bool gemcrValidation::isPassedScintillators(GlobalPoint trajGP1, GlobalPoint tra
 }
 
 
+int g_nNumTest = 0;
+
+
 void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup){
+  g_nEvt++;
 
   //std::cout << "analyze on!" << std::endl;
   theService->update(iSetup);
@@ -457,6 +542,63 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     edm::LogError("gemcrValidation") << "Cannot get strips by Token RecHits Token.\n";
     return ;
   }
+  
+  float fXGenGP1x = 0.0, fXGenGP1y = 0.0, fXGenGP1z = 0.0;
+  float fXGenGP2x = 0.0, fXGenGP2y = 0.0, fXGenGP2z = 0.0;
+  
+  int nNumCurrFiredCh = 0;
+  
+  if ( isMC ) {
+    edm::Handle<edm::HepMCProduct> genVtx;
+    e.getByToken( this->InputTagToken_US, genVtx);
+    HepMC::GenParticle *genMuon = genVtx->GetEvent()->barcode_to_particle(1);
+    
+    double dUnitGen = 0.1;
+    
+    fXGenGP1x = dUnitGen * genMuon->production_vertex()->position().x();
+    fXGenGP1y = dUnitGen * genMuon->production_vertex()->position().z();
+    fXGenGP1z = dUnitGen * genMuon->production_vertex()->position().y();
+    
+    fXGenGP2x = fXGenGP1x + dUnitGen * genMuon->momentum().x();
+    fXGenGP2y = fXGenGP1y + dUnitGen * genMuon->momentum().z();
+    fXGenGP2z = fXGenGP1z + dUnitGen * genMuon->momentum().y();
+    
+    Float_t fVecX, fVecY, fVecZ;
+    int arrnFired[ 32 ] = {0, };
+    
+    fVecX = genMuon->momentum().x() / genMuon->momentum().y();
+    fVecY = genMuon->momentum().z() / genMuon->momentum().y();
+    //fVecZ = 1.0;
+    
+    for ( GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit ) {
+      int nIdxCh = findIndex((*recHit).gemId());
+      GlobalPoint recHitGP = GEMGeometry_->idToDet((*recHit).gemId())->surface().toGlobal(recHit->localPosition());
+      
+      if ( arrnFired[ nIdxCh ] == 0 ) {
+        arrnFired[ nIdxCh ] = 1;
+        //g_nNumFiredCh++;
+        nNumCurrFiredCh++;
+      }
+      
+      Float_t fDiffZ = recHitGP.y() - fXGenGP1z;
+      
+      Float_t fXGenHitX = fXGenGP1x + fDiffZ * fVecX;
+      Float_t fXGenHitY = fXGenGP1y + fDiffZ * fVecY;
+      Float_t fXGenHitZ = recHitGP.y();
+      
+      printf("  recHit : %i, (%0.5f, %0.5f, %0.5f) <... (%0.5f, %0.5f, %0.5f)\n", nIdxCh, 
+          recHitGP.x(), recHitGP.z(), recHitGP.y(), 
+          fXGenHitX, fXGenHitY, fXGenHitZ);
+      g_nNumRecHit++;
+    }
+    
+    g_nNumFiredCh += nNumCurrFiredCh;
+    if ( nNumCurrFiredCh > 6 ) g_nNumFiredChValid += nNumCurrFiredCh;
+  }
+  
+  GlobalPoint genGPos1(fXGenGP1x, fXGenGP1y, fXGenGP1z);
+  GlobalPoint genGPos2(fXGenGP2x, fXGenGP2y, fXGenGP2z);
+  
   vector<bool> firedCh;
   vector<int> rMul;
   vector<vector<int>> vMul(n_ch, vector<int>(24, 0));
@@ -466,6 +608,7 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     rMul.push_back(0);
   }
   //std::cout << "num of hit : " << gemRecHits->size() << std::endl;
+  TString strListRecHit("");
   for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
 
     Float_t  rh_l_x = recHit->localPosition().x();
@@ -502,15 +645,36 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     for(int i = firstClusterStrip; i < (firstClusterStrip + clusterSize); i++){
       gem_chamber_digi_recHit[index]->Fill(i,rh_roll);
     }
+    strListRecHit += TString::Format("recHit : %lf, %lf, %lf (%i, %i) (%s)\n", rh_g_X, rh_g_Z, rh_g_Y, index + 1 - ( index % 2 ), ( index % 2 ) + 1, ( clusterSize >= minCLS && clusterSize <= maxCLS ? "okay" : "cut" ));
     if (clusterSize < minCLS) continue;
     if (clusterSize > maxCLS) continue;
     rh2_chamber->Fill(index);
+    if ( rMul[ index ] <= 1 ) gem_chamber_track[ index ]->Fill(3.5);
     for(int i = firstClusterStrip; i < (firstClusterStrip + clusterSize); i++){
       sMul[index][rh_roll] +=1;
       sMul[index][0] +=1;
       gem_chamber_digi_CLS[index]->Fill(i,rh_roll);
     }
+    //printf("recHit : %lf, %lf, %lf (%i, %i)\n", rh_g_X, rh_g_Z, rh_g_Y, index + 1 - ( index % 2 ), ( index % 2 ) + 1);
   }
+  
+  for ( int ich = 0 ; ich < n_ch ; ich++ ) {
+    for ( int ivfat = 0 ; ivfat < 24 ; ivfat++ ) {
+      if ( vMul[ ich ][ ivfat ] > 0 ) {
+        int nRoll = 8 - ivfat % 8;
+        int nVFat = ivfat / 8 + 1;
+        
+        gem_chamber_pad_vfat[ ich ]->Fill(nVFat, nRoll);
+        for ( int mulidx = 0 ; mulidx < vMul[ ich ][ ivfat ] ; mulidx++ ) gem_chamber_pad_vfat_withmul[ ich ]->Fill(nVFat, nRoll);
+        
+        if ( vMul[ ich ^ 0x1 ][ ivfat ] > 0 ) {
+          gem_chamber_copad_vfat[ ich ]->Fill(nVFat, nRoll);
+          for ( int mulidx = 0 ; mulidx < vMul[ ich ^ 0x1 ][ ivfat ] ; mulidx++ ) gem_chamber_copad_vfat_withmul[ ich ]->Fill(nVFat, nRoll);
+        }
+      }
+    }
+  }
+  
   int fChMul = 0;
   for(int c=0;c<n_ch;c++){
     gem_chamber_hitMul[c]->Fill(rMul[c]);
@@ -525,22 +689,38 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       fChMul += 1;
     }
   }
- if (fChMul > 3) cout << "more then 3 chambers fired !"<< endl;
- firedMul->Fill(fChMul);
+  if (fChMul <= 3) //cout << "less then 3 chambers fired !"<< endl;
+  {
+    cout << "less then 3 chambers fired !"<< endl;
+    for (GEMRecHitCollection::const_iterator recHit = gemRecHits->begin(); recHit != gemRecHits->end(); ++recHit){
+      GlobalPoint recHitGP = GEMGeometry_->idToDet((*recHit).gemId())->surface().toGlobal(recHit->localPosition());
+      printf("  recHit : (%0.5f, %0.5f, %0.5f)\n", 
+        recHitGP.x(), recHitGP.z(), recHitGP.y());
+    }
+  }
+  firedMul->Fill(fChMul);
   /// Tracking start
- vector<double> chamSetEff = {0,0, 0,0, 0,0, 0,0, 0,0, 
+  vector<double> chamSetEff = {0,0, 0,0, 0,0, 0,0, 0,0, 
                               //97.0,95.0, 96.0,97.0, 97.0,96.0, 98.0,96.0, 96.0,97.0, 
                               97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 
                               //97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 0,0, 
                               //97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 97.0,97.0, 
                               0,0, 0,0, 0,0, 0,0, 0,0};
+  
+  vector<double> vecChamType = {1,2, 2,2, 2,2, 2,2, 2,3, 
+                                1,2, 2,2, 2,2, 2,2, 2,3, 
+                                1,2, 2,2, 2,2, 2,2, 2,3};
+  
   int fCha = 10;
   int lCha = 19;
   
 
   if (!makeTrack) return; 
   int countTC = 0;
+  int nIsTraceGet = 0;
+  TString strKeep;
   for (auto tch : gemChambers){
+    strKeep = TString("");
     countTC += 1;
     MuonTransientTrackingRecHit::MuonRecHitContainer testRecHits;
     if (isMC){if (tch.id().chamber()<9 and tch.id().chamber()>20) continue;}
@@ -575,14 +755,16 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     }
     if (muRecHits.size()<3){ 
       //cout << "tracking passed due to # recHit under 3" << endl;
+      if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(6.5);
       continue;}
     int TCN = 0;
     for(int c=0;c<n_ch;c++){
       if (c == (countTC - 1)) continue;
       if (firedCh[c]){ TCN += 1;}
     }
+    if (TCN < 3) if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(6.5);
     if (TCN < 3) continue;
-    gem_chamber_track[findIndex(tch.id())]->Fill(0.5);
+    if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(0.5);
     auto_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
     std::vector<GPSeed> vecSeedGP;
     trajectorySeeds =findSeeds(muRecHits, vecSeedGP);
@@ -595,11 +777,21 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     int countTR = 0;
     int nIdxBest = -1;
     for (auto seed : *trajectorySeeds){
-      Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
+      //printf("Seed : (%lf, %lf, %lf) - (%lf, %lf, %lf)\n", 
+      //  vecSeedGP[ countTR ].P1.x(), vecSeedGP[ countTR ].P1.z(), vecSeedGP[ countTR ].P1.y(), 
+      //  vecSeedGP[ countTR ].P2.x(), vecSeedGP[ countTR ].P2.z(), vecSeedGP[ countTR ].P2.y());
+      g_dTestx = vecSeedGP[ countTR ].P1.x();
+      g_dTesty = vecSeedGP[ countTR ].P1.y();
+      g_dTestz = vecSeedGP[ countTR ].P1.z();
+      Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch, &vecSeedGP[ countTR ]);
       
+      /*strKeep += TString::Format("Seed : (%lf, %lf, %lf) - (%lf, %lf, %lf) : ", 
+        vecSeedGP[ countTR ].P1.x(), vecSeedGP[ countTR ].P1.z(), vecSeedGP[ countTR ].P1.y(), 
+        vecSeedGP[ countTR ].P2.x(), vecSeedGP[ countTR ].P2.z(), vecSeedGP[ countTR ].P2.y());*/
       countTR += 1;
       //cout << smoothed.chiSquared()/float(smoothed.ndof()) << endl;
       if (smoothed.isValid()){
+        //strKeep += TString::Format("%lf\n", smoothed.chiSquared()/float(smoothed.ndof()));
         trajectoryh->Fill(2,1);
         //cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
         if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
@@ -609,29 +801,51 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           nIdxBest = countTR - 1;
         }
       }else{
+        //strKeep += TString::Format("non valid\n");
         trajectoryh->Fill(1,1);
         //cout << "trajectory " << countTR << " is not valid" << endl;
       }
+      strKeep += g_strMakeTraj;
     }
     //cout << "# of trajectories : " << countTR << endl;
     //cout <<maxChi2 << endl;
     if (!bestTrajectory.isValid()) continue; //{cout<<"no Best Trajectory" << endl; continue;}
-    gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
+    if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(1.5);
     if (maxChi2 > trackChi2) continue;
     
     //if ( !isPassedScintillators(vecSeedGP[ nIdxBest ].P1, vecSeedGP[ nIdxBest ].P2) ) continue;
-    bool bIsScint = isPassedScintillators(vecSeedGP[ nIdxBest ].P1, vecSeedGP[ nIdxBest ].P2);
+    //bool bIsScint = isPassedScintillators(vecSeedGP[ nIdxBest ].P1, vecSeedGP[ nIdxBest ].P2);
+    bool bIsScint = /*!isMC ||*/ isPassedScintillators(genGPos1, genGPos2);
+    
+    double dDirX = vecSeedGP[ nIdxBest ].P2.x() - vecSeedGP[ nIdxBest ].P1.x();
+    double dDirY = vecSeedGP[ nIdxBest ].P2.z() - vecSeedGP[ nIdxBest ].P1.z();
+    double dDirZ = vecSeedGP[ nIdxBest ].P2.y() - vecSeedGP[ nIdxBest ].P1.y();
+    double dDirLen = sqrt(dDirX * dDirX + dDirY * dDirY + dDirZ * dDirZ);
+    
+    if ( nIsTraceGet == 0 && 1 == 1 ) {
+      printf("Trajectory : %lf, %lf, %lf // %lf, %lf, %lf (n : %lf, %lf, %lf)\n", 
+        vecSeedGP[ nIdxBest ].P1.x(), vecSeedGP[ nIdxBest ].P1.z(), vecSeedGP[ nIdxBest ].P1.y(), 
+        dDirX, dDirY, dDirZ, dDirX / dDirLen, dDirY / dDirLen, dDirZ / dDirLen);
+    }
+    
+    nIsTraceGet = 1;
     
     trajectoryh->Fill(3,1);
     gem_chamber_bestChi2[findIndex(tch.id())]->Fill(maxChi2);
     //cout << maxChi2 << endl;
-    gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
+    if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
     
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
     const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();
     TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(ptsd1,&bp,&*theService->magneticField());
     TrajectoryStateOnSurface tsosCurrent = tsos;
+    /*strKeep += TString::Format("Trajectory : (%lf, %lf, %lf) - (%lf, %lf, %lf) // \n%lf, %lf, %lf (n : %lf, %lf, %lf)\n", 
+      vecSeedGP[ nIdxBest ].P1.x(), vecSeedGP[ nIdxBest ].P1.z(), vecSeedGP[ nIdxBest ].P1.y(), 
+      vecSeedGP[ nIdxBest ].P2.x(), vecSeedGP[ nIdxBest ].P2.z(), vecSeedGP[ nIdxBest ].P2.y(), 
+      dDirX, dDirY, dDirZ, dDirX / dDirLen, dDirY / dDirLen, dDirZ / dDirLen);*/
+    strKeep += strListRecHit;
+    int nTrajHit = 0, nTrajRecHit = 0, nTestHit = 0;
     for(int c=0; c<n_ch;c++){
       GEMChamber ch = gemChambers[c];
       tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch.surface());
@@ -648,10 +862,10 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
           if(minDely > abs(rtlp.y())){minDely = abs(rtlp.y()); mRoll = r+1;}
         }
 
-        if(mRoll == 1 or mRoll == 8){
+        if(1 == 0 && ( mRoll == 1 || mRoll == 8 )){
           bool tester = 1;
           for (int chId = fCha; chId < lCha+1; chId++){
-            if (chId == findIndex(tch.id())) continue;
+            if (chId == findIndex(ch.id())) continue;
             if (!firedCh[chId]) tester = 0;
           }
           if (!tester) continue;
@@ -662,22 +876,35 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         double min_x = ch.etaPartition(mRoll)->centreOfStrip(0).x();
         double max_x = ch.etaPartition(mRoll)->centreOfStrip(n_strip).x();
         if ((tlp.x()>(min_x)) & (tlp.x() < (max_x)) ){
-          gem_chamber_track[findIndex(tch.id())]->Fill(3.5);
-          int index = findIndex(tch.id());
+          gem_chamber_track[findIndex(ch.id())]->Fill(4.5);
+          int index = findIndex(ch.id());
           double vfat = findvfat(tlp.x(), min_x, max_x);
           gem_chamber_th2D_eff[index]->Fill(vfat, mRoll);                
           gem_chamber_thxroll_eff[index]->Fill(tlp.x(), mRoll);
           gem_chamber_thxy_eff[index]->Fill(tlp.x(), gtrp.z());
+          gemcrTr_g->Fill(gtrp.x(), gtrp.z(), gtrp.y());
+          g_nNumTrajHit++;
+          if ( nNumCurrFiredCh == 6 ) g_nNumTrajHit6++;
+          
+          printf("    TrjHit : %i, (%0.5f, %0.5f, %0.5f)\n", findIndex(ch.id()), 
+            gtrp.x(), gtrp.z(), gtrp.y());
+          if ( g_dMinY > gtrp.z() ) g_dMinY = gtrp.z();
+          if ( g_dMaxY < gtrp.z() ) g_dMaxY = gtrp.z();
+          //printf("trajectory hit : %lf, %lf, %lf\n", gtrp.x(), gtrp.z(), gtrp.y());
+          //strKeep += TString::Format("trajectory hit : %lf, %lf, %lf\n", gtrp.x(), gtrp.z(), gtrp.y());
+          nTrajHit++;
+          
           if ( bIsScint ) {
             gem_chamber_th2D_eff_scint[index]->Fill(vfat, mRoll);                
             gem_chamber_thxroll_eff_scint[index]->Fill(tlp.x(), mRoll);
             gem_chamber_thxy_eff_scint[index]->Fill(tlp.x(), gtrp.z());
+            gemcrTrScint_g->Fill(gtrp.x(), gtrp.z(), gtrp.y());
           }
           double maxR = 99.9;
           shared_ptr<MuonTransientTrackingRecHit> tmpRecHit;
           for (auto hit : testRecHits){
             GEMDetId hitID(hit->rawId());
-            if (hitID.chamberId() != tch.id()) continue;
+            if (hitID.chamberId() != ch.id()) continue;
             GlobalPoint hitGP = hit->globalPosition();
             if (abs(hitGP.x() - gtrp.x()) > maxRes) continue;
             if (abs(hitID.roll() - mRoll)>1) continue;
@@ -687,13 +914,18 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
               maxR = deltaR;
             }
           }
-          //if(mRoll != -1){
+          if ( !tmpRecHit && testRecHits.size() > 0 ) gem_chamber_track[findIndex(ch.id())]->Fill(6.5);
+          //if(mRoll != -1)
           if(tmpRecHit){
-            gem_chamber_track[findIndex(tch.id())]->Fill(4.5);
+            gem_chamber_track[findIndex(ch.id())]->Fill(5.5);
             Local3DPoint hitLP = tmpRecHit->localPosition();
             Global3DPoint recHitGP = tmpRecHit->globalPosition();
             
             gemcrCf_g->Fill(recHitGP.x(), recHitGP.z(), recHitGP.y());
+          
+            //printf("eff hit : %lf, %lf, %lf\n", recHitGP.x(), recHitGP.z(), recHitGP.y());
+            //strKeep += TString::Format("eff hit : %lf, %lf, %lf\n", recHitGP.x(), recHitGP.z(), recHitGP.y());
+            nTrajRecHit++;
             
             gem_chamber_tr2D_eff[index]->Fill(vfat, mRoll);
             gem_chamber_trxroll_eff[index]->Fill(tlp.x(), mRoll);
@@ -712,12 +944,27 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
               rh3_chamber_scint->Fill(index);
             }
             //cout << "chamber " << index << ", Track x : " << tlp.x() <<", RecHit x : " << hitLP.x() << ", Roll : " << mRoll << endl;
-          }
+            
+            printf("    recHit : %i, (%0.5f, %0.5f, %0.5f)\n", findIndex(ch.id()), 
+              tmpRecHit->globalPosition().x(), tmpRecHit->globalPosition().z(), tmpRecHit->globalPosition().y());
+            g_nNumMatched++;
+          }/* else {
+            nTestHit = 1;
+            printf("### Yay! ###\n");
+            printf(strKeep.Data());
+          }*/
         }
         continue;
       }
     }
+    
+    //if ( nTrajRecHit != nTrajHit )
+    if ( nTestHit != 0 && 1 == 0 ) {
+      printf("### missing hit occurs! ###\n");
+      printf(strKeep.Data());
+    }
   }
+  g_nNumTest++;
 }
 
 

@@ -20,24 +20,10 @@
 #include "RecoMuon/StandAloneTrackFinder/interface/StandAloneMuonSmoother.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
+#include "SimDataFormats/Track/interface/SimTrack.h"
 
 
-/*class GPSeed {
-public:
-  double vecP1[ 3 ];
-  double vecP2[ 3 ];
 
-public:
-  GPSeed(double dP1x, double dP1y, double dP1z, double dP2x, double dP2y, double dP2z) {
-    vecP1[ 0 ] = dP1x;
-    vecP1[ 1 ] = dP1y;
-    vecP1[ 2 ] = dP1z;
-    
-    vecP2[ 0 ] = dP2x;
-    vecP2[ 1 ] = dP2y;
-    vecP2[ 2 ] = dP2z;
-  }
-};*/
 typedef struct tagGPSeed {
   GlobalPoint P1;
   GlobalPoint P2;
@@ -61,6 +47,10 @@ private:
   std::vector<MonitorElement*> gem_chamber_x_y;
   std::vector<MonitorElement*> gem_chamber_cl_size;
   std::vector<MonitorElement*> gem_chamber_bx;
+  std::vector<MonitorElement*> gem_chamber_pad_vfat;
+  std::vector<MonitorElement*> gem_chamber_copad_vfat;
+  std::vector<MonitorElement*> gem_chamber_pad_vfat_withmul;
+  std::vector<MonitorElement*> gem_chamber_copad_vfat_withmul;
   std::vector<MonitorElement*> gem_chamber_tr2D_eff;
   std::vector<MonitorElement*> gem_chamber_th2D_eff;
   std::vector<MonitorElement*> gem_chamber_trxroll_eff;
@@ -91,7 +81,9 @@ private:
 
 
   MonitorElement* gemcr_g;
+  MonitorElement* gemcrTr_g;
   MonitorElement* gemcrCf_g;
+  MonitorElement* gemcrTrScint_g;
   MonitorElement* gemcrCfScint_g;
   MonitorElement* gem_cls_tot;
   MonitorElement* gem_bx_tot;
@@ -119,14 +111,14 @@ private:
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeeds);
-  Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber);
-  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG;
+  Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber, GPSeed *pVecSeeds);
+  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG, InputTagToken_US;
   
   //float fScinHPosY, fScinHLeft, fScinHRight, fScinHTop, fScinHBottom;
   //float fScinLPosY, fScinLLeft, fScinLRight, fScinLTop, fScinLBottom;
   
-  std::vector<double> ScinUPosY, ScinULeft, ScinURight, ScinUTop, ScinUBottom;
-  std::vector<double> ScinLPosY, ScinLLeft, ScinLRight, ScinLTop, ScinLBottom;
+  std::vector<double> ScinUPosZ, ScinUXMin, ScinUXMax, ScinUYMin, ScinUYMax;
+  std::vector<double> ScinLPosZ, ScinLXMin, ScinLXMax, ScinLYMin, ScinLYMax;
   
   bool isPassedScintillators(GlobalPoint trajGP1, GlobalPoint trajGP2);
 };

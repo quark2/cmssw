@@ -47,6 +47,7 @@ int myIsMuonPassScint(double dVx, double dVy, double dVz, double dPx, double dPy
   double dR =  1200.0;
   double dB =  -750.0;
   double dT =   850.0;
+  //double dT =  -500.0;
   
   double dYLower = -114.85;
   double dYUpper = 1540.15;
@@ -115,6 +116,7 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
        while ( 1 ) {
          dVx = CLHEP::RandFlat::shoot(engine, -1300.0, 1300.0) ;
          dVz = CLHEP::RandFlat::shoot(engine, -850.0, 950.0) ;
+         //dVz = CLHEP::RandFlat::shoot(engine, -850.0, -450.0) ;
          
          double pt     = CLHEP::RandFlat::shoot(engine, fMinPt, fMaxPt) ;
          //double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
@@ -129,15 +131,15 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
          px     = mom*sin(theta)*cos(phi) ;
          py     = mom*cos(theta) ;
          pz     = mom*sin(theta)*sin(phi) ;
+         //px = 0.0;
+         //py = mom;
+         //pz = 0.0;
          
          if ( myIsMuonPassScint(dVx, dVy, dVz, px, py, pz) != 0 ) break;
          
          if ( j >= 10000 ) break;
          j++;
        }
-       std::cout << "out - " << ip << "(" << j << "); (" 
-         << dVx << ", " << dVy << ", " << dVz << "), ("
-         << px << ", " << py << ", " << pz << ")" << std::endl;
        int PartID = fPartIDs[ip] ;
        const HepPDT::ParticleData* 
           PData = fPDGTable->particle(HepPDT::ParticleID(abs(PartID))) ;
