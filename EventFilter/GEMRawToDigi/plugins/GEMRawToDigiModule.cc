@@ -140,7 +140,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
 	    ec.channelId = chan + 1;
 	    GEMROmap::dCoord dc = m_gemROMap->hitPosition(ec);
 	    int bx = bc-25;
-	    gemId = dc.gemDetId;
+	    //gemId = dc.gemDetId;
 	    GEMDigi digi(dc.stripId,bx);
 
 	    // std::cout <<"GEMRawToDigiModule vfatId "<<ec.vfatId
@@ -172,7 +172,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
                                      gebData->InFu(),
                                      gebData->Stuckd(),
                                      gebData->GEBflag());
-          outGEBStatus.get()->insertDigi(gemId.chamberId(),gebStatus); 
+          outGEBStatus.get()->insertDigi(gebData->InputID(),gebStatus); 
         }
 		  	
 	amcData->g_add(*gebData);
