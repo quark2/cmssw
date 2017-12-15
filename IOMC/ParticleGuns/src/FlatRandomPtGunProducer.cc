@@ -74,6 +74,7 @@ int myIsMuonPassScint(double dVx, double dVy, double dVz, double dPx, double dPy
 
 void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es) 
 {
+   printf("event() : %i\n", (int)e.eventAuxiliary().event());
    edm::Service<edm::RandomNumberGenerator> rng;
    CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
 
@@ -122,7 +123,8 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
          //double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
          double phi    = CLHEP::RandFlat::shoot(engine, fMinPhi, fMaxPhi) ;
          //double theta  = 2.*atan(exp(-eta)) ;
-         double theta  = CLHEP::RandFlat::shoot(engine, 0.0, 3.141592 / 2.0) ;
+         //double theta  = CLHEP::RandFlat::shoot(engine, 0.0, 3.141592 / 2.0) ;
+         double theta  = acos(sqrt(CLHEP::RandFlat::shoot(engine, 0.0, 1.0))) ;
          //mom    = pt/sin(theta) ;
          mom    = pt;
          /*double px     = pt*cos(phi) ;

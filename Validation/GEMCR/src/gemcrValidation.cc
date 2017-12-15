@@ -56,6 +56,7 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   trackChi2 = cfg.getParameter<double>("trackChi2");
   trackResY = cfg.getParameter<double>("trackResY"); 
   trackResX = cfg.getParameter<double>("trackResX");
+  MulSigmaOnWindow = cfg.getParameter<double>("MulSigmaOnWindow");
   
   if ( isMC ) {
     /*fScinHPosZ   = cfg.getParameter<double>("ScintilUpperZ");
@@ -172,6 +173,11 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   scinLowerHit = ibooker.book3D("scinUpperHit","LOWER SCINTILLATOR GLOBAL", 260,-130,130,30,-82.5,82.5, 140,0,140);
   scinUpperRecHit = ibooker.book3D("scinLowerRecHit","UPPER SCINTILLATOR GLOBAL RECHITS", 260,-130,130,30,-82.5,82.5, 140,0,140);
   scinLowerRecHit = ibooker.book3D("scinLowerRecHit","LOWER SCINTILLATOR GLOBAL RECHITS", 260,-130,130,30,-82.5,82.5, 140,0,140);
+  
+  resXSim = ibooker.book1D("residualx_sim", " residual x (sim)",200,-3,3);
+  resYByErrSim = ibooker.book1D("residualy_sim", " residual y (sim)",200,-3,3);
+  hitXErr = ibooker.book1D("x_err", "x_err",200,0,5);
+  hitYErr = ibooker.book1D("y_err", "y_err",200,0,50);
 
   tr_chamber = ibooker.book1D("tr_eff_ch", "tr rec /chamber",n_ch,1,n_ch); 
   th_chamber = ibooker.book1D("th_eff_ch", "tr hit/chamber",n_ch,0,n_ch); 
@@ -181,6 +187,18 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
   rh3_chamber = ibooker.book1D("rh3_chamber", "tracking recHits",n_ch,0,n_ch); 
   
   rh3_chamber_scint = ibooker.book1D("rh3_chamber_scint", "tracking recHits, scintillated",n_ch,0,n_ch); 
+  
+  events_withtraj = ibooker.book1D("events_withtraj", "# of events with a reconstructed trajectory",6,0,6); 
+  
+  events_withtraj->setBinLabel(1, "events with firedCh >= 4");
+  events_withtraj->setBinLabel(2, "events with firedCh >= 5");
+  events_withtraj->setBinLabel(3, "events with firedCh >= 6");
+  events_withtraj->setBinLabel(4, "events with tr, firedCh >= 4");
+  events_withtraj->setBinLabel(5, "events with tr, firedCh >= 5");
+  events_withtraj->setBinLabel(6, "events with tr, firedCh >= 6");
+  
+  diffTrajGenRec = ibooker.book3D("diffTrajGenRec","Difference between GEN track and RECO track", 
+    100, 0, 3, 100, -1, 1, 100, 0, 50);
   
   for(int c = 0; c<n_ch; c++){
    cout << gemChambers[c].id() << endl;
@@ -212,6 +230,8 @@ void gemcrValidation::bookHistograms(DQMStore::IBooker & ibooker, edm::Run const
      gem_chamber_thxroll_eff.push_back(ibooker.book2D(h_name+"_thxroll_eff", h_name+"_th2D_eff", 50,-25,25,8,1,9));
      gem_chamber_thxy_eff.push_back(ibooker.book2D(h_name+"_thxy_eff", h_name+"_th2D_eff", 50,-25,25,120,-60,60));
      gem_chamber_residual.push_back(ibooker.book2D(h_name+"_residual", h_name+" residual", 500,-25,25,100,-5,5));
+     gem_chamber_residualX1DSim.push_back(ibooker.book1D(h_name+"_residualX1DSim", h_name+" residual x 1D (sim)", 200,-3,3));
+     gem_chamber_residualY1DSim.push_back(ibooker.book1D(h_name+"_residualY1DSim", h_name+" residual y 1D (sim)", 200,-3,3));
      gem_chamber_local_x.push_back(ibooker.book2D(h_name+"_local_x", h_name+" local x",500,-25,25,500,-25,25));
      gem_chamber_digi_digi.push_back(ibooker.book2D(h_name+"_digi_gemDigi", h_name+" gemDigi (DIGI)", 384,0,384,8,1,9));
      gem_chamber_digi_recHit.push_back(ibooker.book2D(h_name+"_recHit_gemDigi", h_name+" gemDigi (recHit)", 384,0,384,8,1,9));
@@ -295,11 +315,11 @@ gemcrValidation::~gemcrValidation() {
 auto_ptr<std::vector<TrajectorySeed> > gemcrValidation::findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeed)
 {
   auto_ptr<std::vector<TrajectorySeed> > tmptrajectorySeeds( new vector<TrajectorySeed>());
-  float fSeedCut = 40.0;
+  //float fSeedCut = 40.0;
   for (auto hit1 : muRecHits){
     for (auto hit2 : muRecHits){
       if (hit1->globalPosition().y() < hit2->globalPosition().y())
-      //if (hit2->globalPosition().y() - hit1->globalPosition().y() > fSeedCut ) //// VETO_TOO_SHORT_SEED
+      //if (hit2->globalPosition().y() - hit1->globalPosition().y() > 40.0 ) //// VETO_TOO_SHORT_SEED
       {
         LocalPoint segPos = hit1->localPosition();
         GlobalVector segDirGV(hit2->globalPosition().x() - hit1->globalPosition().x(),
@@ -345,12 +365,12 @@ auto_ptr<std::vector<TrajectorySeed> > gemcrValidation::findSeeds(MuonTransientT
 float g_dTestx, g_dTesty, g_dTestz;
 
 
-float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
+float gemcrValidation::CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
   if ( 1 != 1 ) {
     return 5.0;
   }
   
-  float fDev = 5.0;
+  float fDev = trackResX * MulSigmaOnWindow;
   
   float fZCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
   float fZDiffSeed = pVecSeed->P2.y() - fZCenterSeed;
@@ -361,12 +381,12 @@ float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
 }
 
 
-float CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
+float gemcrValidation::CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
   if ( 1 != 1 ) {
     return 5.0;
   }
   
-  float fDev = 45.0;
+  float fDev = trackResY * MulSigmaOnWindow;
   
   float fZCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
   float fZDiffSeed = pVecSeed->P2.y() - fZCenterSeed;
@@ -405,10 +425,11 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
         //cout << "chamber #" << findIndex(ch.id()) << ", resX : " << abs(hitGP.x() - tsosGP.x()) << ", resY : " << abs(hitGP.z() - tsosGP.z()) << ", delR : " << deltaR << endl;
         //cout << "recHit (position, err x) : (" << hitGP.x() << ", "<<x_err << "), y : (" << hitGP.z() << ", "<<y_err<<")" << endl;
         
-        //if (abs(hitGP.x() - tsosGP.x()) > 5.0) continue;
-        //if (abs(hitGP.z() - tsosGP.z()) > 45.0) continue; // actually y-cut
+        //if (abs(hitGP.x() - tsosGP.x()) > trackResX * MulSigmaOnWindow) continue;
+        //if (abs(hitGP.z() - tsosGP.z()) > trackResY * MulSigmaOnWindow * hit->localPositionError().yy() ) continue; // actually y-cut
         if ( abs(hitGP.x() - tsosGP.x()) > CalcWindowWidthX(pVecSeed, &hitGP) ) continue; //// CONE_WINDOW
-        if ( abs(hitGP.z() - tsosGP.z()) > CalcWindowWidthY(pVecSeed, &hitGP) ) continue; //// CONE_WINDOW // actually y-cut
+        if ( abs(hitGP.z() - tsosGP.z()) > CalcWindowWidthY(pVecSeed, &hitGP) * hit->localPositionError().yy() ) continue; //// CONE_WINDOW // actually y-cut
+        //if ( abs(hitGP.z() - tsosGP.z()) > CalcWindowWidthY(pVecSeed, &hitGP) ) continue; //// CONE_WINDOW // actually y-cut
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         float deltaR = (hitGP - tsosGP).mag();
         //cout <<"chamber : " << findIndex(ch.id()) << ", recHit : "<<hitGP << ", trackHit : " << tsosGP << ", delR : "<< deltaR << ", err :" << x_err << ", "<< y_err << endl; 
@@ -589,6 +610,16 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       printf("  recHit : %i, (%0.5f, %0.5f, %0.5f) <... (%0.5f, %0.5f, %0.5f)\n", nIdxCh, 
           recHitGP.x(), recHitGP.z(), recHitGP.y(), 
           fXGenHitX, fXGenHitY, fXGenHitZ);
+      
+      //resXSim->Fill(recHitGP.x() - fXGenHitX);
+      resXSim->Fill(recHitGP.x() - fXGenHitX);
+      gem_chamber_residualX1DSim[ nIdxCh ]->Fill(recHitGP.x() - fXGenHitX);
+      hitXErr->Fill(recHit->localPositionError().xx());
+      
+      resYByErrSim->Fill(( recHitGP.z() - fXGenHitY ) / recHit->localPositionError().yy());
+      gem_chamber_residualY1DSim[ nIdxCh ]->Fill(( recHitGP.z() - fXGenHitY ) / recHit->localPositionError().yy());
+      hitYErr->Fill(recHit->localPositionError().yy());
+      
       g_nNumRecHit++;
     }
     
@@ -719,6 +750,9 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   int countTC = 0;
   int nIsTraceGet = 0;
   TString strKeep;
+  if ( fChMul == 4 ) events_withtraj->Fill(0.5);
+  if ( fChMul == 5 ) events_withtraj->Fill(1.5);
+  if ( fChMul >= 6 ) events_withtraj->Fill(2.5);
   for (auto tch : gemChambers){
     strKeep = TString("");
     countTC += 1;
@@ -794,8 +828,10 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
         //strKeep += TString::Format("%lf\n", smoothed.chiSquared()/float(smoothed.ndof()));
         trajectoryh->Fill(2,1);
         //cout << "Trajectory " << countTR << ", chi2 : " << smoothed.chiSquared()/float(smoothed.ndof()) << ", track ResX :" << trackResX << ", track ResY : " << trackResY << endl;
-        if (maxChi2 > smoothed.chiSquared()/float(smoothed.ndof())){
-          maxChi2 = smoothed.chiSquared()/float(smoothed.ndof());
+        //float dProbChiNDF = smoothed.chiSquared()/float(smoothed.ndof());
+        float dProbChiNDF = TMath::Prob(smoothed.chiSquared(), smoothed.ndof());
+        if (maxChi2 > dProbChiNDF){
+          maxChi2 = dProbChiNDF;
           bestTrajectory = smoothed;
           bestSeed = seed;
           nIdxBest = countTR - 1;
@@ -963,6 +999,14 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       printf("### missing hit occurs! ###\n");
       printf(strKeep.Data());
     }
+  }
+  if ( nIsTraceGet != 0 ) {
+    if ( fChMul == 4 ) events_withtraj->Fill(3.5);
+    if ( fChMul == 5 ) events_withtraj->Fill(4.5);
+    if ( fChMul >= 6 ) events_withtraj->Fill(5.5);
+    
+    
+    //diffTrajGenRec->Fill(maxChi2, );
   }
   g_nNumTest++;
 }

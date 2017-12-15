@@ -40,7 +40,7 @@ public:
   int findIndex(GEMDetId id_);
   int findvfat(float x, float a, float b);
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
-  double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX;
+  double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX, MulSigmaOnWindow;
   bool makeTrack, isMC;
 private:
   const GEMGeometry* GEMGeometry_;
@@ -58,6 +58,8 @@ private:
   std::vector<MonitorElement*> gem_chamber_trxy_eff;
   std::vector<MonitorElement*> gem_chamber_thxy_eff;
   std::vector<MonitorElement*> gem_chamber_residual;
+  std::vector<MonitorElement*> gem_chamber_residualX1DSim;
+  std::vector<MonitorElement*> gem_chamber_residualY1DSim;
   std::vector<MonitorElement*> gem_chamber_local_x;
   std::vector<MonitorElement*> gem_chamber_digi_digi;
   std::vector<MonitorElement*> gem_chamber_digi_recHit;
@@ -96,12 +98,18 @@ private:
   MonitorElement* rh2_chamber;
   MonitorElement* rh3_chamber;
   MonitorElement* trajectoryh;
+  MonitorElement* events_withtraj;
   MonitorElement* firedMul;
   MonitorElement* firedChamber;
   MonitorElement* scinUpperHit;
   MonitorElement* scinLowerHit;
   MonitorElement* scinUpperRecHit;
   MonitorElement* scinLowerRecHit;
+  MonitorElement* resXSim;
+  MonitorElement* resYByErrSim;
+  MonitorElement* hitXErr;
+  MonitorElement* hitYErr;
+  //MonitorElement* diffTrajGenRec;
   
 
 
@@ -121,6 +129,9 @@ private:
   std::vector<double> ScinLPosZ, ScinLXMin, ScinLXMax, ScinLYMin, ScinLYMax;
   
   bool isPassedScintillators(GlobalPoint trajGP1, GlobalPoint trajGP2);
+  float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr);
+  float CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr);
+  //int CalcDiffGenRec(GPSeed *pVecSeed, GlobalPoint *pPCurr);
 };
 
 #endif

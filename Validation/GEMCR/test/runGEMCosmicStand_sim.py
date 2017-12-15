@@ -5,6 +5,28 @@
 # with command line options: SingleMuPt100_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW,RAW2DIGI,L1Reco,RECO --conditions auto:run2_mc --magField 38T_PostLS1 --datatier GEN-SIM --geometry GEMCosmicStand --eventcontent FEVTDEBUGHLT --era phase2_muon -n 100 --fileout out_reco.root
 import FWCore.ParameterSet.Config as cms
 
+# options
+import FWCore.ParameterSet.VarParsing as VarParsing
+options = VarParsing.VarParsing('analysis')
+
+options.register('runNum',
+                 1,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.int,
+                 "Run number")
+options.register('eventsPerJob',
+                 200,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.int,
+                 "The number of events (in each file)")
+options.register('idxJob',
+                 -1,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.int,
+                 "The number of events (in each file)")
+
+options.parseArguments()
+
 from Configuration.StandardSequences.Eras import eras
 
 process = cms.Process('RECO',eras.phase2_muon)
@@ -209,6 +231,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     trackChi2 = cms.double(runConfig.trackChi2),
     trackResX = cms.double(runConfig.trackResX),
     trackResY = cms.double(runConfig.trackResY),
+    MulSigmaOnWindow = cms.double(runConfig.MulSigmaOnWindow),
     MuonSmootherParameters = cms.PSet(
                       PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                       PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -340,7 +363,8 @@ process.gemSegments.dYclusBoxMax = cms.double(50.0)
 process.gemSegments.preClustering = cms.bool(False)
 process.gemSegments.preClusteringUseChaining = cms.bool(False)
 
-process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
+#process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
+process.simMuonGEMDigis.averageEfficiency = cms.double(1.00)
 process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
 process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
 process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
