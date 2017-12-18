@@ -63,6 +63,7 @@ private:
   std::vector<GEMChamber> gemChambers;
 
   std::unordered_map<UInt_t,  MonitorElement*> Digi_Strip_vs_eta;
+  std::unordered_map<UInt_t,  MonitorElement*> Digi_VFAT;
   //std::unordered_map<UInt_t,  MonitorElement*> h1B1010;
   //std::unordered_map<UInt_t,  MonitorElement*> h1B1100;
   //std::unordered_map<UInt_t,  MonitorElement*> h1B1110;
@@ -110,6 +111,9 @@ private:
   
   std::vector<int> vnAMCBID;
   //std::vector<std::string> vstrAMCBinLabels;
+  
+  //std::unordered_map<GEMChamber, int> mapChIdx;
+  //std::unordered_map<uint16_t, int> mapAMCIdx;
 
 
 };
@@ -221,6 +225,7 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     int n_lay = sch->nChambers();
     for (int l=0;l<n_lay;l++){
       gemChambers.push_back(*sch->chamber(l+1));
+      //mapChIdx[*sch->chamber(l+1)] = gemChambers.size() - 1;
     }
   }
   nCh = gemChambers.size();
@@ -241,6 +246,9 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     //TH2F *hist_3 = Digi_Strip_vs_eta[ ch.id() ]->getTH2F();
     //hist_3->SetMarkerStyle(20);
     //hist_3->SetMarkerSize(0.5);
+    string hName_VFAT = "Digi_VFAT_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
+    string hTitle_VFAT = "Digi VFAT Gemini ID : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
+    Digi_VFAT[ ch.id() ] = ibooker.book1D(hName_VFAT, hTitle_VFAT, 24, 0, 24);
   }
   
   h1B1010All = ibooker.book1D("vfatErrors_all_b1010", "Control Bit 1010", 15, 0x0 , 0xf);   
@@ -346,6 +354,8 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       const auto& digis_in_det = gemDigis->get(rId);
       for (auto d = digis_in_det.first; d != digis_in_det.second; ++d){
 	Digi_Strip_vs_eta[ cId ]->Fill(d->strip(), rId.roll());
+        int nVfat = findVFAT(1.0, 385.0, d->strip(), rId.roll());
+        Digi_VFAT[ cId ]->Fill(nVfat);
       }
       const auto& errors_in_det = gemErrors->get(rId);
       for(auto vfatError = errors_in_det.first; vfatError != errors_in_det.second; ++vfatError ){
@@ -367,7 +377,8 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
         h2CRCAll->Fill(vfatError->getCrc(), nIdx);
       }
     }
-    const auto& GEB_in_det = gemGEB->get(cId.chamberId());
+    //const auto& GEB_in_det = gemGEB->get(cId.chamberId());
+    const auto& GEB_in_det = gemGEB->get(nIdx);
     for(auto GEBStatus = GEB_in_det.first; GEBStatus != GEB_in_det.second; ++GEBStatus ){
       h1InputID->Fill(GEBStatus->getInputID());
       h1Vwh->Fill(GEBStatus->getVwh());
