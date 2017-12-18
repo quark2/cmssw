@@ -119,6 +119,7 @@ private:
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeeds);
+  std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, std::vector<GPSeed> &vecSeeds);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber, GPSeed *pVecSeeds);
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG, InputTagToken_US;
   
