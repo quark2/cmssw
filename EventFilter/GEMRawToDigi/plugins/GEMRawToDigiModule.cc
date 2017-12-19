@@ -74,7 +74,6 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
     
     amc13Event->setCDFHeader(*word);
     amc13Event->setAMC13header(*(++word));
-
     // Readout out AMC headers
     for (unsigned short i = 0; i < amc13Event->nAMC(); ++i)
       amc13Event->addAMCheader(*(++word));
@@ -86,7 +85,8 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
       amcData->setAMCheader2(*(++word));
       amcData->setGEMeventHeader(*(++word));
       uint16_t amcId = amcData->BID();
-
+      uint32_t L1A_ = amcData->L1A();
+      uint16_t amcBX = amcData->BX();
       // Fill GEB
       for (unsigned short j = 0; j < amcData->GDcount(); ++j){
 	auto gebData = std::make_unique<GEBdata>();
@@ -94,7 +94,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
 	
 	unsigned int m_nvb = gebData->Vwh() / 3; // number of VFAT2 blocks. Eventually add here sanity check
 	uint16_t gebId = gebData->InputID();
-	GEMDetId gemId(-1,1,1,1,1,0); // temp ID
+	//GEMDetId gemId(-1,1,1,1,1,0); // temp ID
 	for (unsigned short k = 0; k < m_nvb; k++){
 	  auto vfatData = std::make_unique<VFATdata>();
 	  vfatData->read_fw(*(++word));
@@ -139,8 +139,9 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
 
 	    ec.channelId = chan + 1;
 	    GEMROmap::dCoord dc = m_gemROMap->hitPosition(ec);
-	    int bx = bc-25;
-	    //gemId = dc.gemDetId;
+	    int bx = bc;
+            //std::cout << L1A_ << ", " << bx << ", " << bx - amcBX << std::endl;
+	    GEMDetId gemId = dc.gemDetId;
 	    GEMDigi digi(dc.stripId,bx);
 
 	    // std::cout <<"GEMRawToDigiModule vfatId "<<ec.vfatId
@@ -156,7 +157,7 @@ void GEMRawToDigiModule::produce(edm::StreamID, edm::Event & e, const edm::Event
           if (unpackStatusDigis_){
 	    GEMVfatStatusDigi vfatStatus(b1010, b1100, vfatData->Flag(), b1110, vfatData->lsData(),
 					 vfatData->msData(), crc, vfatData->crc_calc(), vfatData->isBlockGood());
-            outVfatStatus.get()->insertDigi(gemId,vfatStatus);
+            outVfatStatus.get()->insertDigi(gebData->InputID(),vfatStatus);
 	  }
 	  
 	}

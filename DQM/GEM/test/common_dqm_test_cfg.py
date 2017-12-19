@@ -54,7 +54,7 @@ process.source = cms.Source("PoolSource",
     # test file for 2017 mapping (vertical RPs only)
     #'root://eostotem.cern.ch//eos/totem/data/ctpps/run290874.root'
     #'root:///xrootd/store/relval/CMSSW_9_1_1/RelValZMM_14/GEN-SIM-RECO/91X_upgrade2023_realistic_v1_D17-v1/10000/14A91939-1D3F-E711-A09A-0025905A610A.root'
-    'file:gem_EDM.root'
+    'file:/eos/cms/store/user/hyunyong/gemP5/run306596/gem_EDM.root'
   ),
   inputCommands = cms.untracked.vstring(
     'keep *',
