@@ -66,9 +66,9 @@ using namespace std;
 using namespace edm;
 
 int GEMDQMSourceDigi::findVFAT(float min_, float max_, float x_, int roll_) {
-  float step = abs(max_-min_)/3.0;
-  if ( x_ < (min(min_,max_)+step) ) { return 8 - roll_;}
-  else if ( x_ < (min(min_,max_)+2.0*step) ) { return 16 - roll_;}
+  float step = max_/3;
+  if ( x_ < (min_+step) ) { return 8 - roll_;}
+  else if ( x_ < (min_+2*step) )  { return 16 - roll_;}
   else { return 24 - roll_;}
 }
 
