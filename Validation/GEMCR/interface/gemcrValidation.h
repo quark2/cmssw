@@ -109,6 +109,7 @@ private:
   MonitorElement* resYByErrSim;
   MonitorElement* hitXErr;
   MonitorElement* hitYErr;
+  MonitorElement* aftershots;
   //MonitorElement* diffTrajGenRec;
   
 
@@ -119,7 +120,11 @@ private:
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
   std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeeds);
-  std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, std::vector<GPSeed> &vecSeeds);
+  int findSeeds(std::vector<TrajectorySeed> *tmptrajectorySeeds, 
+    MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, 
+    MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, 
+    std::vector<int> &vecnTypeHitsUp, std::vector<int> &vecnTypeHitsDn, 
+    std::vector<GPSeed> &vecSeed);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber, GPSeed *pVecSeeds);
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG, InputTagToken_US;
   

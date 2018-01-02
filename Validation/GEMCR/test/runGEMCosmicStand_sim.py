@@ -3,6 +3,8 @@
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
 # with command line options: SingleMuPt100_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW,RAW2DIGI,L1Reco,RECO --conditions auto:run2_mc --magField 38T_PostLS1 --datatier GEN-SIM --geometry GEMCosmicStand --eventcontent FEVTDEBUGHLT --era phase2_muon -n 100 --fileout out_reco.root
+import datetime
+print datetime.datetime.now()
 import FWCore.ParameterSet.Config as cms
 
 # options
@@ -20,10 +22,10 @@ options.register('eventsPerJob',
                  VarParsing.VarParsing.varType.int,
                  "The number of events (in each file)")
 options.register('idxJob',
-                 -1,
+                 "-1",
                  VarParsing.VarParsing.multiplicity.singleton,
-                 VarParsing.VarParsing.varType.int,
-                 "The number of events (in each file)")
+                 VarParsing.VarParsing.varType.string,
+                 "The index of this root file")
 
 options.parseArguments()
 
@@ -56,10 +58,6 @@ process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
 #process.load('Configuration.StandardSequences.Validation_cff')
 
-nRunNum = int(file("runNum.txt").read())
-nMaxEvt = int(file("numEvtPerJob.txt").read())
-nIdxJob = int(file("idxJob.txt").read())
-
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r1.xml')
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r2.xml')
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c1_r3.xml')
@@ -76,10 +74,11 @@ process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/da
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r4.xml')
 process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/MuonCommonData/data/cosmic1/gem11L_c3_r5.xml')
 
-#process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20000))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(nMaxEvt))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(options.eventsPerJob))
 
 import configureRun_cfi as runConfig
+
+nIdxJob = int(options.idxJob)
 
 strOutput = "out_reco_MC.root" if nIdxJob >= 0 else runConfig.OutputFileName
 
@@ -87,8 +86,8 @@ if nIdxJob < 0: nIdxJob = 0
 
 # Input source
 process.source = cms.Source("EmptySource", 
-    firstRun = cms.untracked.uint32(nRunNum), 
-    firstEvent = cms.untracked.uint32(nMaxEvt * nIdxJob + 1), 
+    firstRun = cms.untracked.uint32(options.runNum), 
+    firstEvent = cms.untracked.uint32(options.eventsPerJob * nIdxJob + 1), 
     firstLuminosityBlock = cms.untracked.uint32(nIdxJob + 1), 
 )
 process.options = cms.untracked.PSet()
@@ -363,8 +362,8 @@ process.gemSegments.dYclusBoxMax = cms.double(50.0)
 process.gemSegments.preClustering = cms.bool(False)
 process.gemSegments.preClusteringUseChaining = cms.bool(False)
 
-#process.simMuonGEMDigis.averageEfficiency = cms.double(0.98)
-process.simMuonGEMDigis.averageEfficiency = cms.double(1.00)
+process.simMuonGEMDigis.averageEfficiency = cms.double(0.97)
+#process.simMuonGEMDigis.averageEfficiency = cms.double(1.00)
 process.simMuonGEMDigis.averageNoiseRate = cms.double(0.0)
 process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
 process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)

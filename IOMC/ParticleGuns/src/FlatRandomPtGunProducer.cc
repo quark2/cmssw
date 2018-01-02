@@ -43,10 +43,12 @@ FlatRandomPtGunProducer::~FlatRandomPtGunProducer()
 
 int myIsMuonPassScint(double dVx, double dVy, double dVz, double dPx, double dPy, double dPz) {
   // To test the drop-down of efficiency at edges, we set the cut looser
-  double dL = -1200.0;
-  double dR =  1200.0;
-  double dB =  -750.0;
-  double dT =   850.0;
+  //double dL = -1200.0;
+  //double dR =  1200.0;
+  double dL = -300.0;
+  double dR =  300.0;
+  double dB =  -850.0;
+  double dT =   950.0;
   //double dT =  -500.0;
   
   double dYLower = -114.85;
@@ -74,7 +76,6 @@ int myIsMuonPassScint(double dVx, double dVy, double dVz, double dPx, double dPy
 
 void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es) 
 {
-   printf("event() : %i\n", (int)e.eventAuxiliary().event());
    edm::Service<edm::RandomNumberGenerator> rng;
    CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
 
@@ -101,7 +102,7 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
    double dVz = CLHEP::RandFlat::shoot(engine, -650.0, 750.0) ;
    HepMC::GenVertex* Vtx = new HepMC::GenVertex(HepMC::FourVector(dVx,dVy,dVz));*/
    double dVx;
-   double dVy = -200.0;
+   double dVy = 1550.0;
    double dVz;
    HepMC::GenVertex* Vtx = NULL;
 
@@ -115,29 +116,32 @@ void FlatRandomPtGunProducer::produce(Event &e, const EventSetup& es)
        
        // To avoid meeting a muon which does not pass the detectors apparently
        while ( 1 ) {
-         dVx = CLHEP::RandFlat::shoot(engine, -1300.0, 1300.0) ;
-         dVz = CLHEP::RandFlat::shoot(engine, -850.0, 950.0) ;
+         //dVx = CLHEP::RandFlat::shoot(engine, -2300.0, 2300.0) ;
+         dVx = CLHEP::RandFlat::shoot(engine, -300.0, 300.0) ;
+         dVz = CLHEP::RandFlat::shoot(engine, -1000.0, 1000.0) ;
          //dVz = CLHEP::RandFlat::shoot(engine, -850.0, -450.0) ;
          
          double pt     = CLHEP::RandFlat::shoot(engine, fMinPt, fMaxPt) ;
          //double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
          double phi    = CLHEP::RandFlat::shoot(engine, fMinPhi, fMaxPhi) ;
          //double theta  = 2.*atan(exp(-eta)) ;
-         //double theta  = CLHEP::RandFlat::shoot(engine, 0.0, 3.141592 / 2.0) ;
-         double theta  = acos(sqrt(CLHEP::RandFlat::shoot(engine, 0.0, 1.0))) ;
+         double theta  = CLHEP::RandFlat::shoot(engine, 0.0, 3.141592 / 2.0);
+         //double theta  = acos(sqrt(CLHEP::RandFlat::shoot(engine, 0.0, 1.0))) ;
+         //double theta  = acos(CLHEP::RandFlat::shoot(engine, 0.0, 1.0)) ;
+         //double theta  = 0.0;
          //mom    = pt/sin(theta) ;
          mom    = pt;
          /*double px     = pt*cos(phi) ;
          double py     = pt*sin(phi) ;
          double pz     = mom*cos(theta) ;*/
          px     = mom*sin(theta)*cos(phi) ;
-         py     = mom*cos(theta) ;
+         py     = -mom*cos(theta) ;
          pz     = mom*sin(theta)*sin(phi) ;
          //px = 0.0;
          //py = mom;
          //pz = 0.0;
          
-         if ( myIsMuonPassScint(dVx, dVy, dVz, px, py, pz) != 0 ) break;
+         if ( 1 == 1 || myIsMuonPassScint(dVx, dVy, dVz, px, py, pz) != 0 ) break;
          
          if ( j >= 10000 ) break;
          j++;
