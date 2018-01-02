@@ -523,7 +523,7 @@ Trajectory gemcrValidation::makeTrajectory(TrajectorySeed seed, MuonTransientTra
       }
     }
     if (tmpRecHit){
-      tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
+      //tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
       consRecHits.push_back(tmpRecHit);
       //GlobalPoint recHitGP = GEMGeometry_->idToDet((*tmpRecHit).rawId())->surface().toGlobal(tmpRecHit->localPosition());
       //g_strMakeTraj += TString::Format("  %lf, %lf, %lf\n", recHitGP.x(), recHitGP.z(), recHitGP.y());
