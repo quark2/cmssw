@@ -119,14 +119,7 @@ private:
   MuonServiceProxy* theService;
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
-  std::auto_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GPSeed> &vecSeeds);
-  int findSeeds(std::vector<TrajectorySeed> *tmptrajectorySeeds, 
-    MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, 
-    MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, 
-    std::vector<int> &vecnTypeHitsUp, std::vector<int> &vecnTypeHitsDn, 
-    std::vector<GPSeed> &vecSeed);
-  Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber, GPSeed *pVecSeeds);
-  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_DG, InputTagToken_US;
+  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_TI, InputTagToken_TT, InputTagToken_DG, InputTagToken_US;
   
   //float fScinHPosY, fScinHLeft, fScinHRight, fScinHTop, fScinHBottom;
   //float fScinLPosY, fScinLLeft, fScinLRight, fScinLTop, fScinLBottom;

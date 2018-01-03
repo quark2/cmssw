@@ -183,7 +183,7 @@ process.simSiStripDigis = cms.EDAlias()
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
 process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropagator')
 
-process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
+process.GEMCosmicMuonForQC8 = cms.EDProducer("GEMCosmicMuonForQC8",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
                                        maxClusterSize = cms.double(runConfig.maxClusterSize),
@@ -191,16 +191,17 @@ process.GEMCosmicMuon = cms.EDProducer("GEMCosmicMuon",
                                        trackChi2 = cms.double(runConfig.trackChi2),
                                        trackResX = cms.double(runConfig.trackResX),
                                        trackResY = cms.double(runConfig.trackResY),
+                                       MulSigmaOnWindow = cms.double(runConfig.MulSigmaOnWindow),
                                        MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
                                            RescalingFactor = cms.double(5.0)
                                            ),
                                        )
-process.GEMCosmicMuon.ServiceParameters.GEMLayers = cms.untracked.bool(True)
-process.GEMCosmicMuon.ServiceParameters.CSCLayers = cms.untracked.bool(False)
-process.GEMCosmicMuon.ServiceParameters.RPCLayers = cms.bool(False)
-#process.GEMCosmicMuon.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
+process.GEMCosmicMuonForQC8.ServiceParameters.GEMLayers = cms.untracked.bool(True)
+process.GEMCosmicMuonForQC8.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+process.GEMCosmicMuonForQC8.ServiceParameters.RPCLayers = cms.bool(False)
+#process.GEMCosmicMuonForQC8.ServiceParameters.UseMuonNavigation = cms.untracked.bool(False)
 
 fScale = 1.0
 
@@ -211,8 +212,10 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
     #simTrack = cms.InputTag('g4SimHits',"", "RECO"),
     genVtx = cms.InputTag("generator","unsmeared", "RECO"),
     recHitsInputLabel = cms.InputTag('gemRecHits'),
-    tracksInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
-    seedInputLabel = cms.InputTag('GEMCosmicMuon','','RECO'),
+    tracksInputLabel = cms.InputTag('GEMCosmicMuonForQC8','','RECO'),
+    seedInputLabel = cms.InputTag('GEMCosmicMuonForQC8','','RECO'),
+    chNoInputLabel = cms.InputTag('GEMCosmicMuonForQC8','','RECO'),
+    seedTypeInputLabel = cms.InputTag('GEMCosmicMuonForQC8','','RECO'),
     genParticleLabel = cms.InputTag('genParticles','','RECO'),
     gemDigiLabel = cms.InputTag("muonGEMDigis","","RECO"),
     # st1, st2_short, st2_long of xbin, st1,st2_short,st2_long of ybin
@@ -310,7 +313,7 @@ process.simulation_step = cms.Path(process.psim)
 process.digitisation_step = cms.Path(process.pdigi)
 #process.reconstruction_step = cms.Path(process.reconstruction)
 #process.digitisation_step = cms.Path(process.muonGEMDigi)
-process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuon)
+process.reconstruction_step    = cms.Path(process.gemLocalReco+process.GEMCosmicMuonForQC8)
 #process.reconstruction_step    = cms.Path(process.gemLocalReco)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
