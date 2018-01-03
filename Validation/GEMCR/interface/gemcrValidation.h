@@ -119,7 +119,7 @@ private:
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_TI, InputTagToken_TT, InputTagToken_DG, InputTagToken_US;
   
   
-  bool gemcrValidation::isPassedScintillators(GlobalPoint p1, GlobalPoint p2);
+  bool isPassedScintillators(GlobalPoint p1, GlobalPoint p2);
   float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr);
   float CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr);
   //int CalcDiffGenRec(GPSeed *pVecSeed, GlobalPoint *pPCurr);

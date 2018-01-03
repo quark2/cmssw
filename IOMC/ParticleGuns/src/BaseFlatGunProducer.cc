@@ -48,8 +48,8 @@ BaseFlatGunProducer::BaseFlatGunProducer( const ParameterSet& pset ) :
    fPartIDs     = pgun_params.getParameter< vector<int> >("PartID");
    fMinPhi      = pgun_params.getParameter<double>("MinPhi");
    fMaxPhi      = pgun_params.getParameter<double>("MaxPhi");
-   fMinEta      = pgun_params.getParameter<double>("MinEta");
-   fMaxEta      = pgun_params.getParameter<double>("MaxEta");  
+   //fMinEta      = pgun_params.getParameter<double>("MinEta");
+   //fMaxEta      = pgun_params.getParameter<double>("MaxEta");  
    fMinTheta    = pgun_params.getParameter<double>("MinTheta");
    fMaxTheta    = pgun_params.getParameter<double>("MaxTheta");
    fIsThetaFlat = pgun_params.getParameter<bool>("IsThetaFlat"); // If 'True': theta distribution is flat. If 'False': theta distribution is a cos^2
