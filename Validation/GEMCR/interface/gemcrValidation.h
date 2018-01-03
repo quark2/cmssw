@@ -22,8 +22,6 @@
 
 #include "SimDataFormats/Track/interface/SimTrack.h"
 
-
-
 typedef struct tagGPSeed {
   GlobalPoint P1;
   GlobalPoint P2;
@@ -113,7 +111,6 @@ private:
   //MonitorElement* diffTrajGenRec;
   
 
-
   std::vector<GEMChamber> gemChambers;
   int n_ch;
   MuonServiceProxy* theService;
@@ -121,13 +118,8 @@ private:
   KFUpdator* theUpdator;
   edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_TI, InputTagToken_TT, InputTagToken_DG, InputTagToken_US;
   
-  //float fScinHPosY, fScinHLeft, fScinHRight, fScinHTop, fScinHBottom;
-  //float fScinLPosY, fScinLLeft, fScinLRight, fScinLTop, fScinLBottom;
   
-  std::vector<double> ScinUPosZ, ScinUXMin, ScinUXMax, ScinUYMin, ScinUYMax;
-  std::vector<double> ScinLPosZ, ScinLXMin, ScinLXMax, ScinLYMin, ScinLYMax;
-  
-  bool isPassedScintillators(GlobalPoint trajGP1, GlobalPoint trajGP2);
+  bool gemcrValidation::isPassedScintillators(GlobalPoint p1, GlobalPoint p2);
   float CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr);
   float CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr);
   //int CalcDiffGenRec(GPSeed *pVecSeed, GlobalPoint *pPCurr);
