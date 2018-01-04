@@ -25,7 +25,8 @@ gStyle.SetPalette(100, array("i", myPalette))
 
 import configureRun_cfi as runConfig
 
-if len(sys.argv) > 1 : runConfig.RunNumber = int(sys.argv[ 1 ])
+#if len(sys.argv) > 1 : runConfig.RunNumber = int(sys.argv[ 1 ])
+if len(sys.argv) > 1 : runConfig.RunNumber = int(1)
 rootF = "DQM_V0001_R%09d__Global__CMSSW_X_Y_Z__RECO.root"%runConfig.RunNumber
 run = runConfig.RunNumber
 tDir = "DQMData/Run %d/MuonGEMRecHitsV/Run summary/GEMRecHitsTask"%(run)

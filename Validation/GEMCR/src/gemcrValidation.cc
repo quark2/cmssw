@@ -61,80 +61,6 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   trackResX = cfg.getParameter<double>("trackResX");
   MulSigmaOnWindow = cfg.getParameter<double>("MulSigmaOnWindow");
   
-  if ( isMC ) {
-    /*fScinHPosZ   = cfg.getParameter<double>("ScintilUpperZ");
-    fScinHLeft   = cfg.getParameter<double>("ScintilUpperLeft");
-    fScinHRight  = cfg.getParameter<double>("ScintilUpperRight");
-    fScinHTop    = cfg.getParameter<double>("ScintilUpperTop");
-    fScinHBottom = cfg.getParameter<double>("ScintilUpperBottom");
-    
-    fScinLPosZ   = cfg.getParameter<double>("ScintilLowerZ");
-    fScinLLeft   = cfg.getParameter<double>("ScintilLowerLeft");
-    fScinLRight  = cfg.getParameter<double>("ScintilLowerRight");
-    fScinLTop    = cfg.getParameter<double>("ScintilLowerTop");
-    fScinLBottom = cfg.getParameter<double>("ScintilLowerBottom");*/
-    
-    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper00Z"));
-    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper00XMin"));
-    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper00XMax"));
-    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper00YMin"));
-    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper00YMax"));
-    
-    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower00Z"));
-    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower00XMin"));
-    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower00XMax"));
-    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower00YMin"));
-    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower00YMax"));
-    
-    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper01Z"));
-    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper01XMin"));
-    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper01XMax"));
-    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper01YMin"));
-    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper01YMax"));
-    
-    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower01Z"));
-    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower01XMin"));
-    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower01XMax"));
-    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower01YMin"));
-    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower01YMax"));
-    
-    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper02Z"));
-    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper02XMin"));
-    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper02XMax"));
-    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper02YMin"));
-    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper02YMax"));
-    
-    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower02Z"));
-    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower02XMin"));
-    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower02XMax"));
-    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower02YMin"));
-    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower02YMax"));
-    
-    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper03Z"));
-    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper03XMin"));
-    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper03XMax"));
-    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper03YMin"));
-    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper03YMax"));
-    
-    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower03Z"));
-    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower03XMin"));
-    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower03XMax"));
-    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower03YMin"));
-    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower03YMax"));
-    
-    ScinUPosZ.push_back(cfg.getParameter<double>("ScintilUpper04Z"));
-    ScinUXMin.push_back(cfg.getParameter<double>("ScintilUpper04XMin"));
-    ScinUXMax.push_back(cfg.getParameter<double>("ScintilUpper04XMax"));
-    ScinUYMin.push_back(cfg.getParameter<double>("ScintilUpper04YMin"));
-    ScinUYMax.push_back(cfg.getParameter<double>("ScintilUpper04YMax"));
-    
-    ScinLPosZ.push_back(cfg.getParameter<double>("ScintilLower04Z"));
-    ScinLXMin.push_back(cfg.getParameter<double>("ScintilLower04XMin"));
-    ScinLXMax.push_back(cfg.getParameter<double>("ScintilLower04XMax"));
-    ScinLYMin.push_back(cfg.getParameter<double>("ScintilLower04YMin"));
-    ScinLYMax.push_back(cfg.getParameter<double>("ScintilLower04YMax"));
-  }
-  
   edm::ParameterSet smootherPSet = cfg.getParameter<edm::ParameterSet>("MuonSmootherParameters");
   theSmoother = new CosmicMuonSmoother(smootherPSet, theService);
   theUpdator = new KFUpdator();
@@ -320,83 +246,45 @@ gemcrValidation::~gemcrValidation() {
 }
 
 
-bool gemcrValidation::isPassedScintillators(GlobalPoint trajGP1, GlobalPoint trajGP2) {
-  unsigned int i;
+bool gemcrValidation::isPassedScintillators(GlobalPoint p1, GlobalPoint p2)
+{
+  bool isPassedScint = false;
   
-  // Getting the direction of trajectory by using the hits in the seed
-  double dTrajDirX = trajGP2.x() - trajGP1.x();
-  double dTrajDirY = trajGP2.y() - trajGP1.y();
-  double dTrajDirZ = trajGP2.z() - trajGP1.z();
+  double ScintilLowerY =  -11.485;
+  double ScintilUpperY =  154.015;
+  double ScintilXMin   = -100.0;
+  double ScintilXMax   =  100.0;
+  double ScintilZMin   =  -60.56;
+  double ScintilZMax   =   63.0;
   
-  int nIsHitUpper, nIsHitLower;
+  // Finding the X coordinate of the track in the upper and lower scintillator planes : (x)=(m_xy)*(y)+(q_xy), (m_xy)=(x2-x1)/(y2-y1), (q_xy)=x2-(m_xy)*y2
+  double m_xy = ( p2.x() - p1.x() ) / ( p2.y() - p1.y() ) ;
+  double q_xy = p2.x() - m_xy * p2.y() ;
+  double HitXupScint  = m_xy * ScintilUpperY + q_xy ;
+  double HitXlowScint = m_xy * ScintilLowerY + q_xy ;
   
-  double dXUHit = 0.0, dYUHit = 0.0, dZUHit = 0.0;
-  double dXLHit = 0.0, dYLHit = 0.0, dZLHit = 0.0;
+  // Finding the Z coordinate of the track in the upper and lower scintillator planes : (z)=(m_zy)*(y)+(q_zy), (m_zy)=(z2-z1)/(y2-y1), (q_zy)=z2-(m_zy)*y2
+  double m_zy = ( p2.z() - p1.z() ) / ( p2.y() - p1.y() ) ;
+  double q_zy = p2.z() - m_zy * p2.y() ;
+  double HitZupScint  = m_zy * ScintilUpperY + q_zy ;
+  double HitZlowScint = m_zy * ScintilLowerY + q_zy ;
   
-  if ( -0.0000001 < dTrajDirY && dTrajDirY < 0.0000001 ) return false; // for safety
-  
-  nIsHitUpper = 0;
-  nIsHitLower = 0;
-  
-  for ( i = 0 ; i < ScinUPosZ.size() ; i++ ) {
-    // Time to solve 1-order equation
-    double dTTraj = ( ScinUPosZ[ i ] - trajGP1.y() ) / dTrajDirY;
-    
-    // Finding the coordinates of the hit position on the y-plane containing the upper scintillator
-    dXUHit = trajGP1.x() + dTTraj * dTrajDirX;
-    dYUHit = ScinUPosZ[ i ];
-    dZUHit = trajGP1.z() + dTTraj * dTrajDirZ;
-    
-    // The above lines are probably not needed to be calculated in each iteration
-    // because all entries of ScinUPosZ may be same.
-    // But for... safety...
-    
-    // Checking whether the hit position in the upper scintillator
-    if ( ( ScinUXMin[ i ] <= dXUHit && dXUHit <= ScinUXMax[ i ]  ) && 
-       ( ScinUYMin[ i ]  <= dZUHit && dZUHit <= ScinUYMax[ i ] ) )
-    {
-      nIsHitUpper = 1;
-      break;
-    }
+  if (( ScintilXMin <= HitXupScint  && HitXupScint  <= ScintilXMax ) && ( ScintilZMin  <= HitZupScint  && HitZupScint  <= ScintilZMax ) &&
+      ( ScintilXMin <= HitXlowScint && HitXlowScint <= ScintilXMax ) && ( ScintilZMin  <= HitZlowScint && HitZlowScint <= ScintilZMax ) )
+  {
+    isPassedScint = true;
   }
   
-  for ( i = 0 ; i < ScinLPosZ.size() ; i++ ) {
-    // Time to solve 1-order equation
-    double dTTraj = ( ScinLPosZ[ i ] - trajGP1.y() ) / dTrajDirY;
-    
-    // Finding the coordinates of the hit position on the y-plane containing the upper scintillator
-    dXLHit = trajGP1.x() + dTTraj * dTrajDirX;
-    dYLHit = ScinLPosZ[ i ];
-    dZLHit = trajGP1.z() + dTTraj * dTrajDirZ;
-    
-    // The above lines are probably not needed to be calculated in each iteration
-    // because all entries of ScinLPosZ may be same.
-    // But for... safety...
-    
-    // Checking whether the hit position in the upper scintillator
-    if ( ( ScinLXMin[ i ] <= dXLHit && dXLHit <= ScinLXMax[ i ]  ) && 
-       ( ScinLYMin[ i ]  <= dZLHit && dZLHit <= ScinLYMax[ i ] ) )
-    {
-      nIsHitLower = 1;
-      break;
-    }
+  scinUpperHit -> Fill(HitXupScint, HitZupScint, ScintilUpperY);
+  scinLowerHit -> Fill(HitXlowScint, HitZlowScint, ScintilLowerY);
+  
+  if  (isPassedScint == true)
+  {
+      scinUpperRecHit->Fill(HitXupScint, HitZupScint, ScintilUpperY);
+      scinLowerRecHit->Fill(HitXlowScint, HitZlowScint, ScintilLowerY);
   }
   
-  /*vecPosHit.push_back(dXUHit);
-  vecPosHit.push_back(dYUHit);
-  vecPosHit.push_back(dZUHit);
-  
-  vecPosHit.push_back(dXLHit);
-  vecPosHit.push_back(dYLHit);
-  vecPosHit.push_back(dZLHit);*/
-  
-  scinUpperHit->Fill(dXUHit, dZUHit, dYUHit);
-  scinLowerHit->Fill(dXLHit, dZLHit, dYLHit);
-  
-  if ( nIsHitUpper == 1 ) scinUpperRecHit->Fill(dXUHit, dZUHit, dYUHit);
-  if ( nIsHitLower == 1 ) scinLowerRecHit->Fill(dXLHit, dZLHit, dYLHit);
-  
-  return ( nIsHitUpper == 1 && nIsHitLower == 1 );
+  return isPassedScint;
 }
 
 

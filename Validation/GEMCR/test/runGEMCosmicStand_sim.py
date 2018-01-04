@@ -132,14 +132,13 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 process.generator = cms.EDProducer("FlatRandomPtGunProducer",
     AddAntiParticle = cms.bool(True),
     PGunParameters = cms.PSet(
-        MaxEta = cms.double(0.3),
-        #MaxPhi = cms.double(1.5707963267948966+0.3),
-        MaxPhi = cms.double(-3.141592),
-        MaxPt = cms.double(100.01),
-        MinEta = cms.double(-0.3),
-        #MinPhi = cms.double(1.5707963267948966-0.3),
-        MinPhi = cms.double(3.141592),
         MinPt = cms.double(99.99),
+        MaxPt = cms.double(100.01),
+        MinPhi = cms.double(3.141592),
+        MaxPhi = cms.double(-3.141592),
+        MinTheta = cms.double(0.0),
+        MaxTheta = cms.double(1.5707963),
+        IsThetaFlat = cms.bool(True), # If 'True': theta distribution is flat. If 'False': theta distribution is a cos^2
         PartID = cms.vint32(-13)
     ),
     Verbosity = cms.untracked.int32(0),
@@ -239,69 +238,7 @@ process.gemcrValidation = cms.EDAnalyzer('gemcrValidation',
                       PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                       PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
                       RescalingFactor = cms.double(5.0)
-                      ),
-    
-    # Probably there is more efficient way to put that infos
-    ScintilLower00Z    = cms.double(-11.485), 
-    ScintilLower00XMin = cms.double(-100.0), 
-    ScintilLower00XMax = cms.double(-60.0), 
-    ScintilLower00YMin = cms.double(-60.56), 
-    ScintilLower00YMax = cms.double(63.0), 
-    
-    ScintilLower01Z    = cms.double(-11.485), 
-    ScintilLower01XMin = cms.double(-60.0), 
-    ScintilLower01XMax = cms.double(-20.0), 
-    ScintilLower01YMin = cms.double(-60.56), 
-    ScintilLower01YMax = cms.double(63.0), 
-    
-    ScintilLower02Z    = cms.double(-11.485), 
-    ScintilLower02XMin = cms.double(-20.0), 
-    ScintilLower02XMax = cms.double( 20.0), 
-    ScintilLower02YMin = cms.double(-60.56), 
-    ScintilLower02YMax = cms.double(63.0), 
-    
-    ScintilLower03Z    = cms.double(-11.485), 
-    ScintilLower03XMin = cms.double( 20.0), 
-    ScintilLower03XMax = cms.double( 60.0), 
-    ScintilLower03YMin = cms.double(-60.56), 
-    ScintilLower03YMax = cms.double(63.0), 
-    
-    ScintilLower04Z    = cms.double(-11.485), 
-    ScintilLower04XMin = cms.double( 60.0), 
-    ScintilLower04XMax = cms.double(100.0), 
-    ScintilLower04YMin = cms.double(-60.56), 
-    ScintilLower04YMax = cms.double(63.0), 
-    
-    ScintilUpper00Z    = cms.double(154.015), 
-    ScintilUpper00XMin = cms.double(-100.0), 
-    ScintilUpper00XMax = cms.double(-60.0), 
-    ScintilUpper00YMin = cms.double(-60.56), 
-    ScintilUpper00YMax = cms.double(63.0), 
-    
-    ScintilUpper01Z    = cms.double(154.015), 
-    ScintilUpper01XMin = cms.double(-60.0), 
-    ScintilUpper01XMax = cms.double(-20.0), 
-    ScintilUpper01YMin = cms.double(-60.56), 
-    ScintilUpper01YMax = cms.double(63.0), 
-    
-    ScintilUpper02Z    = cms.double(154.015), 
-    ScintilUpper02XMin = cms.double(-20.0), 
-    ScintilUpper02XMax = cms.double( 20.0), 
-    ScintilUpper02YMin = cms.double(-60.56), 
-    ScintilUpper02YMax = cms.double(63.0), 
-    
-    ScintilUpper03Z    = cms.double(154.015), 
-    ScintilUpper03XMin = cms.double( 20.0), 
-    ScintilUpper03XMax = cms.double( 60.0), 
-    ScintilUpper03YMin = cms.double(-60.56), 
-    ScintilUpper03YMax = cms.double(63.0), 
-    
-    ScintilUpper04Z    = cms.double(154.015), 
-    ScintilUpper04XMin = cms.double( 60.0), 
-    ScintilUpper04XMax = cms.double(100.0), 
-    ScintilUpper04YMin = cms.double(-60.56), 
-    ScintilUpper04YMax = cms.double(63.0), 
-
+                      )
 )
 
 # Path and EndPath definitions
