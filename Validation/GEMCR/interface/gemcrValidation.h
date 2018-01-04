@@ -119,7 +119,7 @@ private:
   MuonServiceProxy* theService;
   CosmicMuonSmoother* theSmoother;
   KFUpdator* theUpdator;
-  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_TI, InputTagToken_TT, InputTagToken_DG, InputTagToken_US;
+  edm::EDGetToken InputTagToken_, InputTagToken_RH, InputTagToken_TR, InputTagToken_TS, InputTagToken_TJ, InputTagToken_TI, InputTagToken_TT, InputTagToken_DG, InputTagToken_US;
   
   //float fScinHPosY, fScinHLeft, fScinHRight, fScinHTop, fScinHBottom;
   //float fScinLPosY, fScinLLeft, fScinLRight, fScinLTop, fScinLBottom;

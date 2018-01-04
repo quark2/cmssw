@@ -44,6 +44,7 @@ gemcrValidation::gemcrValidation(const edm::ParameterSet& cfg): GEMBaseValidatio
   InputTagToken_RH = consumes<GEMRecHitCollection>(cfg.getParameter<edm::InputTag>("recHitsInputLabel"));
   InputTagToken_TR = consumes<vector<reco::Track>>(cfg.getParameter<edm::InputTag>("tracksInputLabel"));
   InputTagToken_TS = consumes<vector<TrajectorySeed>>(cfg.getParameter<edm::InputTag>("seedInputLabel"));
+  InputTagToken_TJ = consumes<vector<Trajectory>>(cfg.getParameter<edm::InputTag>("trajInputLabel"));
   InputTagToken_TI = consumes<vector<int>>(cfg.getParameter<edm::InputTag>("chNoInputLabel"));
   InputTagToken_TT = consumes<vector<unsigned int>>(cfg.getParameter<edm::InputTag>("seedTypeInputLabel"));
   InputTagToken_DG = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("gemDigiLabel"));
@@ -430,15 +431,19 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     return ;
   }
   
+  TString strKeep("");
+  
   float fXGenGP1x = 0.0, fXGenGP1y = 0.0, fXGenGP1z = 0.0;
   float fXGenGP2x = 0.0, fXGenGP2y = 0.0, fXGenGP2z = 0.0;
   
   int nNumCurrFiredCh = 0;
+  HepMC::GenParticle *genMuon = NULL;
   
   if ( isMC ) {
     edm::Handle<edm::HepMCProduct> genVtx;
     e.getByToken( this->InputTagToken_US, genVtx);
-    HepMC::GenParticle *genMuon = genVtx->GetEvent()->barcode_to_particle(1);
+    //HepMC::GenParticle *genMuon = genVtx->GetEvent()->barcode_to_particle(1);
+    genMuon = genVtx->GetEvent()->barcode_to_particle(1);
     
     double dUnitGen = 0.1;
     
@@ -475,8 +480,10 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       Float_t fXGenHitZ = fXGenGP1z + fDiffY * fVecZ;
       //Float_t fXGenHitZ = recHitGP.y();
       
-      //printf("  recHit : %i, (%0.5f, %0.5f, %0.5f) <... (%0.5f, %0.5f, %0.5f)\n", nIdxCh, 
+      //printf("  recHit : %i, RECO : (%0.5f, %0.5f, %0.5f) <... GEN : (%0.5f, %0.5f, %0.5f)\n", nIdxCh + 1, 
       //    recHitGP.x(), recHitGP.z(), recHitGP.y(), fXGenHitX, fXGenHitZ, recHitGP.y());
+      strKeep += TString::Format("  recHit : %i, RECO : (%0.5f, %0.5f, %0.5f) <... GEN : (%0.5f, %0.5f, %0.5f)\n", nIdxCh + 1, 
+        recHitGP.x(), recHitGP.z(), recHitGP.y(), fXGenHitX, fXGenHitZ, recHitGP.y());
       
       //resXSim->Fill(recHitGP.x() - fXGenHitX);
       resXSim->Fill(recHitGP.x() - fXGenHitX);
@@ -488,6 +495,32 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       hitYErr->Fill(recHit->localPositionError().yy());
       
       g_nNumRecHit++;
+    }
+    
+    int nIdxCh = 0;
+    for (auto tch : gemChambers){
+      nIdxCh++;
+      //strKeep = TString("");
+      for (auto etaPart : tch.etaPartitions()){
+        GEMDetId etaPartID = etaPart->id();
+        GEMRecHitCollection::range range = gemRecHits->get(etaPartID);
+        for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit){
+            int nContinueCLS = 0;
+            if ((*rechit).clusterSize()<minCLS) nContinueCLS |= 0x1;
+            if ((*rechit).clusterSize()>maxCLS) nContinueCLS |= 0x2;
+            //if (isMC){if (CLHEP::RandFlat::shoot(engine, 0., 100.) > chamSetEff[countTC-1]) continue;}
+            //GlobalPoint recHitGP = rechit->globalPosition();
+            GlobalPoint recHitGP = GEMGeometry_->idToDet((*rechit).gemId())->surface().toGlobal(rechit->localPosition());
+            
+            Float_t fDiffY = recHitGP.y() - fXGenGP1y;
+            
+            Float_t fXGenHitX = fXGenGP1x + fDiffY * fVecX;
+            Float_t fXGenHitZ = fXGenGP1z + fDiffY * fVecZ;
+            
+            strKeep += TString::Format("  recHit (TCH) : %i (%i), RECO : (%0.5f, %0.5f, %0.5f) <... GEN : (%0.5f, %0.5f, %0.5f)\n", 
+              nIdxCh, nContinueCLS, recHitGP.x(), recHitGP.z(), recHitGP.y(), fXGenHitX, fXGenHitZ, recHitGP.y());
+        }
+      }
     }
     
     aftershots->Fill(fXGenGP1x + 400.0 * fVecX, fXGenGP1z + 400.0 * fVecZ);
@@ -623,6 +656,12 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   edm::Handle<std::vector<TrajectorySeed>> seedGCM;
   e.getByToken( this->InputTagToken_TS, seedGCM);
   
+  edm::Handle<std::vector<Trajectory>> trajGCM;
+  e.getByToken( this->InputTagToken_TJ, trajGCM);
+  
+  edm::Handle<vector<reco::Track>> trackCollection;
+  e.getByToken( this->InputTagToken_TR, trackCollection);
+  
   edm::Handle<std::vector<unsigned int>> seedTypes;
   e.getByToken( this->InputTagToken_TT, seedTypes);
   
@@ -632,7 +671,6 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
   int countTC = 0;
   int nIsTraceGet = 0;
   int nIsLongSeed = 0;
-  //TString strKeep;
   if ( fChMul == 4 ) events_withtraj->Fill(0.5);
   if ( fChMul == 5 ) events_withtraj->Fill(1.5);
   if ( fChMul >= 6 ) events_withtraj->Fill(2.5);
@@ -654,25 +692,42 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
     }
     
     std::vector<int>::const_iterator it1 = idxChTraj->begin();
-    std::vector<unsigned int>::const_iterator it2 = seedTypes->begin();
-    std::vector<TrajectorySeed>::const_iterator it3 = seedGCM->begin();
+    std::vector<TrajectorySeed>::const_iterator it2 = seedGCM->begin();
+    std::vector<Trajectory>::const_iterator it3 = trajGCM->begin();
+    std::vector<reco::Track>::const_iterator it4 = trackCollection->begin();
+    std::vector<unsigned int>::const_iterator it5 = seedTypes->begin();
     
     TrajectorySeed bestSeed;
+    Trajectory bestTraj;
+    reco::Track bestTrack;
     unsigned int unTypeSeed = 0;
     
     for ( ; it1 != idxChTraj->end() ; ) {
       if ( *it1 == countTC - 1 ) {
-        unTypeSeed = *it2;
-        bestSeed = *it3;
+        //bestSeed = *it2;
+        bestTraj = *it3;
+        bestSeed = (*it3).seed();
+        bestTrack = *it4;
+        unTypeSeed = *it5;
         break;
       }
       
       it1++;
       it2++;
       it3++;
+      it4++;
+      it5++;
     }
     
     if ( it1 == idxChTraj->end() ) continue;
+    
+    const FreeTrajectoryState* ftsAtVtx = bestTraj.geometricalInnermostState().freeState();
+    
+    //GlobalPoint trackPCA = ftsAtVtx->position();
+    GlobalVector gvecTrack = ftsAtVtx->momentum();
+    
+    Float_t fSeedP1x = 0.0, fSeedP1y = 0.0, fSeedP1z = 0.0;
+    Float_t fSeedP2x = 0.0, fSeedP2y = 0.0, fSeedP2z = 0.0;
     
     PTrajectoryStateOnDet ptsd1(bestSeed.startingState());
     DetId did(ptsd1.detId());
@@ -691,6 +746,8 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
       if (!tsosCurrent.isValid()) continue;
       Global3DPoint gtrp = tsosCurrent.freeTrajectoryState()->position();
       Local3DPoint tlp = ch.surface().toLocal(gtrp);
+      if ( c == 10 ) {fSeedP1x = gtrp.x(); fSeedP1y = gtrp.y(); fSeedP1z = gtrp.z();}
+      if ( c == 19 ) {fSeedP2x = gtrp.x(); fSeedP2y = gtrp.y(); fSeedP2z = gtrp.z();}
       if (!ch.surface().bounds().inside(tlp)){continue;}
       if (ch==tch){
         int n_roll = ch.nEtaPartitions();
@@ -789,14 +846,59 @@ void gemcrValidation::analyze(const edm::Event& e, const edm::EventSetup& iSetup
             //printf("    recHit : %i, (%0.5f, %0.5f, %0.5f)\n", findIndex(ch.id()), 
             //  tmpRecHit->globalPosition().x(), tmpRecHit->globalPosition().z(), tmpRecHit->globalPosition().y());
             g_nNumMatched++;
-          }/* else {
-            nTestHit = 1;
-            printf("### Yay! ###\n");
-            printf(strKeep.Data());
-          }*/
+          } else {
+            //nTestHit = 1;
+            //printf("### Yay! ###\n");
+            //printf(strKeep.Data());
+            
+            if ( countTC == 18 && mRoll == 2 && vfat == 1 ) {
+              Float_t fVecX, fVecZ;
+              double dUnitGen = 0.1;
+              
+              fVecX = genMuon->momentum().x() / genMuon->momentum().y();
+              fVecZ = genMuon->momentum().z() / genMuon->momentum().y();
+              
+              fXGenGP1x = dUnitGen * genMuon->production_vertex()->position().x();
+              fXGenGP1y = dUnitGen * genMuon->production_vertex()->position().y();
+              fXGenGP1z = dUnitGen * genMuon->production_vertex()->position().z();
+              
+              Float_t fDiffY = gtrp.y() - fXGenGP1y;
+              Float_t fXGenHitX = fXGenGP1x + fDiffY * fVecX;
+              Float_t fXGenHitZ = fXGenGP1z + fDiffY * fVecZ;
+              
+              printf("17_2_roll1_VFAT2 : event no. = %i ; # = %i\n", g_nEvt, (int)testRecHits.size());
+              printf("GEN velocity : (%lf, %lf, 1.0)\n", fVecX, fVecZ);
+              printf(strKeep.Data());
+              
+              printf("reco trj hit : GEN (%lf, %lf, %lf) vs RECO_TRAJ (%lf, %lf, %lf)\n", 
+                fXGenHitX, fXGenHitZ, gtrp.y(), gtrp.x(), gtrp.z(), gtrp.y());
+              
+              for (auto hit : testRecHits){
+                GlobalPoint hitGP = hit->globalPosition();
+                printf("    associated recHits : (%lf, %lf, %lf)\n", 
+                  hitGP.x(), hitGP.z(), hitGP.y());
+              }
+            }
+          }
         }
         continue;
       }
+    }
+    
+    if ( 11 <= countTC && countTC <= 20 ) {
+      Float_t fSeedDiffY = fSeedP2y - fSeedP1y;
+      Float_t fSeedVelX = ( fSeedP2x - fSeedP1x ) / fSeedDiffY;
+      Float_t fSeedVelZ = ( fSeedP2z - fSeedP1z ) / fSeedDiffY;
+      
+      Float_t fTrackVelX = gvecTrack.x() / gvecTrack.y();
+      Float_t fTrackVelZ = gvecTrack.z() / gvecTrack.y();
+      
+      Float_t fGenVecX = genMuon->momentum().x() / genMuon->momentum().y();
+      Float_t fGenVecZ = genMuon->momentum().z() / genMuon->momentum().y();
+      
+      printf("VEL_COMPARE (%i; %i) : GEN (%0.5f, %0.5f), SEED (%0.5f, %0.5f), TRACK (%0.5f, %0.5f)\n", 
+        g_nEvt, countTC, 
+        fGenVecX, fGenVecZ, fSeedVelX, fSeedVelZ, fTrackVelX, fTrackVelZ);
     }
     
     //if ( nTrajRecHit != nTrajHit )

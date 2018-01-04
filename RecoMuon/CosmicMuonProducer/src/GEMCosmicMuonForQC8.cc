@@ -263,6 +263,48 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
       unTypeSeed = 1;
     }
     
+    const FreeTrajectoryState* ftsAtVtx = bestTrajectory.geometricalInnermostState().freeState();
+    
+    GlobalPoint pca = ftsAtVtx->position();
+    math::XYZPoint persistentPCA(pca.x(),pca.y(),pca.z());
+    GlobalVector p = ftsAtVtx->momentum();
+    math::XYZVector persistentMomentum(p.x(),p.y(),p.z());
+    
+    reco::Track track(bestTrajectory.chiSquared(), 
+                      bestTrajectory.ndof(true),
+                      persistentPCA,
+                      persistentMomentum,
+                      ftsAtVtx->charge(),
+                      ftsAtVtx->curvilinearError());
+   
+    // create empty collection of Segments
+    //cout << "GEMCosmicMuon::track " << track.pt() << endl;
+    
+    // reco::TrackExtra tx(track.outerPosition(), track.outerMomentum(), track.outerOk(),
+    // 		      track.innerPosition(), track.innerMomentum(), track.innerOk(),
+    // 		      track.outerStateCovariance(), track.outerDetId(),
+    // 		      track.innerStateCovariance(), track.innerDetId(),
+    // 		      track.seedDirection(), edm::RefToBase<TrajectorySeed>());
+    // 		      //, bestTrajectory.seedRef() );
+    reco::TrackExtra tx;
+    //tx.setResiduals(track.residuals());
+    //adding rec hits
+    Trajectory::RecHitContainer transHits = bestTrajectory.recHits();
+    unsigned int nHitsAdded = 0;
+    for (Trajectory::RecHitContainer::const_iterator recHit = transHits.begin(); recHit != transHits.end(); ++recHit) {
+      TrackingRecHit *singleHit = (**recHit).hit()->clone();
+      trackingRecHitCollection->push_back( singleHit );  
+      ++nHitsAdded;
+    }
+    tx.setHits(recHitCollectionRefProd, recHitsIndex, nHitsAdded);
+    recHitsIndex +=nHitsAdded;
+    
+    trackExtraCollection->push_back(tx );
+    
+    reco::TrackExtraRef trackExtraRef(trackExtraCollectionRefProd, trackExtraIndex++ );
+    track.setExtra(trackExtraRef);
+    trackCollection->push_back(track);
+    
     //trajectoryh->Fill(3,1);
     //gem_chamber_bestChi2[findIndex(tch.id())]->Fill(maxChi2);
     //if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
