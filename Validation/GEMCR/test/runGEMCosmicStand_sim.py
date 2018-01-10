@@ -92,6 +92,8 @@ process.source = cms.Source("EmptySource",
 )
 process.options = cms.untracked.PSet()
 
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
     annotation = cms.untracked.string('CosmicMuonGenerator nevts:100'),

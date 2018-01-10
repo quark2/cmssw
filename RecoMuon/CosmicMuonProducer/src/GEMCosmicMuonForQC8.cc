@@ -34,6 +34,15 @@
 
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 
+#include "RecoMuon/CosmicMuonProducer/interface/HeaderForQC8.h"
+
+  
+std::vector<double> g_vecChamType = {1,3, 0,0, 0,0, 0,0, 4,2, 
+                                     1,3, 0,0, 0,0, 0,0, 4,2, 
+                                     1,3, 0,0, 0,0, 0,0, 4,2};
+ 
+
+
 using namespace std;
 
 class GEMCosmicMuonForQC8 : public edm::stream::EDProducer<> {
@@ -54,11 +63,10 @@ private:
   CosmicMuonSmoother* theSmoother;
   MuonServiceProxy* theService;
   KFUpdator* theUpdator;
-  unique_ptr<std::vector<TrajectorySeed> > findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits);
   int findSeeds(std::vector<TrajectorySeed> *tmptrajectorySeeds, 
     MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, 
     MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, 
-    std::vector<int> &vecnTypeHitsUp, std::vector<int> &vecnTypeHitsDn);
+    std::vector<unsigned int> &vecunInfoSeeds);
   Trajectory makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber);
 };
 
@@ -120,7 +128,7 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
   //n_ch = gemChambers.size();
 
   //vector<const DetLayer*> gemLayers = theMuonLayers->allDTLayers();
-  
+
   // get the collection of GEMRecHit
   edm::Handle<GEMRecHitCollection> gemRecHits;
   ev.getByToken(theGEMRecHitToken,gemRecHits);
@@ -138,10 +146,6 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
   
   //  cout << "GEMCosmicMuonForQC8::gemRecHits " << gemRecHits->size() << endl;
   
-  vector<double> vecChamType = {1,3, 0,0, 0,0, 0,0, 4,2, 
-                                1,3, 0,0, 0,0, 0,0, 4,2, 
-                                1,3, 0,0, 0,0, 0,0, 4,2};
-  
   int countTC = 0;
     
   for (auto tch : gemChambers){
@@ -150,34 +154,27 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
     MuonTransientTrackingRecHit::MuonRecHitContainer seedupRecHits;
     MuonTransientTrackingRecHit::MuonRecHitContainer seeddnRecHits;
     
-    std::vector<int> vecnTypeHitsUp;
-    std::vector<int> vecnTypeHitsDn;
-    
     int nUpType = 2;
     int nDnType = 1;
     
     int nIdxTestCh = tch.id().chamber() + tch.id().layer() - 2;
     //int nColTestCh = nIdxTestCh / 10;
-    int nIsTopBottom = 0;
     
-    //if ( vecChamType[ nIdxTestCh ] == 2 ) {nUpType = 4; nIsTopBottom = 1;}
-    //if ( vecChamType[ nIdxTestCh ] == 1 ) {nDnType = 3; nIsTopBottom = 1;}
-    if ( vecChamType[ nIdxTestCh ] == 2 || vecChamType[ nIdxTestCh ] == 1 ) {
-      nUpType = 4;
-      nDnType = 3;
-      nIsTopBottom = 1;
-    }
+    if ( g_vecChamType[ nIdxTestCh ] == 2 ) {nUpType = 4;}
+    if ( g_vecChamType[ nIdxTestCh ] == 1 ) {nDnType = 3;}
+    //if ( g_vecChamType[ nIdxTestCh ] == 2 || g_vecChamType[ nIdxTestCh ] == 1 ) {
+    //  nUpType = 4;
+    //  nDnType = 3;
+    //}
     
-    int countC = 0;
     int TCN = 0;
     for (auto ch : gemChambers){
-      countC += 1;
       if (tch == ch) continue;
       int nHitOnceFilter = 0;
       for (auto etaPart : ch.etaPartitions()){
         GEMDetId etaPartID = etaPart->id();
         GEMRecHitCollection::range range = gemRecHits->get(etaPartID);   
-        int nRoll = (int)etaPartID.roll();
+        //int nRoll = (int)etaPartID.roll();
         for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit){
           const GeomDet* geomDet(etaPart);
           if ((*rechit).clusterSize()<minCLS) continue;
@@ -190,25 +187,13 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
           }
           
           int nIdxCh = ch.id().chamber() + ch.id().layer() - 2;
+          
+          //if ( nIdxCh / 10 != 1 ) continue;
           //int nColCh = nIdxCh / 10;
-          if ( vecChamType[ nIdxCh ] == nUpType ) {
+          if ( g_vecChamType[ nIdxCh ] == nUpType ) {
             seedupRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
-            if ( nIsTopBottom != 0 && nRoll == 1/* && nColCh == nColTestCh*/ ) {
-              vecnTypeHitsUp.push_back(1);
-            } else if ( nIsTopBottom != 0 && nRoll == 8/* && nColCh == nColTestCh*/ ) {
-              vecnTypeHitsUp.push_back(8);
-            } else {
-              vecnTypeHitsUp.push_back(0);
-            }
-          } else if ( vecChamType[ nIdxCh ] == nDnType ) {
+          } else if ( g_vecChamType[ nIdxCh ] == nDnType ) {
             seeddnRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
-            if ( nIsTopBottom != 0 && nRoll == 1/* && nColCh == nColTestCh*/ ) {
-              vecnTypeHitsDn.push_back(1);
-            } else if ( nIsTopBottom != 0 && nRoll == 8/* && nColCh == nColTestCh*/ ) {
-              vecnTypeHitsDn.push_back(8);
-            } else {
-              vecnTypeHitsDn.push_back(0);
-            }
           }
         }
       }
@@ -221,8 +206,8 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
     //if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(0.5);
     vector<TrajectorySeed> trajSeedsBody;
     std::vector<TrajectorySeed> *trajSeeds = &trajSeedsBody;
-    int nNumNormalSeed;
-    nNumNormalSeed = findSeeds(trajSeeds, seedupRecHits, seeddnRecHits, vecnTypeHitsUp, vecnTypeHitsDn);
+    std::vector<uint32_t> vecunInfoSeeds;
+    findSeeds(trajSeeds, seedupRecHits, seeddnRecHits, vecunInfoSeeds);
     Trajectory bestTrajectory;
     TrajectorySeed bestSeed;
     //trajectoryh->Fill(0, trajSeeds->size());
@@ -255,12 +240,6 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
     //if (maxChi2 > trackChi2) continue;
     if (maxChi2 > trackChi2) {
       continue;
-    }
-    
-    unsigned int unTypeSeed = 0;
-    
-    if ( nIdxBest >= nNumNormalSeed ) {
-      unTypeSeed = 1;
     }
     
     const FreeTrajectoryState* ftsAtVtx = bestTrajectory.geometricalInnermostState().freeState();
@@ -310,8 +289,8 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
     //if ( testRecHits.size() > 0 ) gem_chamber_track[findIndex(tch.id())]->Fill(2.5);
     trajectorys->push_back(bestTrajectory);
     trajectorySeeds->push_back(bestSeed);
-    trajectoryChIdx->push_back(countTC - 1);
-    trajectoryType->push_back(unTypeSeed);
+    trajectoryChIdx->push_back(countTC);
+    trajectoryType->push_back(vecunInfoSeeds[ nIdxBest ]);
   }
   
   // fill the collection
@@ -326,65 +305,14 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup) 
   
 }
 
-unique_ptr<std::vector<TrajectorySeed> > GEMCosmicMuonForQC8::findSeeds(MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits)
-{
-  unique_ptr<std::vector<TrajectorySeed> > trajectorySeeds( new vector<TrajectorySeed>());
-  for (auto hit1 : muRecHits){
-    for (auto hit2 : muRecHits){
-      if (hit1->globalPosition().y() < hit2->globalPosition().y()){
-        LocalPoint segPos = hit1->localPosition();
-        GlobalVector segDirGV(hit2->globalPosition().x() - hit1->globalPosition().x(),
-                              (hit2->globalPosition().y() - hit1->globalPosition().y()),
-                              hit2->globalPosition().z() - hit1->globalPosition().z());
-
-        segDirGV *=10;
-        LocalVector segDir = hit1->det()->toLocal(segDirGV);
-  
-        int charge= 1;
-        LocalTrajectoryParameters param(segPos, segDir, charge);
-  
-        AlgebraicSymMatrix mat(5,0);
-        mat = hit1->parametersError().similarityT( hit1->projectionMatrix() );
-        //float p_err = 0.2;
-        //mat[0][0]= p_err;
-        LocalTrajectoryError error(asSMatrix<5>(mat));
-
-        // get first hit
-        TrajectoryStateOnSurface tsos(param, error, hit1->det()->surface(), &*theService->magneticField());
-        //cout << "GEMCosmicMuonForQC8::tsos " << tsos << endl;
-        uint32_t id = hit1->rawId();
-           PTrajectoryStateOnDet const & seedTSOS = trajectoryStateTransform::persistentState(tsos, id);
-        
-        edm::OwnVector<TrackingRecHit> seedHits;
-        seedHits.push_back(hit1->hit()->clone());
-        seedHits.push_back(hit2->hit()->clone());
-
-        TrajectorySeed seed(seedTSOS,seedHits,alongMomentum);
-        trajectorySeeds->push_back(seed);
-      }
-    }
-  }
-  
-  return trajectorySeeds;
-}
-
 
 int GEMCosmicMuonForQC8::findSeeds(std::vector<TrajectorySeed> *tmptrajectorySeeds, 
     MuonTransientTrackingRecHit::MuonRecHitContainer &seedupRecHits, 
     MuonTransientTrackingRecHit::MuonRecHitContainer &seeddnRecHits, 
-    std::vector<int> &vecnTypeHitsUp, std::vector<int> &vecnTypeHitsDn)
+    std::vector<unsigned int> &vecunInfoSeeds)
 {
-  std::vector<TrajectorySeed> tmptrajectorySeedsEdgeEta;
-  
-  int nIdxHitUp, nIdxHitDn;
-  
-  nIdxHitDn = -1;
-  
   for (auto hit1 : seeddnRecHits){
-    nIdxHitDn++;
-    nIdxHitUp = -1;
     for (auto hit2 : seedupRecHits){
-      nIdxHitUp++;
       if (hit1->globalPosition().y() < hit2->globalPosition().y()) {
         LocalPoint segPos = hit1->localPosition();
         GlobalVector segDirGV(hit2->globalPosition().x() - hit1->globalPosition().x(),
@@ -412,56 +340,34 @@ int GEMCosmicMuonForQC8::findSeeds(std::vector<TrajectorySeed> *tmptrajectorySee
 
         TrajectorySeed seed(seedTSOS,seedHits,alongMomentum);
         
-        if ( ( vecnTypeHitsUp[ nIdxHitUp ] == 1 && vecnTypeHitsDn[ nIdxHitDn ] == 1 ) || 
-            ( vecnTypeHitsUp[ nIdxHitUp ] == 8 && vecnTypeHitsDn[ nIdxHitDn ] == 8 ) )
-        {
-          tmptrajectorySeedsEdgeEta.push_back(seed);
-        } else {
-          tmptrajectorySeeds->push_back(seed);
+        uint32_t unInfoSeeds = 0;
+        
+        GEMDetId detId1(hit1->rawId()), detId2(hit2->rawId());
+        uint32_t unChNo1 = detId1.chamber(), unChNo2 = detId2.chamber();
+        uint32_t unRoll1 = detId1.roll(), unRoll2 = detId2.roll();
+        
+        int32_t nCol1 = (int)( ( unChNo1 - 1 ) / 10 );
+        int32_t nCol2 = (int)( ( unChNo2 - 1 ) / 10 );
+        int32_t nDiffCol = abs(nCol1 - nCol2);
+        
+        if ( nDiffCol == 1 ) unInfoSeeds |= QC8FLAG_SEEDINFO_DIFFCOL1;
+        else if ( nDiffCol == 2 ) unInfoSeeds |= QC8FLAG_SEEDINFO_DIFFCOL2;
+        
+        uint32_t unIsForRef = ( g_vecChamType[ unChNo1 - 1 ] == 3 || g_vecChamType[ unChNo2 - 1 ] == 4 ? 1 : 0 );
+        //( g_vecChamType[ unChNo1 - 1 ] == 4 && g_vecChamType[ unChNo2 - 1 ] == 3 ? 1 : 0 );
+        
+        if ( unIsForRef == 1 && ( ( unRoll1 == 1 && unRoll2 == 1 ) || ( unRoll1 == 8 && unRoll2 == 8 ) ) ) {
+          unInfoSeeds |= QC8FLAG_SEEDINFO_REFVERTROLL18;
         }
+        
+        tmptrajectorySeeds->push_back(seed);
+        vecunInfoSeeds.push_back(unInfoSeeds);
       }
     }
   }
   
-  int nSizeNormalSeed = (int)tmptrajectorySeeds->size();
-  
-  for ( auto seedEdgeEta : tmptrajectorySeedsEdgeEta ) {
-    tmptrajectorySeeds->push_back(seedEdgeEta);
-  }
-  return nSizeNormalSeed;
+  return 0;
 }
-
-
-/*float gemcrValidation::CalcWindowWidthX(GPSeed *pVecSeed, GlobalPoint *pPCurr) {
-  if ( 1 != 1 ) {
-    return 5.0;
-  }
-  
-  float fDev = trackResX * MulSigmaOnWindow;
-  
-  float fYCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
-  float fYDiffSeed = pVecSeed->P2.y() - fYCenterSeed;
-  float fYDiffHit = pPCurr->y() - fYCenterSeed;
-  
-  //printf("%lf\n", abs(fYDiffHit / fYDiffSeed));
-  return max(fDev * abs(fYDiffHit / fYDiffSeed), fDev);
-}
-
-
-float gemcrValidation::CalcWindowWidthY(GPSeed *pVecSeed, GlobalPoint *pPCurr) { // Y : local
-  if ( 1 != 1 ) {
-    return 5.0;
-  }
-  
-  float fDev = trackResY * MulSigmaOnWindow;
-  
-  float fYCenterSeed = 0.5 * ( pVecSeed->P1.y() + pVecSeed->P2.y() );
-  float fYDiffSeed = pVecSeed->P2.y() - fYCenterSeed;
-  float fYDiffHit = pPCurr->y() - fYCenterSeed;
-  
-  //printf("%lf\n", abs(fYDiffHit / fYDiffSeed));
-  return max(fDev * abs(fYDiffHit / fYDiffSeed), fDev);
-}*/
 
 
 Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber)
@@ -475,7 +381,8 @@ Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransien
   for (auto ch : gemChambers){
     //if (ch == testChamber) continue;
     std::shared_ptr<MuonTransientTrackingRecHit> tmpRecHit;
-    tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,ch.surface());
+    tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent,
+      theService->trackingGeometry()->idToDet(ch.id())->surface());
     if (!tsosCurrent.isValid()) return Trajectory();
     GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
     float maxR = 9999;
@@ -484,10 +391,10 @@ Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransien
       if (hitID.chamberId() == ch.id() ){
         GlobalPoint hitGP = hit->globalPosition();
 
-        //double y_err = hit->localPositionError().yy();
+        double y_err = hit->localPositionError().yy();
         //double x_err = hit->localPositionError().xx();
         if (abs(hitGP.x() - tsosGP.x()) > trackResX * MulSigmaOnWindow) continue;
-        if (abs(hitGP.z() - tsosGP.z()) > trackResY * MulSigmaOnWindow * hit->localPositionError().yy() ) continue; // global z, local y
+        if (abs(hitGP.z() - tsosGP.z()) > trackResY * MulSigmaOnWindow * y_err ) continue; // global z, local y
         //if (abs(hitGP.z() - tsosGP.z()) > y_err*trackResY) continue;
         float deltaR = (hitGP - tsosGP).mag();
         if (maxR > deltaR){
@@ -499,12 +406,14 @@ Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransien
     if (tmpRecHit){
       //tsosCurrent = theUpdator->update(tsosCurrent, *tmpRecHit);
       consRecHits.push_back(tmpRecHit);
-      //GlobalPoint recHitGP = GEMGeometry_->idToDet((*tmpRecHit).rawId())->surface().toGlobal(tmpRecHit->localPosition());
     }
   }
   if (consRecHits.size() <3) return Trajectory();
   vector<Trajectory> fitted = theSmoother->trajectories(seed, consRecHits, tsos);
   if ( fitted.size() <= 0 ) return Trajectory();
+  
+  
+  
   return fitted.front();
 }
 

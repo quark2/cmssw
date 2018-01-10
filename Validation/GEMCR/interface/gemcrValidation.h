@@ -104,10 +104,13 @@ private:
   MonitorElement* scinUpperRecHit;
   MonitorElement* scinLowerRecHit;
   MonitorElement* resXSim;
+  MonitorElement* resXByErrSim;
   MonitorElement* resYByErrSim;
   MonitorElement* hitXErr;
   MonitorElement* hitYErr;
   MonitorElement* aftershots;
+  MonitorElement* projtheta_dist_sim;
+  MonitorElement* projtheta_dist_edge_sim;
   //MonitorElement* diffTrajGenRec;
   
 

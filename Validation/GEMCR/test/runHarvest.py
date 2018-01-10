@@ -40,11 +40,18 @@ if len(sys.argv) >= 3:
   process.source.fileNames.pop()
   
   strDir = sys.argv[ 2 ]
-  listSrc = os.listdir(strDir)
+  listSrcOrg = os.listdir(strDir)
+  listSrc = []
+  listSrcSort = []
   
-  for strSrc in listSrc:
+  for strSrc in listSrcOrg:
     if ".root" not in strSrc: continue
     if ".root_asdf" in strSrc: continue
+    
+    listSrc.append(strSrc)
+  
+  listSrcSort = sorted(listSrc, key = lambda strSrc: int(strSrc.split("_")[ -1 ].split(".")[ 0 ]))
+  for strSrc in listSrcSort:
     process.source.fileNames.append("file:" + strDir + "/" + strSrc)
 
 process.options = cms.untracked.PSet(
