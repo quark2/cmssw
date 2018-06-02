@@ -18,10 +18,12 @@ class GEMMaskReClusterizer
 {
  public :
 
-   GEMMaskReClusterizer();
-   ~GEMMaskReClusterizer();
-   GEMClusterContainer doAction(const GEMDetId& ,GEMClusterContainer& , const EtaPartitionMask& );
-   int get(const EtaPartitionMask& ,int );
+   GEMMaskReClusterizer() {};
+   ~GEMMaskReClusterizer() {};
+   //GEMClusterContainer doAction(const GEMDetId& ,GEMClusterContainer& , const EtaPartitionMask& );
+   //int get(const EtaPartitionMask& ,int );
+   GEMClusterContainer doAction(const GEMDetId& ,GEMClusterContainer& , const EtaPartitionMask& ) const;
+   bool get(const EtaPartitionMask& ,int ) const;
 
 };
 
