@@ -10,14 +10,14 @@
 class GEMCluster;
 class GEMClusterizer{
  public:
-  GEMClusterizer();
-  ~GEMClusterizer();
+  GEMClusterizer() {};
+  ~GEMClusterizer() {};
   GEMClusterContainer doAction(const GEMDigiCollection::Range& digiRange);
 
- private:
-  GEMClusterContainer doActualAction(GEMClusterContainer& initialclusters);
+ //private:
+ // GEMClusterContainer doActualAction(GEMClusterContainer& initialclusters);
 
- private:
-  GEMClusterContainer cls;
+ //private:
+ // GEMClusterContainer cls;
 };
 #endif
