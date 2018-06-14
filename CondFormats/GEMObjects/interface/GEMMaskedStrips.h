@@ -9,7 +9,7 @@ class GEMMaskedStrips {
 
  public:
   struct MaskItem {
-    int rawId;
+    uint32_t rawId;
     int strip;
     COND_SERIALIZABLE;
   };

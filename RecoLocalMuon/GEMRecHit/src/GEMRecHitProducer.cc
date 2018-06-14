@@ -5,7 +5,6 @@
 
 #include "GEMRecHitProducer.h"
 
-
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -210,9 +209,8 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
     // Getting the roll mask, that includes dead strips, for the given GEMDet
     EtaPartitionMask mask;
-    int rawId = gemId.rawId();
+    uint32_t rawId = gemId.rawId();
     int Size = GEMMaskedStripsObj->getMaskVec().size();
-    printf("  %X (%i)\n", gemId.rawId(), gemId.rawId());
     for (int i = 0; i < Size; i++ ) {
       if ( ( GEMMaskedStripsObj->getMaskVec() )[i].rawId == rawId ) {
         int bit = ( GEMMaskedStripsObj->getMaskVec() )[i].strip;

@@ -9,7 +9,7 @@ class GEMDeadStrips {
 
  public:
   struct DeadItem {
-    int rawId;
+    uint32_t rawId;
     int strip;  
     COND_SERIALIZABLE;
   };
