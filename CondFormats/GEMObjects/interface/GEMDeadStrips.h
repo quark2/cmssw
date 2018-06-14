@@ -19,7 +19,7 @@ class GEMDeadStrips {
 
   std::vector<DeadItem> const & getDeadVec() const {return deadVec_;}
 
- private:
+ public:
   std::vector<DeadItem> deadVec_;
 
   COND_SERIALIZABLE;

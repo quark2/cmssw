@@ -82,7 +82,8 @@ if (options.process!=""):
 #process = cms.Process(pname, eras.Run2_2017, eras.run2_GEM_2017)
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.Run2_2017,eras.run2_GEM_2017)
+#process = cms.Process('RECO',eras.Run2_2017,eras.run2_GEM_2017)
+process = cms.Process('RECO2',eras.Run2_2017,eras.run2_GEM_2017)
 
 process.load('Configuration.StandardSequences.L1Reco_cff')
 process.load('Configuration.StandardSequences.Reconstruction_cff')
@@ -167,9 +168,35 @@ process.dumpRaw = cms.EDAnalyzer(
 
 # raw to digi
 process.load('EventFilter.GEMRawToDigi.muonGEMDigis_cfi')
-process.load('EventFilter.GEMRawToDigi.GEMSQLiteCabling_cfi')
+#process.load('EventFilter.GEMRawToDigi.GEMSQLiteCabling_cfi')
 process.muonGEMDigis.InputLabel = cms.InputTag('rawDataCollector')
 process.muonGEMDigis.useDBEMap = True
+
+from CondCore.CondDB.CondDB_cfi import *
+CondDB.DBParameters.authenticationPath = cms.untracked.string('/afs/cern.ch/cms/DB/conddb')
+CondDB.connect = cms.string('sqlite_fip:RecoLocalMuon/GEMRecHit/data/GEMMaskedStrip.db')
+
+process.GEMCablingMasked = cms.ESSource("PoolDBESSource",
+    CondDB,
+    toGet = cms.VPSet(
+      cms.PSet(
+        record = cms.string('GEMMaskedStripsRcd'),
+        tag = cms.string('GEMMaskedStrip_v1')
+      )
+    ),
+)
+
+CondDB2 = CondDB.clone(connect = cms.string('sqlite_fip:RecoLocalMuon/GEMRecHit/data/GEMDeadStrip.db'))
+
+process.GEMCablingDead = cms.ESSource("PoolDBESSource",
+    CondDB2,
+    toGet = cms.VPSet(
+      cms.PSet(
+        record = cms.string('GEMDeadStripsRcd'),
+        tag = cms.string('GEMDeadStrip_v1')
+      )
+    ),
+)
 
 #process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')
 process.load('RecoLocalMuon.GEMRecHit.gemRecHits_cfi')
@@ -178,18 +205,19 @@ process.gemRecHits = cms.EDProducer("GEMRecHitProducer",
     recAlgoConfig = cms.PSet(),
     recAlgo = cms.string('GEMRecHitStandardAlgo'),
     gemDigiLabel = cms.InputTag("muonGEMDigis"),
-    # maskSource = cms.string('File'),
-    # maskvecfile = cms.FileInPath('RecoLocalMuon/GEMRecHit/data/GEMMaskVec.dat'),
-    # deadSource = cms.string('File'),
-    # deadvecfile = cms.FileInPath('RecoLocalMuon/GEMRecHit/data/GEMDeadVec.dat')
+    maskSource = cms.string('EventSetup'),
+    maskvecfile = cms.FileInPath('RecoLocalMuon/GEMRecHit/data/GEMMaskVec.dat'),
+    deadSource = cms.string('EventSetup'),
+    deadvecfile = cms.FileInPath('RecoLocalMuon/GEMRecHit/data/GEMDeadVec.dat')
 )
 
 
 # Path and EndPath definitions
 process.path = cms.Path(
     #process.validationEventFilter
-    process.dumpRaw
-    +process.muonGEMDigis
+    #process.dumpRaw
+    #+process.muonGEMDigis
+    process.muonGEMDigis
     +process.gemRecHits
 )
 
@@ -213,9 +241,12 @@ if (options.edm):
         SelectEvents = cms.untracked.PSet(
             SelectEvents = cms.vstring('path')
         ),
-        fileName = cms.untracked.string('gem_EDM.root')
+        #fileName = cms.untracked.string('gem_EDM.root')
+        fileName = cms.untracked.string('gem2_%s_%i.root'%(options.inputFiles[ 0 ], options.maxEvents))
     )
 
     process.out = cms.EndPath(
         process.output
     )
+
+process.MessageLogger.cerr.FwkReport.reportEvery = 5000000

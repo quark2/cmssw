@@ -19,7 +19,7 @@ class GEMMaskedStrips {
 
   std::vector<MaskItem> const & getMaskVec() const {return maskVec_;}
 
- private:
+ public:
   std::vector<MaskItem> maskVec_;
 
   COND_SERIALIZABLE;

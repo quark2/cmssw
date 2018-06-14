@@ -22,16 +22,22 @@
 #include "RecoLocalMuon/GEMRecHit/interface/GEMRecHitAlgoFactory.h"
 #include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
 
-// #include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
-// #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
-// #include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
+#include "CondFormats/DataRecord/interface/GEMMaskedStripsRcd.h"
+#include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
+#include "CondFormats/DataRecord/interface/GEMDeadStripsRcd.h"
+
+#include "FWCore/Utilities/interface/typelookup.h"
 
 #include <string>
 
 
 using namespace edm;
 using namespace std;
+
+
+TYPELOOKUP_DATA_REG(GEMMaskedStrips);
+TYPELOOKUP_DATA_REG(GEMDeadStrips);
 
 
 GEMRecHitProducer::GEMRecHitProducer(const ParameterSet& config){
@@ -46,11 +52,11 @@ GEMRecHitProducer::GEMRecHitProducer(const ParameterSet& config){
 
   string theAlgoName = config.getParameter<string>("recAlgo");
   theAlgo = GEMRecHitAlgoFactory::get()->create(theAlgoName,
-						config.getParameter<ParameterSet>("recAlgoConfig"));
+    config.getParameter<ParameterSet>("recAlgoConfig"));
 
   // Get masked- and dead-strip information
 
-  /* GEMMaskedStripsObj = new GEMMaskedStrips();
+  GEMMaskedStripsObj = new GEMMaskedStrips();
 
   GEMDeadStripsObj = new GEMDeadStrips();
 
@@ -87,15 +93,16 @@ GEMRecHitProducer::GEMRecHitProducer(const ParameterSet& config){
     }
     inputFile.close();
   }
-  */
 }
 
 
+int g_nEvtHit = 0;
 GEMRecHitProducer::~GEMRecHitProducer(){
+  printf("Final : %i\n", g_nEvtHit);
 
   delete theAlgo;
-  // delete GEMMaskedStripsObj;
-  // delete GEMDeadStripsObj;
+  delete GEMMaskedStripsObj;
+  delete GEMDeadStripsObj;
 
 }
 
@@ -104,13 +111,12 @@ GEMRecHitProducer::~GEMRecHitProducer(){
 void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup){
 
   // Getting the masked-strip information
-  /*
   if ( maskSource == "EventSetup" ) {
     edm::ESHandle<GEMMaskedStrips> readoutMaskedStrips;
     setup.get<GEMMaskedStripsRcd>().get(readoutMaskedStrips);
     const GEMMaskedStrips* tmp_obj = readoutMaskedStrips.product();
-    GEMMaskedStripsObj->MaskVec = tmp_obj->MaskVec;
-    delete tmp_obj;
+    GEMMaskedStripsObj->maskVec_ = tmp_obj->maskVec_;
+    //delete tmp_obj; // IT YIELDS DOUBLE UNALLOCATION
   }
   else if ( maskSource == "File" ) {
     std::vector<GEMMaskedStrips::MaskItem>::iterator posVec;
@@ -118,18 +124,16 @@ void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup
       GEMMaskedStrips::MaskItem Item; 
       Item.rawId = (*posVec).rawId;
       Item.strip = (*posVec).strip;
-      GEMMaskedStripsObj->MaskVec.push_back(Item);
+      GEMMaskedStripsObj->maskVec_.push_back(Item);
     }
   }
-  */
   // Getting the dead-strip information
-  /*
   if ( deadSource == "EventSetup" ) {
     edm::ESHandle<GEMDeadStrips> readoutDeadStrips;
     setup.get<GEMDeadStripsRcd>().get(readoutDeadStrips);
     const GEMDeadStrips* tmp_obj = readoutDeadStrips.product();
-    GEMDeadStripsObj->DeadVec = tmp_obj->DeadVec;
-    delete tmp_obj;
+    GEMDeadStripsObj->deadVec_ = tmp_obj->deadVec_;
+    //delete tmp_obj; // IT YIELDS DOUBLE UNALLOCATION
   }
   else if ( deadSource == "File" ) {
     std::vector<GEMDeadStrips::DeadItem>::iterator posVec;
@@ -137,15 +141,16 @@ void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup
       GEMDeadStrips::DeadItem Item;
       Item.rawId = (*posVec).rawId;
       Item.strip = (*posVec).strip;
-      GEMDeadStripsObj->DeadVec.push_back(Item);
+      GEMDeadStripsObj->deadVec_.push_back(Item);
     }
   }
-  */
 }
 
 
 
+int g_nEvt = 0;
 void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
+  g_nEvt++;
 
   // Get the GEM Geometry
 
@@ -167,9 +172,31 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
   // Iterate through all digi collections ordered by LayerId   
 
+  if ( g_nEvt == 1 ) {
+    printf("MaskedStrips in DB START\n");
+    for ( int i = 0 ; i < (int)GEMMaskedStripsObj->getMaskVec().size() ; i++ ) {
+      printf("%i %i\n", 
+        GEMMaskedStripsObj->getMaskVec()[ i ].rawId, 
+        GEMMaskedStripsObj->getMaskVec()[ i ].strip);
+    }
+    printf("MaskedStrips in DB END\n");
+    
+    printf("DeadStrips in DB START\n");
+    for ( int i = 0 ; i < (int)GEMDeadStripsObj->getDeadVec().size() ; i++ ) {
+      printf("%i %i\n", 
+        GEMDeadStripsObj->getDeadVec()[ i ].rawId, 
+        GEMDeadStripsObj->getDeadVec()[ i ].strip);
+    }
+    printf("DeadStrips in DB END\n");
+  }
+
   GEMDigiCollection::DigiRangeIterator gemdgIt;
+  if ( digis->begin() != digis->end() ) printf("%i : OK\n", g_nEvt);
+  if ( digis->begin() != digis->end() ) g_nEvtHit++;
+  int nN = 0;
   for (gemdgIt = digis->begin(); gemdgIt != digis->end();
        ++gemdgIt){
+    nN++;
        
     // The layerId
     const GEMDetId& gemId = (*gemdgIt).first;
@@ -183,32 +210,40 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
     // Getting the roll mask, that includes dead strips, for the given GEMDet
     EtaPartitionMask mask;
-    /*
     int rawId = gemId.rawId();
-    int Size = GEMMaskedStripsObj->MaskVec.size();
+    int Size = GEMMaskedStripsObj->getMaskVec().size();
+    printf("  %X (%i)\n", gemId.rawId(), gemId.rawId());
     for (int i = 0; i < Size; i++ ) {
-      if ( GEMMaskedStripsObj->MaskVec[i].rawId == rawId ) {
-	int bit = GEMMaskedStripsObj->MaskVec[i].strip;
-	mask.set(bit-1);
+      if ( ( GEMMaskedStripsObj->getMaskVec() )[i].rawId == rawId ) {
+        int bit = ( GEMMaskedStripsObj->getMaskVec() )[i].strip;
+        mask.set(bit-1);
       }
     }
 
-    Size = GEMDeadStripsObj->DeadVec.size();
+    Size = GEMDeadStripsObj->getDeadVec().size();
     for (int i = 0; i < Size; i++ ) {
-      if ( GEMDeadStripsObj->DeadVec[i].rawId == rawId ) {
-	int bit = GEMDeadStripsObj->DeadVec[i].strip;
-	mask.set(bit-1);
+      if ( ( GEMDeadStripsObj->getDeadVec() )[i].rawId == rawId ) {
+        int bit = ( GEMDeadStripsObj->getDeadVec() )[i].strip;
+        mask.set(bit-1);
       }
     }
-    */
     // Call the reconstruction algorithm    
 
     OwnVector<GEMRecHit> recHits =
       theAlgo->reconstruct(*roll, gemId, range, mask);
+    if ( recHits.size() > 0 ) printf("  I have %i\n", (int)recHits.size());
+    
+    // Test (start)
+    for ( int i = 0 ; i < (int)recHits.size() ; i++ ) {
+      printf("    (%i ~ %i)\n", recHits[ i ].firstClusterStrip(), 
+        recHits[ i ].firstClusterStrip() + recHits[ i ].clusterSize() - 1);
+    }
+    // Test (end)
     
     if(!recHits.empty()) //FIXME: is it really needed?
       recHitCollection->put(gemId, recHits.begin(), recHits.end());
   }
+  if ( digis->begin() != digis->end() ) printf("  nDigi = %i\n", nN);
 
   event.put(std::move(recHitCollection));
 
