@@ -83,6 +83,21 @@ def L1NtupleEMU(process):
 
     return process
 
+# Configuration for pixel study
+def L1NtuplePiXTRK(process):
+
+    L1NtupleTFileOut(process)
+
+    process.load('L1Trigger.L1TNtuples.L1NtuplePiXTRK_cff')
+    process.l1ntuplepixtrk = cms.Path(
+        process.L1NtuplePiXTRK
+    )
+
+    process.schedule.append(process.l1ntuplepixtrk)
+
+    return process
+
+
 def L1NtupleEMULegacy(process):
 
     L1NtupleTFileOut(process)

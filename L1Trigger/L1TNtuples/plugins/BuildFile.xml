@@ -46,6 +46,31 @@
 <use name="PhysicsTools/Utilities"/>
 <use name="HLTrigger/HLTcore"/>
 <use name="L1Trigger/L1TNtuples"/>
+
+<use name="DataFormats/Phase2L1CaloTrig"/>
+<use name="SimDataFormats/GeneratorProducts"/>
+<use name="hepmc"/>
+<use name="heppdt"/>
+<use name="FastSimulation/Particle"/>
+<use name="FastSimulation/BaseParticlePropagator"/>
+<use name="FastSimulation/CaloGeometryTools"/>
+<use name="Geometry/CaloGeometry"/>
+<use name="RecoLocalCalo/HGCalRecProducers"/>
+<use name="RecoLocalCalo/HGCalRecAlgos"/>
+<use name="DataFormats/HGCDigi"/>
+<use name="DataFormats/HGCRecHit"/>
+<use name="Geometry/HGCalGeometry"/>
+<use name="Geometry/CaloTopology"/>
+<use name="Geometry/Records"/>
+<use name="DataFormats/L1THGCal"/>
+<use name="L1Trigger/L1THGCal"/>
+<use name="SimG4CMS/Calo"/>
+<use name="geant4core"/>
+<use name="L1Trigger/TrackFindingTracklet"/>
+<use name="DataFormats/L1TrackTrigger"/>
+<use name="L1Trigger/TrackTrigger"/>
+<use name="L1Trigger/L1CaloTrigger"/>
+<use name="SimTracker/TrackTriggerAssociation"/>
 <library   file="*.cc" name="L1TriggerL1TNtuplePlugins">
   <flags   EDM_PLUGIN="1"/>
 </library>

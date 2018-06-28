@@ -20,7 +20,8 @@ namespace l1slhc
       L1EGCrystalCluster(const PolarLorentzVector& p4, float calibratedPt, float hovere, float iso, DetId seedCrystal, 
             float PUcorrPt = 0., float bremStrength = 0., float e2x2 = 0., float e2x5 = 0.,
             float e3x5 = 0., float e5x5 = 0., bool standaloneWP = false, bool electronWP98 = false, bool photonWP80 = false,
-            bool electronWP90 = false, bool looseL1TkMatchWP = false, bool stage2effMatch = false ) :
+            //bool electronWP90 = false, bool looseL1TkMatchWP = false, bool stage2effMatch = false ) :
+            bool electronWP90 = false, bool looseL1TkMatchWP = false, bool stage2effMatch = false, GlobalVector gp_weightedPosition = GlobalVector(0., 0., 0.) ) : // add global position
                     l1t::L1Candidate(p4), calibratedPt_(calibratedPt), hovere_(hovere), iso_(iso), seedCrystal_(seedCrystal),
                     PUcorrPt_(PUcorrPt), bremStrength_(bremStrength), e2x2_(e2x2), e2x5_(e2x5),
                     e3x5_(e3x5), e5x5_(e5x5), standaloneWP_(standaloneWP), electronWP98_(electronWP98), photonWP80_(photonWP80),
@@ -53,6 +54,8 @@ namespace l1slhc
       inline float electronWP90() const { return electronWP90_; };
       inline float looseL1TkMatchWP() const { return looseL1TkMatchWP_; };
       inline float stage2effMatch() const { return stage2effMatch_; };
+
+      inline GlobalVector position() const { return gp_weightedPosition_;};
 
       // The index range depends on the algorithm eta,phi window, currently 3x5
       // The pt should always be ordered.
@@ -97,6 +100,10 @@ namespace l1slhc
       std::vector<float> crystalPt_;
       // For investigating novel algorithm parameters
       std::map<std::string, float> experimentalParams_;
+
+
+      // global position of weighted position
+      GlobalVector gp_weightedPosition_;
   };
   
   
