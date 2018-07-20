@@ -11,6 +11,7 @@
 #include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
 #include "SimDataFormats/TrackerDigiSimLink/interface/StripDigiSimLink.h"
 #include "SimDataFormats/GEMDigiSimLink/interface/GEMDigiSimLink.h"
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
 
 #include <string>
 
@@ -40,6 +41,8 @@ private:
   
   std::string digiModelString_;
   GEMDigiModel* gemDigiModel_;
+  
+  std::vector<GEMMaskedStrips::MaskItem> MaskVec;
 };
 
 #endif

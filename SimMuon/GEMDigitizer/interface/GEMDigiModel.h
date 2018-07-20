@@ -17,6 +17,7 @@
 #include "SimDataFormats/TrackerDigiSimLink/interface/StripDigiSimLink.h"
 #include "SimDataFormats/GEMDigiSimLink/interface/GEMDigiSimLink.h"
 #include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
 
 #include <map>
 #include <set>
@@ -49,7 +50,7 @@ public:
   virtual std::vector<std::pair<int,int> > 
     simulateClustering(const GEMEtaPartition*, const PSimHit*, const int, CLHEP::HepRandomEngine* engine) = 0;
 
-  void fillDigis(int rollDetId, GEMDigiCollection&);
+  void fillDigis(int rollDetId, GEMDigiCollection& digis, std::vector<GEMMaskedStrips::MaskItem> &MaskVec);
 
   virtual void setup() = 0;
 

@@ -95,9 +95,7 @@ GEMRecHitProducer::GEMRecHitProducer(const ParameterSet& config){
 }
 
 
-int g_nEvtHit = 0;
 GEMRecHitProducer::~GEMRecHitProducer(){
-  printf("Final : %i\n", g_nEvtHit);
 
   delete theAlgo;
   delete GEMMaskedStripsObj;
@@ -147,9 +145,7 @@ void GEMRecHitProducer::beginRun(const edm::Run& r, const edm::EventSetup& setup
 
 
 
-int g_nEvt = 0;
 void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
-  g_nEvt++;
 
   // Get the GEM Geometry
 
@@ -171,31 +167,9 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
   // Iterate through all digi collections ordered by LayerId   
 
-  if ( g_nEvt == 1 ) {
-    printf("MaskedStrips in DB START\n");
-    for ( int i = 0 ; i < (int)GEMMaskedStripsObj->getMaskVec().size() ; i++ ) {
-      printf("%i %i\n", 
-        GEMMaskedStripsObj->getMaskVec()[ i ].rawId, 
-        GEMMaskedStripsObj->getMaskVec()[ i ].strip);
-    }
-    printf("MaskedStrips in DB END\n");
-    
-    printf("DeadStrips in DB START\n");
-    for ( int i = 0 ; i < (int)GEMDeadStripsObj->getDeadVec().size() ; i++ ) {
-      printf("%i %i\n", 
-        GEMDeadStripsObj->getDeadVec()[ i ].rawId, 
-        GEMDeadStripsObj->getDeadVec()[ i ].strip);
-    }
-    printf("DeadStrips in DB END\n");
-  }
-
   GEMDigiCollection::DigiRangeIterator gemdgIt;
-  if ( digis->begin() != digis->end() ) printf("%i : OK\n", g_nEvt);
-  if ( digis->begin() != digis->end() ) g_nEvtHit++;
-  int nN = 0;
   for (gemdgIt = digis->begin(); gemdgIt != digis->end();
        ++gemdgIt){
-    nN++;
        
     // The layerId
     const GEMDetId& gemId = (*gemdgIt).first;
@@ -229,19 +203,10 @@ void GEMRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
     OwnVector<GEMRecHit> recHits =
       theAlgo->reconstruct(*roll, gemId, range, mask);
-    if ( recHits.size() > 0 ) printf("  I have %i\n", (int)recHits.size());
-    
-    // Test (start)
-    for ( int i = 0 ; i < (int)recHits.size() ; i++ ) {
-      printf("    (%i ~ %i)\n", recHits[ i ].firstClusterStrip(), 
-        recHits[ i ].firstClusterStrip() + recHits[ i ].clusterSize() - 1);
-    }
-    // Test (end)
     
     if(!recHits.empty()) //FIXME: is it really needed?
       recHitCollection->put(gemId, recHits.begin(), recHits.end());
   }
-  if ( digis->begin() != digis->end() ) printf("  nDigi = %i\n", nN);
 
   event.put(std::move(recHitCollection));
 

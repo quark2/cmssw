@@ -17,10 +17,13 @@
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
 
+#include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
+
 #include <sstream>
 #include <string>
 #include <map>
 #include <vector>
+#include <fstream>
 
 namespace CLHEP {
   class HepRandomEngine;
@@ -46,6 +49,19 @@ GEMDigiProducer::GEMDigiProducer(const edm::ParameterSet& ps)
   std::string collection_(ps.getParameter<std::string>("inputCollection"));
 
   cf_token = consumes<CrossingFrame<PSimHit> >(edm::InputTag(mix_, collection_));
+  
+  std::string strPath = "/cms/ldap_home/quark2930/Work/sw/dqm/maskedstrips_digitest_1020pre3/src/RecoLocalMuon/GEMRecHit/data/GEMDeadVec.dat";
+  std::ifstream inputFile(strPath, std::ios::in);
+  if ( !inputFile ) {
+    std::cerr << "Masked Strips File cannot not be opened" << std::endl;
+    exit(1);
+  }
+  while ( inputFile.good() ) {
+    GEMMaskedStrips::MaskItem Item;
+    inputFile >> Item.rawId >> Item.strip;
+    if ( inputFile.good() ) MaskVec.push_back(Item);
+  }
+  inputFile.close();
 }
 
 
@@ -98,7 +114,7 @@ void GEMDigiProducer::produce(edm::Event& e, const edm::EventSetup& eventSetup)
 
     gemDigiModel_->simulateSignal(roll, simHits, engine);
     gemDigiModel_->simulateNoise(roll, engine);
-    gemDigiModel_->fillDigis(rawId, *digis);
+    gemDigiModel_->fillDigis(rawId, *digis, MaskVec);
     (*stripDigiSimLinks).insert(gemDigiModel_->stripDigiSimLinks());
     (*gemDigiSimLinks).insert(gemDigiModel_->gemDigiSimLinks());
   }

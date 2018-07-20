@@ -2,11 +2,28 @@
 #include "SimDataFormats/EncodedEventId/interface/EncodedEventId.h"
 
 void 
-GEMDigiModel::fillDigis(int rollDetId, GEMDigiCollection& digis)
+GEMDigiModel::fillDigis(int rollDetId, GEMDigiCollection& digis, std::vector<GEMMaskedStrips::MaskItem> &MaskVec)
 {
   for (const auto& d: strips_)
   {
     if (d.second == -999) continue;
+    
+    int nSkip = 0;
+    
+    for ( std::vector<GEMMaskedStrips::MaskItem>::iterator posVec = MaskVec.begin(); 
+      posVec != MaskVec.end(); ++posVec )
+    {
+      if ( (int)( *posVec ).rawId != rollDetId ) continue;
+      if ( ( *posVec ).strip == (int)d.first ) {
+        nSkip = 1; 
+        break;
+      }
+    }
+    
+    if ( nSkip != 0 ) {
+      printf("Dead!\n");
+      continue;
+    }
 
     // (strip, bx)
     GEMDigi digi(d.first, d.second); 
