@@ -16,7 +16,7 @@ options.register("runNum",1,
                  VarParsing.VarParsing.varType.int,
                  "Run number")
 
-options.register("eventsPerJob",20000,
+options.register("eventsPerJob",2,
                  VarParsing.VarParsing.multiplicity.singleton,
                  VarParsing.VarParsing.varType.int,
                  "The number of events (in each file)")
@@ -29,9 +29,9 @@ options.register("idxJob","-1",
 options.parseArguments()
 
 # Insert the type 0 , S , L of the superchambers in 15 positions: frontal view, 90 deg rotated
-SuperChType = ['L','L','L','L','L',\
-               'L','L','L','L','L',\
-               'L','L','L','L','L']
+#SuperChType = ['L','L','L','L','L',\
+#               'L','L','L','L','L',\
+#               'L','L','L','L','L']
 
 # Alignment of chambers
 trueDx = [0.4,-0.1,-0.2,-0.5,0.2,\
@@ -53,7 +53,8 @@ rotationZ = [0,0,0,0,0,\
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.phase2_muon)
+# eras.run2_GEM_2017 makes GEM packer/unpacker to use DB (GEMELMapRcd)
+process = cms.Process('RECO',eras.phase2_muon,eras.run2_GEM_2017)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -62,7 +63,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
-process.load('Geometry.GEMGeometry.GeometryGEMCosmicStand_cff')
+process.load('Geometry.GEMGeometry.GeometryGEMCosmicStandDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_0T_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedRealistic50ns13TeVCollision_cfi')
@@ -79,12 +80,12 @@ process.load('SimMuon.GEMCosmicMuon.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
 
 # DEFINITION OF THE SUPERCHAMBERS INSIDE THE STAND
-for i in range(len(SuperChType)):
-    column_row = '_c%d_r%d' % ((i/5)+1, i%5+1)
-    if SuperChType[i]=='L' : size = 'L'
-    if SuperChType[i]=='S' : size = 'S'
-    if SuperChType[i]!='0' : geomFile = 'Geometry/MuonCommonData/data/GEMQC8/gem11'+size+column_row+'.xml'
-    if SuperChType[i]!='0' : process.XMLIdealGeometryESSource.geomXMLFiles.append(geomFile)
+#for i in range(len(SuperChType)):
+#    column_row = '_c%d_r%d' % ((i/5)+1, i%5+1)
+#    if SuperChType[i]=='L' : size = 'L'
+#    if SuperChType[i]=='S' : size = 'S'
+#    if SuperChType[i]!='0' : geomFile = 'Geometry/MuonCommonData/data/GEMQC8/gem11'+size+column_row+'.xml'
+#    if SuperChType[i]!='0' : process.XMLIdealGeometryESSource.geomXMLFiles.append(geomFile)
 
 # Config importation & settings
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(options.eventsPerJob))
@@ -93,6 +94,11 @@ nIdxJob = int(options.idxJob)
 strOutput = "out_reco_MC.root" if nIdxJob >= 0 else runConfig.OutputFileName
 if nIdxJob < 0: nIdxJob = 0
 
+# For debug purposes - use what is already in GEM DB
+process.GEMQC8ConfESSource.WriteDummy = cms.untracked.int32(-1) # -1 -- P5 chambers
+process.GEMQC8ConfESSource.runNumber = cms.int32( options.runNum )
+process.GEMQC8ConfESSource.printValues = cms.untracked.bool( False )
+
 # Input source
 process.source = cms.Source("EmptySource",
     firstRun = cms.untracked.uint32(options.runNum),
@@ -100,6 +106,16 @@ process.source = cms.Source("EmptySource",
     firstLuminosityBlock = cms.untracked.uint32(nIdxJob + 1),
 )
 process.options = cms.untracked.PSet()
+
+process.reader_qc8conf = cms.EDAnalyzer( "GEMQC8ConfRcdReader",
+  dumpFileName = cms.untracked.string( "dumpQC8conf.out" )
+  #dumpFileName = cms.untracked.string( "" ) # no dump
+)
+
+process.reader_elmap = cms.EDAnalyzer( "GEMELMapRcdReader",
+  dumpFileName = cms.untracked.string( "dumpELMap.out" )
+  #dumpFileName = cms.untracked.string( "" ) # no dump
+)
 
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
@@ -192,7 +208,7 @@ process.AlignmentTrackRecoQC8 = cms.EDProducer("AlignmentTrackRecoQC8",
                                        trackResX = cms.double(runConfig.trackResX),
                                        trackResY = cms.double(runConfig.trackResY),
                                        MulSigmaOnWindow = cms.double(runConfig.MulSigmaOnWindow),
-                                       SuperChamberType = cms.vstring(SuperChType),
+                                       #SuperChamberType = cms.vstring(SuperChType),
                                        MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -242,7 +258,7 @@ process.AlignmentValidationQC8 = cms.EDProducer('AlignmentValidationQC8',
     trackResX = cms.double(runConfig.trackResX),
     trackResY = cms.double(runConfig.trackResY),
     MulSigmaOnWindow = cms.double(runConfig.MulSigmaOnWindow),
-    SuperChamberType = cms.vstring(SuperChType),
+    #SuperChamberType = cms.vstring(SuperChType),
     MuonSmootherParameters = cms.PSet(
                       PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                       PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -266,7 +282,9 @@ process.digitisation_step = cms.Path(process.mix+process.simMuonGEMDigis)
 process.reconstruction_step = cms.Path(process.gemPacker+process.rawDataCollector+process.muonGEMDigis+process.gemLocalReco+process.AlignmentTrackRecoQC8)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
-process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
+process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput
+  +process.reader_elmap +process.reader_qc8conf
+)
 process.validation_step = cms.Path(process.AlignmentValidationQC8)
 process.digitisation_step.remove(process.simEcalTriggerPrimitiveDigis)
 process.digitisation_step.remove(process.simEcalDigis)
@@ -314,3 +332,10 @@ process.simMuonGEMDigis.simulateIntrinsicNoise = cms.bool(False)
 process.simMuonGEMDigis.doBkgNoise = cms.bool(False)
 process.simMuonGEMDigis.doNoiseCLS = cms.bool(False)
 process.simMuonGEMDigis.simulateElectronBkg = cms.bool(False)
+
+for name, module in process.es_sources_().iteritems():
+    if 'GEM' in name:
+        print "ESModules> provider:%s '%s'" % ( name, module.type_() )
+for name, module in process.es_producers_().iteritems():
+    if 'GEM' in name:
+        print "ESModules> provider:%s '%s'" % ( name, module.type_() )

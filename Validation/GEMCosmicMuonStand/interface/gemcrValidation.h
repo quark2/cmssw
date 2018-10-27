@@ -39,7 +39,7 @@ public:
   int findVFAT(float x, float a, float b);
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   double maxCLS, minCLS,maxRes, trackChi2, trackResY, trackResX, MulSigmaOnWindow;
-  std::vector<std::string> SuperChamType;
+  //std::vector<std::string> SuperChamType;
   std::vector<double> vecChamType;
   bool makeTrack, isMC;
 private:

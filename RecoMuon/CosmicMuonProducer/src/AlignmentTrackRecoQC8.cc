@@ -44,7 +44,7 @@ public:
     double minCLS;
     double trackChi2, trackResX, trackResY;
     double MulSigmaOnWindow;
-    std::vector<std::string> g_SuperChamType;
+  //std::vector<std::string> g_SuperChamType;
     std::vector<double> shiftX;
     std::vector<double> rotationZ;
     std::vector<double> trueDx;
@@ -81,7 +81,7 @@ AlignmentTrackRecoQC8::AlignmentTrackRecoQC8(const edm::ParameterSet& ps) : iev(
     trackResX = ps.getParameter<double>("trackResX");
     trackResY = ps.getParameter<double>("trackResY");
     MulSigmaOnWindow = ps.getParameter<double>("MulSigmaOnWindow");
-    g_SuperChamType = ps.getParameter<vector<string>>("SuperChamberType");
+    //g_SuperChamType = ps.getParameter<vector<string>>("SuperChamberType");
     theGEMRecHitToken = consumes<GEMRecHitCollection>(ps.getParameter<edm::InputTag>("gemRecHitLabel"));
     // register what this produces
     edm::ParameterSet serviceParameters = ps.getParameter<edm::ParameterSet>("ServiceParameters");

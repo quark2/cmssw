@@ -66,7 +66,7 @@ AlignmentValidationQC8::AlignmentValidationQC8(const edm::ParameterSet& cfg): GE
     trackResY = cfg.getParameter<double>("trackResY");
     trackResX = cfg.getParameter<double>("trackResX");
     MulSigmaOnWindow = cfg.getParameter<double>("MulSigmaOnWindow");
-    SuperChamType = cfg.getParameter<vector<string>>("SuperChamberType");
+    //SuperChamType = cfg.getParameter<vector<string>>("SuperChamberType");
     edm::ParameterSet smootherPSet = cfg.getParameter<edm::ParameterSet>("MuonSmootherParameters");
     theSmoother = new CosmicMuonSmoother(smootherPSet, theService);
     theUpdator = new KFUpdator();
