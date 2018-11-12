@@ -51,6 +51,7 @@ class GEMELMap {
   
  public:
   // size of ID bits
+  static const int vfatTypeV3_ = 11;     // ID size from VFat
   static const int chipIdBits_ = 12;     // ID size from VFat
   static const int chipIdMask_ = 0xfff;  // chipId mask for 12 bits
   static const int gebIdBits_  = 5;      // ID size from GEB
@@ -60,5 +61,7 @@ class GEMELMap {
   static const int maxVFatGE21_= 6;      // vFat per eta partition in GE21
   static const int maxChan_    = 128;    // channels per vFat
   static const int amcBX_      = 25;     // amc BX to get strip bx
+  static const int maxEtaPartition_ = 8; // etaPartitions in chamber
+
 };
 #endif // GEMELMap_H
