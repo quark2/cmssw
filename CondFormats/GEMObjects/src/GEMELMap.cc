@@ -1,11 +1,25 @@
+#ifndef noFileInPath_H
 #include "CondFormats/GEMObjects/interface/GEMELMap.h"
 #include "CondFormats/GEMObjects/interface/GEMROmap.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#endif
 
 GEMELMap::GEMELMap():
+  theVFatMap_(), theStripMap_(),
   theVersion("") {}
 
+GEMELMap::GEMELMap(const GEMELMap *ptr) :
+  theVFatMap_(), theStripMap_(),
+  theVersion("")
+{
+  if (!ptr) return;
+  theVFatMap_ = ptr->theVFatMap_;
+  theStripMap_ = ptr->theStripMap_;
+  theVersion = ptr->theVersion;
+}
+
 GEMELMap::GEMELMap(const std::string & version):
+  theVFatMap_(), theStripMap_(),
   theVersion(version) {}
 
 GEMELMap::~GEMELMap() {}
@@ -14,6 +28,7 @@ const std::string & GEMELMap::version() const {
   return theVersion;
 }
 
+#ifndef noFileInPath_H
 void GEMELMap::convert(GEMROmap & romap) {
   // amc->geb->vfat mapping to GEMDetId
   for (auto imap : theVFatMap_) {
@@ -145,4 +160,115 @@ void GEMELMap::convertDummy(GEMROmap & romap) {
     romap.add(cMap, sMap);
     romap.add(sMap, cMap);
   }
+}
+#endif
+
+
+void GEMELMap::print(std::ostream &out, int detailed, int checkArrays) const
+{
+  out << "GEMELMap: theVFATMap[" << theVFatMap_.size() << "], theStripMap["
+      << theStripMap_.size() << "]\n";
+  if (detailed) {
+    out << "  theVFATMap[" << theVFatMap_.size() << "]:\n";
+    for (unsigned int i=0; i<theVFatMap_.size(); i++) {
+      const GEMVFatMap *ptr= & theVFatMap_.at(i);
+      unsigned int sz= ptr->vfat_position.size();
+      out << " i=" << i << ", VFATmapTypeId=" << ptr->VFATmapTypeId << ", sz="
+	  << sz << "\n";
+      int ok=1;
+      if (checkArrays) {
+	if ((sz!=ptr->z_direction.size()) || (sz!=ptr->iEta.size()) || (sz!=ptr->iPhi.size()) || (sz!=ptr->depth.size()) || (sz!=ptr->vfatType.size()) || (sz!=ptr->vfatId.size()) || (sz!=ptr->amcId.size()) || (sz!=ptr->gebId.size()) || (sz!=ptr->sec.size())) {
+	  out << "GEMVFatMap size error : z_direction[" << ptr->z_direction.size() << "], iEta[" << ptr->iEta.size() << "], iPhi[" << ptr->iPhi.size() << "], depth[" << ptr->depth.size() << "], vfatType[" << ptr->vfatType.size() << "], vfatId[" << ptr->vfatId.size() << "], amcId[" << ptr->amcId.size() << "], gebId[" << ptr->gebId.size() << "], sec[" << ptr->sec.size() << "\n";
+	  ok=0;
+	}
+      }
+      if (ok) {
+	for (unsigned int ii=0; ii<sz; ii++) {
+	  out << " " << ii << " vfat_pos=" << ptr->vfat_position[ii];
+	  if (ii < ptr->z_direction.size()) out << " z_dir=" << ptr->z_direction[ii];
+	  if (ii < ptr->iEta.size()) out << " iEta=" << ptr->iEta[ii];
+	  if (ii < ptr->iPhi.size()) out << " iPhi=" << ptr->iPhi[ii];
+	  if (ii < ptr->depth.size()) out << " depth=" << ptr->depth[ii];
+	  if (ii < ptr->vfatType.size()) out << " vfatType=" << ptr->vfatType[ii];
+	  if (ii < ptr->vfatId.size()) out << " vfatId=0x" << std::hex << ptr->vfatId[ii] << std::dec;
+	  if (ii < ptr->amcId.size()) out << " amcId=" << ptr->amcId[ii];
+	  if (ii < ptr->gebId.size()) out << " gebId=" << ptr->gebId[ii];
+	  if (ii < ptr->sec.size()) out << " sect=" << ptr->sec[ii];
+	  out << "\n";
+	}
+      }
+    } // for theVFatMap_
+
+    out << " theStripMap[" << theStripMap_.size() << "]:\n";
+    for (unsigned int i=0; i<theStripMap_.size(); i++) {
+      const GEMStripMap *ptr = & theStripMap_.at(i);
+      unsigned int sz= ptr->vfatType.size();
+      out << " i=" << i << ", sz=" << sz << "\n";
+      int ok=1;
+      if (checkArrays) {
+	if ((sz!=ptr->vfatCh.size()) || (sz!=ptr->vfatStrip.size())) {
+	  out << "GEMStripMap size error : vfatType[" << ptr->vfatType.size() << "], vfatCh[" << ptr->vfatCh.size() << "], vfatStrip[" << ptr->vfatStrip.size() << "]\n";
+	  ok=0;
+	}
+      }
+      if (ok) {
+	for (unsigned int ii=0; ii<sz; ii++) {
+	  out << " " << ii << " vfatType=" << ptr->vfatType[ii]
+	      << " vfatCh=" << ptr->vfatCh[ii]
+	      << " vfatStrip=" << ptr->vfatStrip[ii] << "\n";
+	}
+      }
+    } // for theStripMap
+  } // if (detailed)
+}
+
+
+void GEMELMap::GEMVFatMap::printLast(std::ostream &out, int printEOL) const
+{
+  out << "GEMVFatMap::printLast ";
+  if (vfat_position.size()==0) {
+    out << "empty";
+    return;
+  }
+  out << "vfat_pos=" << vfat_position.back() << " z_dir=" << z_direction.back()
+      << " iEta=" << iEta.back() << " iPhi=" << iPhi.back()
+      << " depth=" << depth.back() << " vfatType=" << vfatType.back()
+      << " vfatId=0x" << std::hex << vfatId.back() << std::dec
+      << " amcId=" << amcId.back()
+      << " gebId=" << gebId.back() << " sec=" << sec.back();
+  if (printEOL) out << "\n";
+}
+
+int GEMELMap::GEMStripMap::areIdentical(const GEMELMap::GEMStripMap &mp, int printDiff) const
+{
+  int res = ( (vfatType == mp.vfatType) &&
+	      (vfatCh == mp.vfatCh) &&
+	      (vfatStrip == mp.vfatStrip) ) ? 1:0;
+  if (!res && printDiff) {
+    if (vfatType.size()!=mp.vfatType.size()) {
+      std::cout << "areIdentical=false: sizes are different: "
+		<< vfatType.size() << " " << mp.vfatType.size() << "\n";
+    }
+    else {
+      for (unsigned int i=0; i<vfatType.size(); i++) {
+	std::cout << " i=" << i << "  " << vfatType[i] << " " << vfatCh[i]
+		  << " " << vfatStrip[i] << "  "
+		  << mp.vfatType[i] << " " << mp.vfatCh[i] << " "
+		  << mp.vfatStrip[i] << "\n";
+      }
+    }
+  }
+  return res;
+}
+
+void GEMELMap::GEMStripMap::printLast(std::ostream &out, int printEOL) const
+{
+  out << "GEMStripMap::printLast ";
+  if (vfatType.size()==0) {
+    out << "empty";
+    return;
+  }
+  out << "vfatType=" << vfatType.back() << " vfatCh=" << vfatCh.back()
+      << " vfatStrip=" << vfatStrip.back();
+  if (printEOL) out << "\n";
 }
