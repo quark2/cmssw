@@ -2,6 +2,7 @@
 #define CondFormats_GEMObjects_GEMROmap_h
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 #include <map>
+#include <iostream>
 
 class GEMROmap{
  public:
@@ -84,6 +85,9 @@ class GEMROmap{
  
   const channelNum& hitPosition(const stripNum& s) const {return stChMap_.at(s);}
   const stripNum& hitPosition(const channelNum& c) const {return chStMap_.at(c);}
+
+  void printElDetMap(std::ostream&) const;
+  void printDetElMap(std::ostream&) const;
 
  private:
   std::map<eCoord,dCoord> roMapED_;

@@ -2,6 +2,7 @@
 #define EventFilter_GEMRawToDigi_AMCdata_h
 #include "GEBdata.h"
 #include <vector>
+#include <iostream>
 
 namespace gem {
   
@@ -31,14 +32,16 @@ namespace gem {
     uint64_t word;
     struct {
       uint64_t dataLengthT: 20; // Overall size of this FED event fragment 
-      uint64_t l1AIDT     : 12; // 8bit long GLIB serial number (first 8 bits)
+      uint64_t cb0        : 4;  // 0x0
+      uint64_t l1AIDT     : 8;  // 8bit long GLIB serial number (first 8 bits)
       uint64_t crc        : 32;
     };
   };
   union EventHeader {
     uint64_t word;
     struct {
-      uint64_t ttsState   : 11; // GLIB TTS state at the moment when this event was built.
+      uint64_t ttsState   : 4; // GLIB TTS state at the moment when this event was built.
+      uint64_t reserved   : 7;  // unused
       uint64_t davCnt     : 5;  // Number of chamber blocks
       uint64_t buffState  : 24; // buffer error 
       uint64_t davList    : 24; // Bitmask indicating which inputs/chambers have data
@@ -47,7 +50,10 @@ namespace gem {
   union EventTrailer {
     uint64_t word;
     struct {
-      uint64_t oosGlib    : 40; // GLIB is out‐of‐sync (critical): L1A ID is different for different chambers in this event (1 bit)
+      uint64_t unused1    : 3;  // not used
+      uint64_t ctrl5      : 5;  // bcl,dr,cl,ml,bp
+      uint64_t unused2    : 31;
+      uint64_t oosGlib    : 1; // GLIB is out‐of‐sync (critical): L1A ID is different for different chambers in this event (1 bit)
       uint64_t chTimeOut  : 24; // GLIB did not receive data from a particular input for this L1A 
     };
   };
@@ -74,6 +80,12 @@ namespace gem {
     void setGEMeventTrailer(uint64_t word) { et_.word = word;}
     uint64_t getGEMeventTrailer() const { return et_.word;}
 
+    std::string getAMCheader1_str() const;
+    std::string getAMCheader2_str() const;
+    std::string getAMCtrailer_str() const;
+    std::string getGEMeventHeader_str() const;
+    std::string getGEMeventTrailer_str() const;
+
     uint32_t dataLength() const {return amch1_.dataLength;}
     uint16_t bx()         const {return amch1_.bxID;}
     uint32_t l1A()        const {return amch1_.l1AID;}
@@ -91,6 +103,8 @@ namespace gem {
     uint8_t  davCnt()     const {return eh_.davCnt;}
     uint32_t buffState()  const {return eh_.buffState;}
     uint32_t davList()    const {return eh_.davList;}
+
+    uint32_t get_davCnt() const {return (uint32_t)(eh_.davCnt);}
 
     uint8_t  oosGlib()    const {return et_.oosGlib;}
     uint32_t chTimeOut()  const {return et_.chTimeOut;}
@@ -112,6 +126,7 @@ namespace gem {
     void addGEB(GEBdata g) {gebd_.push_back(g);}
     //!Returns a vector of GEB data
     const std::vector<GEBdata> * gebs() const {return &gebd_;}
+    const GEBdata& gebData(int i) const {return gebd_.at(i);}
   
   private:
     std::vector<GEBdata> gebd_; ///<Vector of GEB data
@@ -122,4 +137,5 @@ namespace gem {
     EventTrailer et_;
   };
 }
+
 #endif

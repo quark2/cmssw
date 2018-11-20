@@ -19,6 +19,11 @@ options.register('streamer',
                  VarParsing.VarParsing.multiplicity.singleton,
                  VarParsing.VarParsing.varType.bool,
                  "Read input from streamer file")
+options.register('localMode',
+                 False,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.bool,
+                 "Read input from file produced in 'local-mode'")
 options.register('debug',
                  True,
                  VarParsing.VarParsing.multiplicity.singleton,
@@ -69,6 +74,11 @@ options.register('evtDisp',
                  VarParsing.VarParsing.multiplicity.singleton,
                  VarParsing.VarParsing.varType.bool,
                  'Produce histos for individual events')
+options.register('runNum',
+                 1,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.int,
+                 "Run number")
 
 options.parseArguments()
 
@@ -82,7 +92,8 @@ if (options.process!=""):
 #process = cms.Process(pname, eras.Run2_2017, eras.run2_GEM_2017)
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.Run2_2017,eras.run2_GEM_2017)
+process = cms.Process('RECO',eras.Run2_2017)
+#process = cms.Process('RECO',eras.Run2_2017,eras.run2_GEM_2017)
 
 process.load('Configuration.StandardSequences.L1Reco_cff')
 process.load('Configuration.StandardSequences.Reconstruction_cff')
@@ -101,12 +112,29 @@ process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
+process.load('Geometry.GEMGeometry.GeometryGEMCosmicStandDB_cff')
+
+# For debug purposes - use what is already in GEM DB
+process.GEMQC8ConfESSource.WriteDummy = cms.untracked.int32(-2) # -1 -- P5 chambers, -2 -- special case
+process.GEMQC8ConfESSource.runNumber = cms.int32( options.runNum )
+process.GEMQC8ConfESSource.printValues = cms.untracked.bool( False )
+#process.myPrefer = cms.ESPrefer('DDCompactView','GEMQC8ConfESSource')
+process.myPrefer = cms.ESPrefer('GEMQC8ConfESSource')
+
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(options.maxEvents)
 )
 
 # Input source
-if (options.streamer) :
+if (options.localMode) :
+    process.source = cms.Source(
+        "GEMLocalModeDataSource",
+        fileNames = cms.untracked.vstring (options.inputFiles),
+        skipEvents=cms.untracked.uint32(options.skipEvents),
+        fedId = cms.untracked.int32( 1472 ),  # which fedID to assign
+        runNumber = cms.untracked.int32( options.runNum ), # -1 -- read from file name
+    )
+elif (options.streamer) :
     process.source = cms.Source(
         "NewEventStreamFileReader",
         fileNames = cms.untracked.vstring (options.inputFiles),
@@ -146,8 +174,8 @@ if (options.debug):
 
 
 # Other statements
-from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_realistic', '')
+#from Configuration.AlCa.GlobalTag import GlobalTag
+#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_realistic', '')
 #process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:startup', '')
 
 # validation event filter
@@ -158,17 +186,18 @@ process.load('EventFilter.L1TRawToDigi.tmtFilter_cfi')
 process.tmtFilter.mpList = cms.untracked.vint32(options.mps)
 
 # dump raw data
-process.dumpRaw = cms.EDAnalyzer( 
+process.dumpRaw = cms.EDAnalyzer(
     "DumpFEDRawDataProduct",
-    label = cms.untracked.string("rawDataCollector"),
-    feds = cms.untracked.vint32 ( 1466, 1467, 1468 ),
+    #label = cms.untracked.string("rawDataCollector"),
+    inputTag = cms.untracked.InputTag("source","gemLocalModeDataSource"),
+    feds = cms.untracked.vint32 ( 1472 ),
     dumpPayload = cms.untracked.bool ( options.dumpRaw )
 )
 
 # raw to digi
 process.load('EventFilter.GEMRawToDigi.muonGEMDigis_cfi')
 #process.load('EventFilter.GEMRawToDigi.GEMSQLiteCabling_cfi')
-process.muonGEMDigis.InputLabel = cms.InputTag('rawDataCollector')
+process.muonGEMDigis.InputLabel = cms.InputTag("source","gemLocalModeDataSource")
 process.muonGEMDigis.useDBEMap = True
 
 #process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')
@@ -184,9 +213,14 @@ process.gemRecHits = cms.EDProducer("GEMRecHitProducer",
     # deadvecfile = cms.FileInPath('RecoLocalMuon/GEMRecHit/data/GEMDeadVec.dat')
 )
 
+process.reader_qc8conf = cms.EDAnalyzer( "GEMQC8ConfRcdReader",
+  dumpFileName = cms.untracked.string( "dumpQC8conf-qc8spec.out" )
+  #dumpFileName = cms.untracked.string( "" ) # no dump
+)
 
 process.reader_elmap = cms.EDAnalyzer( "GEMELMapRcdReader",
-       dumpFileName = cms.untracked.string( "dumpELMap-from-ALCADB.out" )
+  dumpFileName = cms.untracked.string( "dumpELMap-from-qc8spec.out" )
+  #dumpFileName = cms.untracked.string( "" ) # no dump
 )
 
 
@@ -196,7 +230,8 @@ process.path = cms.Path(
     #process.validationEventFilter
     process.dumpRaw
     +process.muonGEMDigis
-    +process.reader_elmap
+    #+process.reader_elmap
+    #+process.reader_qc8conf
     +process.gemRecHits
 )
 
@@ -220,9 +255,18 @@ if (options.edm):
         SelectEvents = cms.untracked.PSet(
             SelectEvents = cms.vstring('path')
         ),
-        fileName = cms.untracked.string('gem_EDM.root')
+        fileName = cms.untracked.string('gem_EDM-qc8spec.root')
     )
 
     process.out = cms.EndPath(
         process.output
     )
+
+
+# print ESModules
+for name, module in process.es_sources_().iteritems():
+    if 'GEM' in name:
+        print "ESModules> provider:%s '%s'" % ( name, module.type_() )
+for name, module in process.es_producers_().iteritems():
+    if 'GEM' in name:
+        print "ESModules> provider:%s '%s'" % ( name, module.type_() )

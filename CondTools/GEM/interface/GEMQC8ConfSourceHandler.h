@@ -33,6 +33,7 @@ namespace popcon
     void DisconnectOnlineDB();
     void readGEMQC8Conf();
     void readGEMQC8EMap();
+    void readGEMQC8EMap_specDummy();
     std::string id() const { return m_name; }
     const GEMQC8Conf* getQC8conf() const { return qc8conf; }
     const GEMELMap* getQC8elMap() const { return qc8elMap; }
