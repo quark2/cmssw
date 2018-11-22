@@ -30,17 +30,16 @@ private:
   void produce(edm::Event &e) override;
   uint32_t synchronizeEvents();
 
-  //void openFile(const std::string &filename);
-  unsigned int fileCount() const { return this->fileNames().size(); }
 
   bool m_hasFerolHeader;
   int m_fedid;   // which FEDId to assign
+  std::vector<std::string> m_filenames;
   uint32_t m_fileindex; // index of currently opened file
   std::unique_ptr<Storage> storage; // pointer to opened file
   int m_runnumber;
   uint64_t m_data; // local buffer
   uint32_t m_currenteventnumber;
-  std::vector<uint32_t> m_processEvents;
+  std::vector<unsigned int> m_processEvents;
   std::unique_ptr<FEDRawDataCollection> buffers;
   uint64_t m_nGoodEvents;
   std::vector<uint32_t> m_goodEvents;

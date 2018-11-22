@@ -9,7 +9,9 @@ namespace gem {
   // BX mismatch GLIB OH / BX mismatch GLIB VFAT / OOS GLIB OH / OOS GLIB VFAT / No VFAT marker
   // Event size warn / L1AFIFO near full / InFIFO near full / EvtFIFO near full / Event size overflow
   // L1AFIFO full / InFIFO full / EvtFIFO full
-  union GEBchamberHeader {      
+  union GEBchamberHeader {
+    GEBchamberHeader(uint64_t x=0) : word(x) {}
+
     uint64_t word;
     struct {
       uint64_t unused1         : 10;
@@ -20,7 +22,10 @@ namespace gem {
       uint64_t unused2         : 12;
     };
   };
+
   union GEBchamberTrailer {      
+    GEBchamberTrailer(uint64_t x=0) : word(x) {}
+
     uint64_t word;
     struct {
       uint64_t unused       : 33;
@@ -40,37 +45,44 @@ namespace gem {
     ~GEBdata() {vfatd_.clear();}
 
     //!Read chamberHeader from the block.
-    void setChamberHeader(uint64_t word) { ch_.word = word;}
-    uint64_t getChamberHeader() const { return ch_.word;}
+    void setChamberHeader(uint64_t word) { ch_ = word;}
+    uint64_t getChamberHeader() const { return ch_;}
 
     //!Read chamberTrailer from the block.
-    void setChamberTrailer(uint64_t word) { ct_.word = word;}
-    uint64_t getChamberTrailer() const { return ct_.word;}
+    void setChamberTrailer(uint64_t word) { ct_ = word;}
+    uint64_t getChamberTrailer() const { return ct_;}
 
     std::string getChamberHeader_str() const;
     std::string getChamberTrailer_str() const;
 
-    uint16_t unused1()         const {return ch_.unused1;}
-    uint16_t inputStatus()     const {return ch_.inputStatus;}
-    int      flag_noVFATmarker()    const {return (((uint16_t)(ch_.inputStatus) & ((uint16_t)(1)<<5))!=0) ? 1:0;}
-    uint16_t vfatWordCnt()     const {return ch_.vfatWordCnt;}
-    uint8_t  inputID()         const {return ch_.inputID;}
-    uint16_t zeroSupWordsCnt() const {return ch_.zeroSupWordsCnt;}
-    uint16_t unused2()         const {return ch_.unused2;}
+    uint16_t unused1()         const {return GEBchamberHeader{ch_}.unused1;}
+    uint16_t inputStatus()     const {return GEBchamberHeader{ch_}.inputStatus;}
+    int      flag_noVFATmarker()    const {return (((uint16_t)(GEBchamberHeader{ch_}.inputStatus) & ((uint16_t)(1)<<5))!=0) ? 1:0;}
+    uint16_t vfatWordCnt()     const {return GEBchamberHeader{ch_}.vfatWordCnt;}
+    uint8_t  inputID()         const {return GEBchamberHeader{ch_}.inputID;}
+    uint16_t zeroSupWordsCnt() const {return GEBchamberHeader{ch_}.zeroSupWordsCnt;}
+    uint16_t unused2()         const {return GEBchamberHeader{ch_}.unused2;}
+
+    uint32_t get_inputID()     const {return (uint32_t)(GEBchamberHeader{ch_}.inputID);}
 
     //uint32_t ecOH()            const {return ct_.ecOH;}
     //uint16_t bcOH()            const {return ct_.bcOH;}
-    uint64_t unused()          const {return ct_.unused;}
-    uint8_t  inUfw()           const {return ct_.inUfw;}
-    uint8_t  stuckData()       const {return ct_.stuckData;}
-    uint8_t  inFIFOund()       const {return ct_.inFIFOund;}
-    uint16_t vfatWordCntT()    const {return ct_.vfatWordCntT;}
-    uint16_t ohcrc()           const {return ct_.ohcrc;}
+    uint64_t unused()          const {return GEBchamberTrailer{ct_}.unused;}
+    uint8_t  inUfw()           const {return GEBchamberTrailer{ct_}.inUfw;}
+    uint8_t  stuckData()       const {return GEBchamberTrailer{ct_}.stuckData;}
+    uint8_t  inFIFOund()       const {return GEBchamberTrailer{ct_}.inFIFOund;}
+    uint16_t vfatWordCntT()    const {return GEBchamberTrailer{ct_}.vfatWordCntT;}
+    uint16_t ohcrc()           const {return GEBchamberTrailer{ct_}.ohcrc;}
 
-    uint32_t get_vfatWordCnt() const {return (uint32_t)(ch_.vfatWordCnt);}
-    uint32_t get_vfatWordCntT()const {return (uint32_t)(ct_.vfatWordCntT);}
-    void setVfatWordCnt(uint16_t n) {ch_.vfatWordCnt = n; ct_.vfatWordCntT = n;}
-    void setInputID(uint8_t n) {ch_.inputID = n;}
+    uint32_t get_vfatWordCnt() const {return (uint32_t)(GEBchamberHeader{ch_}.vfatWordCnt);}
+    uint32_t get_vfatWordCntT()const {return (uint32_t)(GEBchamberTrailer{ct_}.vfatWordCntT);}
+
+    void setVfatWordCnt(uint16_t n)
+    { GEBchamberHeader h(ch_); h.vfatWordCnt=n; ch_=h.word;
+      GEBchamberTrailer t(ct_); t.vfatWordCntT=n; ct_=t.word;}
+
+    void setInputID(uint8_t n)
+    {GEBchamberHeader h; h.word=ch_; h.inputID=n; ch_=h.word;}
 
     //!Adds VFAT data to the vector
     void addVFAT(VFATdata v) {vfatd_.push_back(v);}
@@ -80,9 +92,12 @@ namespace gem {
     static const int sizeGebID = 5;
     
   private:
+    //GEBchamberHeader ch_;
+    //GEBchamberTrailer ct_;
+    uint64_t ch_;
+    uint64_t ct_;
+
     std::vector<VFATdata> vfatd_;     ///<Vector of VFAT data
-    GEBchamberHeader ch_;
-    GEBchamberTrailer ct_;
   };
 }
 #endif

@@ -97,6 +97,9 @@ void GEMELMap::convert(GEMROmap & romap) {
       romap.add(sMap, cMap);
     }
   }
+
+  romap.printElDetMap(std::cout);
+  romap.printDetElMap(std::cout);
 }
 
 void GEMELMap::convertDummy(GEMROmap & romap) {

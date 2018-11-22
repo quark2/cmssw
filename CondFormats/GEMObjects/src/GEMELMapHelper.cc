@@ -373,7 +373,7 @@ int GEMELMapHelper::loadVFat3bV2(const std::string &fname, GEMELMapHelper::TCham
       int vfatPos=0;
       while (sep!='"') {
 	ss >> vfatPos >> sep;
-	vfat2mapId_[vfatPos] = iMap + int(_vfatMap_conf0);
+	vfat2mapId_[vfatPos] = iMap + int(_vfatMap_conf0) + GEMELMap::vfatTypeV3_;
 	//std::cout << "vfatPos=" << vfatPos << " map=" << vfat2mapId_[vfatPos] << "\n";
       }
     }
@@ -393,8 +393,9 @@ int GEMELMapHelper::loadVFat3bV2(const std::string &fname, GEMELMapHelper::TCham
 
   // load the strip-to-channel map
   for (int mp= int(_vfatMap_conf0); mp<int(_vfatMap_last); mp++) {
-    mapId2stripCh_[mp] = std::vector<int>(128,-1);
+    mapId2stripCh_[mp + GEMELMap::vfatTypeV3_] = std::vector<int>(128,-1);
   }
+
 
   int iPin=0, iCh=0, iStrip=0;
   char sep1,sep2,sep3;
@@ -404,7 +405,7 @@ int GEMELMapHelper::loadVFat3bV2(const std::string &fname, GEMELMapHelper::TCham
     ss >> iPin >> sep1 >> sep2 >> sep3 >> iCh;
     for (int iMap=0; iMap<4; iMap++) {
       ss >> sep1 >> iStrip;
-      mapId2stripCh_[iMap + int(_vfatMap_conf0)][iStrip] = iCh;
+      mapId2stripCh_[iMap + int(_vfatMap_conf0) + GEMELMap::vfatTypeV3_][iStrip] = iCh;
     }
   }
 

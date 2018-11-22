@@ -5,6 +5,7 @@
 <use name="DataFormats/GEMDigi"/>
 <use name="Utilities/StorageFactory"/>
 <use name="FWCore/Sources"/>
+<use name="FWCore/Utilities"/>
 <library   file="*.cc" name="EventFilterGEMRawToDigiPlugins">
   <flags   EDM_PLUGIN="1"/>
 </library>

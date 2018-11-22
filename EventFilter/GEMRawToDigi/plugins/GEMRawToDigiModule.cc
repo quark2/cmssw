@@ -7,6 +7,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
@@ -95,14 +96,12 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
     amc13Event->setCDFHeader(*word);
     amc13Event->setAMC13Header(*(++word));
 
-    std::cout << "GEMRawToDigi: cb5=" << amc13Event->get_cb5() << std::endl;
-    std::cout << "GEMRawToDigi: cb0=" << amc13Event->get_cb0() << std::endl;
-    std::cout << "nAMC=" << amc13Event->get_nAMC() << std::endl;
+    std::cout << "GEMRawToDigi: cb5,cb0 =" << amc13Event->get_cb5() << "," << amc13Event->get_cb0() << "; nAMC=" << amc13Event->get_nAMC() << std::endl;
     
     // Readout out AMC headers
     for (uint8_t i = 0; i < amc13Event->nAMC(); ++i) {
       amc13Event->addAMCheader(*(++word));
-      std::cout << "i=" << i << " cb0=" << amc13Event->get_cb0(i) << " amcNr=" << amc13Event->get_amcNr(i) << " dataSize=" << amc13Event->get_dataSize(i) << std::endl;
+      //std::cout << "i=" << i << " cb0=" << amc13Event->get_cb0(i) << " amcNo=" << amc13Event->get_amcNo(i) << " dataSize=" << amc13Event->get_dataSize(i) << std::endl;
     }
     
     // Readout out AMC payloads
@@ -114,27 +113,32 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
       uint16_t amcId = amcData->boardId();
       uint16_t amcBx = amcData->bx();
 
-      std::cout << "iamc=i=" << i << " amcData->amcNr=" << (uint32_t)(amcData->amcNum()) << " amcData->davCnt=" << (uint32_t)(amcData->davCnt()) << std::endl;
+      //std::cout << "iamc=i=" << i << " amcData->amcNum=" << (uint32_t)(amcData->amcNum()) << " amcData->davCnt=" << (uint32_t)(amcData->davCnt()) << std::endl;
 
       // Fill GEB
-      std::cout << "amcData->davCnt=" << amcData->get_davCnt() << std::endl;
+      //std::cout << "amcData->davCnt=" << amcData->get_davCnt() << std::endl;
       for (uint8_t j = 0; j < amcData->davCnt(); ++j) {
 	auto gebData = std::make_unique<GEBdata>();
 	gebData->setChamberHeader(*(++word));
 
-	std::cout << "igeb=j=" << j << " vfatWordCnt=" << gebData->get_vfatWordCnt() << std::endl;
+	//std::cout << "igeb=j=" << j << " vfatWordCnt=" << gebData->get_vfatWordCnt() << std::endl;
 	uint16_t gebId = gebData->inputID();
 	uint16_t vfatId=0;
-	GEMROmap::eCoord geb_ec = {amcId, gebId, vfatId};
-	std::cout << "amcId=" << amcId << " gebId=" << gebId << " vfatId=" << vfatId << std::endl;
+	GEMROmap::eCoord geb_ec = {amcId, gebId, 0};
+	//std::cout << "amcId=" << amcId << " gebId=" << gebId << std::endl;
 	if (!gemROMap->isValidChipID(geb_ec)) {
-	  std::cout << "is not valid geb_ec chipID" << std::endl;
+	  std::cout << "ERROR is not valid geb_ec chipID" << std::endl;
 	  gemROMap->printElDetMap(std::cout);
+	  throw cms::Exception("not valid geb_ec chipID");
 	}
 	GEMROmap::dCoord geb_dc = gemROMap->hitPosition(geb_ec);
 	GEMDetId gemId = geb_dc.gemDetId;
 
-	std::cout << "gebData->vfatWordCnt()= " << gebData->get_vfatWordCnt() << std::endl;
+	if (gebData->vfatWordCnt()%3!=0) {
+	  throw cms::Exception("gebData->vfatWordCnt()%3!=0");
+	}
+
+	//std::cout << "gebData->vfatWordCnt()= " << gebData->get_vfatWordCnt() << std::endl;
 	for (uint16_t k = 0; k < gebData->vfatWordCnt()/3; k++) {
 	  auto vfatData = std::make_unique<VFATdata>();
 	  vfatData->read_fw(*(++word));
@@ -151,6 +155,8 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
 	    vfatId = vfatData->position();
 	    vfatData->setVersion(3);
 	  }
+
+	  //std::cout << "vfatId=" << vfatId << ", data=" << vfatData->lsData() << "," << vfatData->msData() << std::endl;
 	  
 	  uint16_t bc=vfatData->bc();
 	  // strip bx = vfat bx - amc bx
@@ -173,7 +179,8 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
 	    edm::LogWarning("GEMRawToDigiModule") << "InValid: amcId "<<ec.amcId
 						  << " gebId "<< ec.gebId
 						  << " vfatId "<< ec.vfatId;
-	    continue;
+	    throw cms::Exception("not valid geb_ec chipID");
+	    //continue;
 	  }
 
 	  GEMROmap::dCoord dc = gemROMap->hitPosition(ec);

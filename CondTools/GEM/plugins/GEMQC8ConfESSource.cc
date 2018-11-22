@@ -24,12 +24,17 @@ GEMQC8ConfESSource::GEMQC8ConfESSource(const edm::ParameterSet &p) :
 
 std::unique_ptr<GEMQC8Conf> GEMQC8ConfESSource::produce_QC8Conf(const GEMQC8ConfRcd&)
 {
-  std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects" << std::endl;
-  srcHandler.setOnlyConfDef(1);
-  srcHandler.getNewObjects();
-  std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects done" << std::endl;
   if (!srcHandler.getQC8conf()) {
-    std::cout << "GEMQC8ConfESProducer::produce_QC8Conf failed to get a ptr" << std::endl;
+    std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects" << std::endl;
+    srcHandler.setOnlyConfDef(1);
+    srcHandler.getNewObjects();
+    std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects done" << std::endl;
+    if (!srcHandler.getQC8conf()) {
+      std::cout << "GEMQC8ConfESProducer::produce_QC8Conf failed to get a ptr" << std::endl;
+    }
+  }
+  else {
+    std::cout << "GEMQC8ConfESSource::produce_QC8Conf srchandler is set" << std::endl;
   }
 
   std::unique_ptr<GEMQC8Conf> qc8conf(new GEMQC8Conf(srcHandler.getQC8conf()));
@@ -44,12 +49,17 @@ std::unique_ptr<GEMQC8Conf> GEMQC8ConfESSource::produce_QC8Conf(const GEMQC8Conf
 
 std::unique_ptr<GEMELMap> GEMQC8ConfESSource::produce_ELMap(const GEMELMapRcd&)
 {
-  std::cout << "GEMQC8ConfESSource::produce_ELMap calling getNewObjects" << std::endl;
-  srcHandler.setOnlyConfDef(0);
-  srcHandler.getNewObjects();
-  std::cout << "GEMQC8ConfESSource::produce_ELMap calling getNewObjects done" << std::endl;
   if (!srcHandler.getQC8elMap()) {
-    std::cout << "GEMQC8ConfESProducer::produce_ELMap failed to get a ptr" << std::endl;
+    std::cout << "GEMQC8ConfESSource::produce_ELMap calling getNewObjects" << std::endl;
+    srcHandler.setOnlyConfDef(0);
+    srcHandler.getNewObjects();
+    std::cout << "GEMQC8ConfESSource::produce_ELMap calling getNewObjects done" << std::endl;
+    if (!srcHandler.getQC8elMap()) {
+      std::cout << "GEMQC8ConfESProducer::produce_ELMap failed to get a ptr" << std::endl;
+    }
+  }
+  else {
+    std::cout << "GEMQC8ConfESSource::produce_ELMap srcHandler is set" << std::endl;
   }
 
   std::unique_ptr<GEMELMap> qc8elMap(new GEMELMap(srcHandler.getQC8elMap()));
@@ -63,12 +73,17 @@ std::unique_ptr<GEMELMap> GEMQC8ConfESSource::produce_ELMap(const GEMELMapRcd&)
 
 std::unique_ptr<DDCompactView> GEMQC8ConfESSource::produce_Geom(const IdealGeometryRecord&)
 {
-  std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects" << std::endl;
-  srcHandler.setOnlyConfDef(1);
-  srcHandler.getNewObjects();
-  std::cout << "GEMQC8ConfESSource::produce_QC8Conf calling getNewObjects done" << std::endl;
   if (!srcHandler.getQC8conf()) {
-    std::cout << "GEMQC8ConfESProducer::produce_QC8Conf failed to get a ptr" << std::endl;
+    std::cout << "GEMQC8ConfESSource::produce_Geom calling getNewObjects" << std::endl;
+    srcHandler.setOnlyConfDef(1);
+    srcHandler.getNewObjects();
+    std::cout << "GEMQC8ConfESSource::produce_Geom calling getNewObjects done" << std::endl;
+    if (!srcHandler.getQC8conf()) {
+      std::cout << "GEMQC8ConfESProducer::produce_Geom failed to get a ptr" << std::endl;
+    }
+  }
+  else {
+    std::cout << "GEMQC8ConfESSource::produce_Geom srcHandler is set" << std::endl;
   }
 
   // add XML files, corresponding to the set-up
@@ -103,16 +118,16 @@ std::unique_ptr<DDCompactView> GEMQC8ConfESSource::produce_Geom(const IdealGeome
       std::stringstream sout;
       sout << "Geometry/MuonCommonData/data/GEMQC8/gem11" << chamberSize
 	   << "_c" << ic << "_r" << ir << ".xml";
-      std::cout << "GEMCosmicStandGeomESSource::produceGeom: for chamber "
+      std::cout << "GEMQC8ConfESSource::produce_Geom: for chamber "
 		<< chNames->at(i) << " adding file " << sout.str() << std::endl;
       geoConfig_.addFile(sout.str());
     }
   }
 
   // produce the result
-  std::cout << "\n\nproducing the result" << std::endl;
-  //return XMLIdealGeometryESSource::produce();
+  //std::cout << "\n\nproducing the result" << std::endl;
 
+  //from XMLIdealGeometryESSource::produce();
   DDName ddName(rootNodeName_);
   DDLogicalPart rootNode(ddName);
   DDRootDef::instance().set(rootNode);
@@ -129,6 +144,7 @@ std::unique_ptr<DDCompactView> GEMQC8ConfESSource::produce_Geom(const IdealGeome
                                     <<rootNodeName_<<"\"";
   }
   returnValue->lockdown();
+  std::cout << "quitting the produce_Geom !!!" << std::endl;
   return returnValue;
 }
 

@@ -335,7 +335,7 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap()
 	std::string db_vfatName = row["VFAT_NAME"].data<std::string>();
 	std::string db_vfatPos = row["VFAT_POSN"].data<std::string>();
 
-	int iSector=-1, dep=0, vfatPos=-1, vfatType=-1;
+	int iSector=-1, dep=0, vfatPos=-1, vfatType=-1, zdir=-1;
 	uint16_t vfatId=0;
 	{
 	  char cx;
@@ -356,6 +356,7 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap()
 	  sinp.clear(); sinp.str(db_vfatAddr); sinp>>std::hex>>vfatId;
 	}
 	vfats.vfat_position.push_back(vfatPos);
+	vfats.z_direction.push_back(zdir);
 	vfats.depth.push_back(dep);
 	vfats.vfatType.push_back(vfatType); // indicator of vfatType
 	vfats.vfatId.push_back(vfatId);
@@ -374,7 +375,8 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap()
 	  std::cout <<"    - converted " << iSector << " " << dep
 		    << " " << static_cast<uint16_t>(db_gebID) << " 0x"
 		    << std::hex << vfatId << std::dec << " vfatType="
-		    << vfatType << " " << vfatPos << "\n";
+		    << vfatType << " " << vfatPos
+		    << "  assumed zdir=" << zdir << "\n";
 	}
 
       }
@@ -428,6 +430,7 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap_specDummy()
     return;
   }
   if (!qc8elMap) { qc8elMap= new GEMELMap(); }
+  std::cout << "qc8elMap.size=" << qc8elMap->theVFatMap_.size() << " " << qc8elMap->theStripMap_.size() << std::endl;
 
   GEMELMapHelper elMapAid; // an object to fill GEMEMap
 
@@ -435,7 +438,7 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap_specDummy()
   for (unsigned int ich=0; ich<qc8conf->chSerNums().size(); ich++) {
     std::cout << " readGEMQC8EMap chamber " << qc8conf->chSerNum(ich) << "\n";
     std::string chamberPos= qc8conf->chPos(ich);
-    int sector=-1;
+    int sector=-1, zdir=1;
     {
       std::stringstream ss(chamberPos.c_str());
       int ir, ic;
@@ -451,10 +454,11 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap_specDummy()
       //int iSector=-1; // would be obtained from a DB
       int dep=1;
       int vfatType=GEMELMap::vfatTypeV3_;
-      uint16_t vfatId=0;
+      uint16_t vfatId=vfatPos; // VFAT3
       uint16_t gebId=0;
 
       vfats.vfat_position.push_back(vfatPos);
+      vfats.z_direction.push_back(zdir);
       vfats.depth.push_back(dep);
       vfats.vfatType.push_back(vfatType); // indicator of vfatType
       vfats.vfatId.push_back(vfatId);
@@ -464,8 +468,8 @@ void popcon::GEMQC8ConfSourceHandler::readGEMQC8EMap_specDummy()
       vfats.sec.push_back(sector); // value based on QC8 configuration
 
       if (m_printValues) {
-	std::cout <<"    - hard-coded " << sector << " " << dep
-		  << " " << gebId << " 0x"
+	std::cout <<"    - hard-coded specDummy " << sector << " zdir=" << zdir
+		  << dep << " " << gebId << " 0x"
 		  << std::hex << vfatId << std::dec << " vfatType="
 		  << vfatType << " " << vfatPos << "\n";
       }
@@ -545,7 +549,6 @@ int popcon::GEMQC8ConfSourceHandler::gemELMap_vfat_autoFill(const std::string &c
   for (unsigned int i=0; i<vfats.size(); i++) {
     int pos= vfats.vfat_position[i];
     vfats.vfatType.push_back( elMapAid.vfat2mapId()[pos] ); // strip2ch map no
-    vfats.z_direction.push_back(-1);
     int ieta= 8-pos%8;
     int iphi= pos/8;
     if (confP5) {
