@@ -18,6 +18,7 @@ GEMLocalModeDataSource::GEMLocalModeDataSource(const edm::ParameterSet & pset, e
   m_runnumber( pset.getUntrackedParameter<int>("runNumber",-1)),
   m_currenteventnumber(1),
   m_processEvents(),
+  m_nProcessedEvents(0),
   m_nGoodEvents(0),
   m_goodEvents()
 {
@@ -78,48 +79,6 @@ GEMLocalModeDataSource::GEMLocalModeDataSource(const edm::ParameterSet & pset, e
   std::cout << "examining " << currentfilename << std::endl;
   m_fileindex++;
 
-  if (0) {
-    std::string fname= currentfilename.substr(5,currentfilename.size());
-    std::cout << "trying to open the file " << fname << std::endl;
-    std::ifstream fin(fname.c_str(),std::ios::binary);
-    if (!fin.is_open()) {
-      std::cout << "failed" << std::endl;
-    }
-    else {
-      const int bufsize=150;
-      uint64_t buf[bufsize];
-      fin.read((char*)&buf,bufsize*sizeof(uint64_t));
-
-      if (0)
-	for (uint64_t i=0; i<bufsize*sizeof(uint64_t); i++) {
-	  char c= ((char*)&buf)[i];
-	  std::cout << "i=" << i << ", char=" << c << std::endl;
-	}
-
-      std::cout << "got words\n";
-      gem::AMC13Event amc13Event;
-      for (int i=0; i<bufsize-1; i++) {
-	amc13Event.setCDFHeader(buf[i]);
-	amc13Event.setAMC13Header(buf[i+1]);
-
-	int ok=0;
-	//if (buf[i] > ((uint64_t)(1)<<60)) std::cout << "b ";
-	//else { std::cout << "g "; ok=1; }
-	if (amc13Event.get_cb5()==5) ok=1;
-	std::cout << ((ok) ? "g " : "b ");
-	std::cout << "0x" << std::hex << buf[i] << std::dec << "  ";
-
-	if (ok) {
-	  std::cout << "cb5=" << amc13Event.get_cb5() << " cb0=" << amc13Event.get_cb0()
-		    << " nAMC=" << amc13Event.get_nAMC();
-	}
-
-	std::cout << std::endl;
-      }
-    }
-    fin.close();
-  }
-
   // open file stream
   storage = StorageFactory::get()->open(currentfilename);
   // (throw if storage is 0)
@@ -135,7 +94,7 @@ GEMLocalModeDataSource::GEMLocalModeDataSource(const edm::ParameterSet & pset, e
 
 GEMLocalModeDataSource::~GEMLocalModeDataSource()
 {
-  std::cout << "GEMLocalModeDataSource::~GEMLocalModeDataSource nGoodEvents=" << m_nGoodEvents << std::endl;
+  std::cout << "GEMLocalModeDataSource::~GEMLocalModeDataSource nGoodEvents=" << m_nGoodEvents << ", nProcessedEvents=" << m_nProcessedEvents << std::endl;
   std::cout << " their numbers (may be limited to 100)\n";
   for (unsigned int i=0; i<m_goodEvents.size(); i++) {
     std::cout << " , " << m_goodEvents[i];
@@ -144,6 +103,69 @@ GEMLocalModeDataSource::~GEMLocalModeDataSource()
   std::cout << "\n";
 }
 
+
+void GEMLocalModeDataSource::debug_studyFile()
+{
+  std::cout << "\ndebug_studyFile" << std::endl;
+  std::cout << "m_fileindex=" << m_fileindex << ", m_filenames.size=" << m_filenames.size() << std::endl;
+  std::string currentfilename= m_filenames[m_fileindex-1];
+  std::cout << "checkpoint A" << std::endl;
+  std::string fname= currentfilename.substr(5,currentfilename.size());
+  std::cout << "trying to open the file " << fname << std::endl;
+  std::ifstream fin(fname.c_str(),std::ios::binary);
+  if (!fin.is_open()) {
+    std::cout << "failed" << std::endl;
+    return;
+  }
+
+  const int bufsize=150;
+  uint64_t buf[bufsize];
+  if (m_hasFerolHeader && 1) {
+    fin.read((char*)&buf,3*sizeof(uint64_t));
+
+    for (uint64_t i=0; i<3*sizeof(uint64_t); i++) {
+      char c= ((char*)&buf)[i];
+      std::cout << "i=" << i << ", code=0x" << std::hex << buf[i] << std::dec << ", char=" << c << std::endl;
+    }
+  }
+  fin.read((char*)&buf,bufsize*sizeof(uint64_t));
+
+  if (0) {
+    uint64_t n= fin.gcount();
+    std::cout << "gcount=" << n << "\n";
+    if (n>205) n=205;
+    for (uint64_t i=0; i<n; i++) {
+      // for some reason this if does not work
+      if (i>200) { std::cout << "limiting to " << i << std::endl; break; }
+      char c= ((char*)&buf)[i];
+      std::cout << "i=" << i << ", code=0x" << std::hex << buf[i] << std::dec << ", char=" << c << std::endl;
+    }
+  }
+
+  std::cout << "got words\n";
+  gem::AMC13Event amc13Event;
+  for (int i=0; i<bufsize-1; i++) {
+    amc13Event.setCDFHeader(buf[i]);
+    amc13Event.setAMC13Header(buf[i+1]);
+
+    int ok=0;
+    //if (buf[i] > ((uint64_t)(1)<<60)) std::cout << "b ";
+    //else { std::cout << "g "; ok=1; }
+    if (amc13Event.get_cb5()==5) ok=1;
+    std::cout << ((ok) ? "g " : "b ");
+    std::cout << "0x" << std::hex << buf[i] << std::dec << "  ";
+
+    if (ok) {
+      std::cout << "cb5=" << amc13Event.get_cb5() << " cb0=" << amc13Event.get_cb0()
+		<< " nAMC=" << amc13Event.get_nAMC();
+    }
+
+    std::cout << std::endl;
+  }
+
+  fin.close();
+  std::cout << "debug_studyFile done" << std::endl;
+}
 
 void GEMLocalModeDataSource::fillDescriptions(edm::ConfigurationDescriptions & descriptions)
 {
@@ -170,6 +192,10 @@ void GEMLocalModeDataSource::fillDescriptions(edm::ConfigurationDescriptions & d
 bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue_t &time, edm::EventAuxiliary::ExperimentType &)
 {
   //std::cout << "\nsetRunAndEventInfo m_fileindex=" << m_fileindex << std::endl;
+  if (0 && (m_currenteventnumber==1)) {
+    debug_studyFile();
+    return false;
+  }
 
   if (storage->eof()) {
     storage->close();
@@ -195,13 +221,10 @@ bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue
 
   // assume 1 record is 1 event
   std::vector<uint64_t> buf;
-  const int tmpBufSize=24;
+  const int tmpBufSize=40;
   uint64_t tmpBuf[tmpBufSize];
 
-  int iEventRead=0;
   do {
-  m_currenteventnumber++;
-  iEventRead++;
   buf.clear();
   //std::cout << "GEMLocalModeDataSource::setRunAndEventInfo m_currenteventnumber=" << m_currenteventnumber << std::endl;
 
@@ -214,6 +237,18 @@ bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue
 
   //std::cout << "the number= " << sizeof(uint64_t) << std::endl;
 
+  if (m_hasFerolHeader) {
+    if (inpFile.read((char*)tmpBuf,3*sizeof(uint64_t))!=3*sizeof(uint64_t)) {
+      std::cout << "failed to read next FerolHeader" << std::endl;
+      storage->close();
+      return false;
+    }
+    if (0) {
+      std::cout << "headerSkipped" << std::endl;
+      for (int i=0; i<3; i++) std::cout << "h" << (i+1) << " 0x" << std::hex << tmpBuf[i] << std::dec << "\n";
+    }
+  }
+
   // get CDFHeader and AMC13Header
   int n=inpFile.read((char*)tmpBuf,2*sizeof(uint64_t)); // number of bytes to read
   if (n!=2*sizeof(uint64_t)) {
@@ -221,6 +256,7 @@ bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue
     storage->close();
     return false;
   }
+  m_nProcessedEvents++;
 
   buf.push_back(tmpBuf[0]);
   buf.push_back(tmpBuf[1]);
@@ -283,32 +319,71 @@ bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue
       gebData.setChamberHeader(tmpBuf[0]);
 
       if (prn) {
-	std::cout << "igeb=" << igeb << " vfatWordCount=" << gebData.get_vfatWordCnt() << std::endl;
+	std::cout << "igeb=" << uint32_t(igeb) << " vfatWordCount=" << gebData.get_vfatWordCnt() << std::endl;
 	std::cout << " -- " << gebData.getChamberHeader_str() << std::endl;
       }
 
-      if (tmpBufSize<gebData.vfatWordCnt()) {
-	std::cout << "update code: tmpBufSize=" << tmpBufSize << ", gebData.vfatWordCnt=" << gebData.vfatWordCnt() << std::endl;
-	return false;
-      }
-
       if (gebData.vfatWordCnt()%3!=0) {
-	throw cms::Exception("gebData.vfatCordCnt()%3!=0");
-      }
-      n = inpFile.read((char*)tmpBuf, gebData.vfatWordCnt() * sizeof(uint64_t));
-      for (int ii=0; ii < gebData.vfatWordCnt(); ii++) {
-	buf.push_back(tmpBuf[ii]);
+	throw cms::Exception("gebData.vfatWordCnt()%3!=0");
       }
 
-      if (prn) {
-	std::cout << "gebData.inputID= " << gebData.get_inputID() << "\n";
-	if (gebData.get_inputID()!=0) std::cout << " not ZERO!!\n\n";
-	for (int ii=0; ii<gebData.vfatWordCnt(); ii+=3) {
-	  gem::VFATdata vfd;
-	  vfd.read_fw(tmpBuf[ii]);
-	  vfd.read_sw(tmpBuf[ii+1]);
-	  vfd.read_tw(tmpBuf[ii+2]);
-	  std::cout << " ii/3=" << ii/3 << " " << " vfatPos=" << vfd.get_pos() << "\n";
+      // check if one buffer accommodates information
+      if (gebData.vfatWordCnt() <= tmpBufSize) {
+	// one buffer is enough
+	n = inpFile.read((char*)tmpBuf, gebData.vfatWordCnt() * sizeof(uint64_t));
+	for (int ii=0; ii < gebData.vfatWordCnt(); ii++) {
+	  buf.push_back(tmpBuf[ii]);
+	}
+
+	if (prn) {
+	  std::cout << "gebData.inputID= " << gebData.get_inputID() << "\n";
+	  if (gebData.get_inputID()!=0) std::cout << " not ZERO!!\n\n";
+	  for (int ii=0; ii<gebData.vfatWordCnt(); ii+=3) {
+	    gem::VFATdata vfd;
+	    vfd.read_fw(tmpBuf[ii]);
+	    vfd.read_sw(tmpBuf[ii+1]);
+	    vfd.read_tw(tmpBuf[ii+2]);
+	    std::cout << " ii/3=" << ii/3 << " " << " vfatPos=" << vfd.get_pos() << "\n";
+	  }
+	}
+      }
+      else {
+	// use buffer several times
+	const int allowNumBufs= 32000/tmpBufSize; // 32k is firmware limit
+	if (allowNumBufs * tmpBufSize<gebData.vfatWordCnt()) {
+	  std::cout << "update code: tmpBufSize=" << tmpBufSize << ", allowNumBufs=" << allowNumBufs << ", tmpBufSize*allowNumBufs=" << (tmpBufSize*allowNumBufs) << " (firmware limit), gebData.vfatWordCnt=" << gebData.vfatWordCnt() << std::endl;
+	  std::cout << "current file name is " << m_filenames[m_fileindex-1] << std::endl;
+	  return false;
+	}
+
+	int neededBufs= gebData.vfatWordCnt()/tmpBufSize;
+	if (gebData.vfatWordCnt()%tmpBufSize>0) neededBufs++;
+	if (neededBufs>allowNumBufs) {
+	  std::cout << "code error (neededBufs>allowNumBufs)\n";
+	  return false;
+	}
+	for (int iUse=0; iUse<neededBufs; iUse++) {
+	  uint32_t chunkSize= tmpBufSize;
+	  if (iUse*tmpBufSize+chunkSize > gebData.vfatWordCnt()) {
+	    chunkSize= gebData.vfatWordCnt() - iUse*tmpBufSize;
+	  }
+	  std::cout << "iUse=" << iUse << ", chunkSize=" << chunkSize << "\n";
+	  n = inpFile.read((char*)tmpBuf, chunkSize * sizeof(uint64_t));
+	  for (unsigned int ii=0; ii < chunkSize; ii++) {
+	    buf.push_back(tmpBuf[ii]);
+	  }
+
+	  if (prn) {
+	    std::cout << "gebData.inputID= " << gebData.get_inputID() << "\n";
+	    if (gebData.get_inputID()!=0) std::cout << " not ZERO!!\n\n";
+	    for (unsigned int ii=0; ii<chunkSize; ii+=3) {
+	      gem::VFATdata vfd;
+	      vfd.read_fw(tmpBuf[ii]);
+	      vfd.read_sw(tmpBuf[ii+1]);
+	      vfd.read_tw(tmpBuf[ii+2]);
+	      std::cout << " ii/3=" << ii/3 << " " << " vfatPos=" << vfd.get_pos() << "\n";
+	    }
+	  }
 	}
       }
 
@@ -354,6 +429,8 @@ bool GEMLocalModeDataSource::setRunAndEventInfo(edm::EventID &id, edm::TimeValue
     if (m_goodEvents.size()<100)
       m_goodEvents.push_back(m_currenteventnumber-1);
   }
+
+  m_currenteventnumber++;
 
   if (m_processEvents.size() &&
       (std::find(m_processEvents.begin(),m_processEvents.end(),m_currenteventnumber-1)!=m_processEvents.end())) {

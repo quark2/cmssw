@@ -557,7 +557,7 @@ int popcon::GEMQC8ConfSourceHandler::gemELMap_vfat_autoFill(const std::string &c
     }
     else {
       vfats.iEta.push_back(ieta);
-      vfats.iPhi.push_back(3*vfats.sec[i]/10+1+iphi);
+      vfats.iPhi.push_back(3*vfats.sec[i]/10+iphi);
     }
   }
 

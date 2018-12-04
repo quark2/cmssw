@@ -14,16 +14,9 @@ options.register('runNum',
 options.parseArguments()
 
 
-
-
-process.MessageLogger = cms.Service("MessageLogger",
-  statistics = cms.untracked.vstring(),
-  destinations = cms.untracked.vstring('cerr'),
-  cerr = cms.untracked.PSet(
-#      threshold = cms.untracked.string('WARNING')
-      threshold = cms.untracked.string('DEBUG')
-  )
-)
+process.load('FWCore.MessageService.MessageLogger_cfi')
+process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000 ## really show only every 1000th msg
 
 process.load('Configuration.Geometry.GeometryExtended2017Reco_cff')
 process.load("DQM.Integration.config.FrontierCondition_GT_cfi")
@@ -49,7 +42,8 @@ process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
 #    'file:/eos/cms/store/express/Commissioning2018/ExpressCosmics/FEVT/Express-v1/000/310/292/00000/6C23251D-4F18-E811-AEC5-02163E01A41D.root'
 #        'file:gem_EDM.root'
-        'file:../../../EventFilter/GEMRawToDigi/test/gem_EDM-qc8spec.root'
+        #'file:../../../EventFilter/GEMRawToDigi/test/gem_EDM-qc8spec.root'
+        'file:gem_EDM-qc8spec-runNum{0}.root'.format(options.runNum)
   ),
   #inputCommands = cms.untracked.vstring(
   #  'drop *',

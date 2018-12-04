@@ -30,6 +30,8 @@ private:
   void produce(edm::Event &e) override;
   uint32_t synchronizeEvents();
 
+  void debug_studyFile();
+
 
   bool m_hasFerolHeader;
   int m_fedid;   // which FEDId to assign
@@ -41,7 +43,7 @@ private:
   uint32_t m_currenteventnumber;
   std::vector<unsigned int> m_processEvents;
   std::unique_ptr<FEDRawDataCollection> buffers;
-  uint64_t m_nGoodEvents;
+  uint64_t m_nProcessedEvents, m_nGoodEvents;
   std::vector<uint32_t> m_goodEvents;
 };
 

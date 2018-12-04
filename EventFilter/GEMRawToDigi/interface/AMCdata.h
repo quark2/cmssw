@@ -118,6 +118,7 @@ namespace gem {
     uint32_t buffState()  const {return EventHeader{eh_}.buffState;}
     uint32_t davList()    const {return EventHeader{eh_}.davList;}
 
+    uint32_t get_bxID()   const {return (uint32_t)this->bx();} // bxID
     uint32_t get_davCnt() const {return (uint32_t)(EventHeader{eh_}.davCnt);}
 
     uint8_t  oosGlib()    const {return EventTrailer{et_}.oosGlib;}

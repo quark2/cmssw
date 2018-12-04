@@ -98,6 +98,11 @@ namespace gem {
       return VFATfirst{fw_}.ec;
     }
 
+    int chanIsON(uint64_t chan) const {
+      uint64_t w = (chan<64) ? this->lsData() : this->msData();
+      return (int)((w & (uint64_t(1) << chan))!=0);
+    }
+
     void setVersion(int i) {ver_ = i;}
     int version() const {return ver_;}
 
@@ -110,6 +115,8 @@ namespace gem {
     uint8_t   position   () const {return VFATfirst{fw_}.pos;         }
 
     uint32_t  get_pos    () const {return (uint32_t)VFATfirst{fw_}.pos;}
+    uint32_t  get_bc     () const {return (uint32_t)this->bc();}
+    uint32_t  get_ec     () const {return (uint32_t)this->ec();}
 
     /// v2
     uint8_t   b1010      () const { return VFATfirst{fw_}.b1010;      }
@@ -121,6 +128,10 @@ namespace gem {
     
     uint16_t crc_cal(uint16_t crc_in, uint16_t dato);    
     uint16_t checkCRC();
+
+    bool equal(const VFATdata &d) const {
+      return ((ver_==d.ver_) && (phiPos_==d.phiPos_) && (fw_==d.fw_) && (sw_==d.sw_) && (tw_==d.tw_)) ? true:false;
+    }
     
     static const int nChannels = 128;
     static const int sizeChipID = 12;

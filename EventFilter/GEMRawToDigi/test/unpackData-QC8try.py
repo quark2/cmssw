@@ -133,6 +133,7 @@ if (options.localMode) :
         fileNames = cms.untracked.vstring (options.inputFiles),
         skipEvents=cms.untracked.uint32(options.skipEvents),
         fedId = cms.untracked.int32( 1472 ),  # which fedID to assign
+        hasFerolHeader = cms.untracked.bool(False),
         runNumber = cms.untracked.int32( options.runNum ),
         #processEvents =cms.untracked.vuint32( 118 , 153 , 250 , 282 , 533 , 534 , 595 , 603 , 630 , 794 , 797 , 885 , 915 , 928 , 1128 , 1151 , 1269 , 1302 , 1377 , 1630 , 1883 , 1946 , 1988 , 2197 , 2384 , 2387 , 2405 , 2424 , 2458 , 2461 , 2813 , 2827 , 2987 , 3067 , 3120 , 3208 , 3209 , 3215 , 3265 , 3305 , 3422 , 3628 , 3649 , 3706 , 3831 , 3979 , 4137 , 4290 , 4293 , 4495 , 4533 , 4585 , 4633 , 4656 , 4713 , 4738 , 4817 , 4850 , 4860 , 4887 , 4895 , 4922 , 5013 , 5030 , 5068 , 5085 , 5120 , 5167 , 5300 , 5366 , 5898 , 5953 , 6295 , 6403 , 6494 , 6574 , 6763 , 6792 , 6844 , 6852 , 6867 , 6879 , 6900 , 7004 , 7024 , 7109 , 7115 , 7123 , 7236 , 7353 , 7408 , 7495 , 7500 , 7673 )
     )
@@ -174,6 +175,7 @@ if (options.debug):
     process.MessageLogger.debugModules = cms.untracked.vstring('*')
     process.MessageLogger.cerr.threshold = cms.untracked.string('DEBUG')
 
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000 ## really show only every 1000th msg
 
 # Other statements
 #from Configuration.AlCa.GlobalTag import GlobalTag
@@ -202,6 +204,7 @@ process.load('EventFilter.GEMRawToDigi.muonGEMDigis_cfi')
 process.muonGEMDigis.InputLabel = cms.InputTag("source","gemLocalModeDataSource")
 process.muonGEMDigis.useDBEMap = True
 process.muonGEMDigis.unPackStatusDigis = True
+process.muonGEMDigis.embedAMC13EventData = True
 
 #process.load('Geometry.GEMGeometryBuilder.gemGeometry_cfi')
 process.load('RecoLocalMuon.GEMRecHit.gemRecHits_cfi')

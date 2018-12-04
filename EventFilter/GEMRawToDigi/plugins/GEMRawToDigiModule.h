@@ -48,7 +48,7 @@ class GEMRawToDigiModule : public edm::global::EDProducer<edm::RunCache<GEMROmap
   edm::EDGetTokenT<FEDRawDataCollection> fed_token;
   bool useDBEMap_;
   bool unPackStatusDigis_;
-
+  bool embedAMC13EventData_;
 };
 DEFINE_FWK_MODULE(GEMRawToDigiModule);
 #endif
