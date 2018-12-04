@@ -2,7 +2,7 @@ set -x
 nEvents=$1
 if [ ${#nEvents} -eq 0 ] ; then nEvents=3; fi
 inpFiles=$2
-if [ ${#inpFiles} -eq 0 ] ; then inpFiles="file:run000000_Cosmic_CERNQC8_2018-11-09_chunk_321.root"; fi
+if [ ${#inpFiles} -eq 0 ] ; then inpFiles="file:/afs/cern.ch/user/d/dorney/public/v3Hack/run000000_Cosmic_CERNQC8_2018-11-09_chunk_321.dat"; fi
 runNum=$3
 if [ ${#runNum} -eq 0 ] ; then runNum=1; fi
 
