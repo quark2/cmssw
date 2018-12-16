@@ -147,7 +147,7 @@ updatedJets = updatedPatJets.clone(
 
 finalJets = cms.EDFilter("PATJetRefSelector",
     src = cms.InputTag("updatedJets"),
-    cut = cms.string("pt > 15")
+    cut = cms.string("pt > -1")
 )
 
 updatedJetsAK8 = updatedPatJets.clone(
