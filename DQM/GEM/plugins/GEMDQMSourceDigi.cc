@@ -103,8 +103,8 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
     GEMDetId gid = ch.id();
     string hName_digi = "Digi_Strips_Gemini_"+to_string(gid.chamber())+"_l_"+to_string(gid.layer());
     string hTitle_digi = "Digi Strip GEMINIm"+to_string(gid.chamber())+"l"+to_string(gid.layer());
-    Digi_2D_[ ch.id() ] = ibooker.book2D(hName_digi, hTitle_digi, 384, 1, 385, 8, 0.5,8.5);
-    Digi_1D_[ ch.id() ] = ibooker.book1D(hName_digi+"_VFAT", hTitle_digi+" VFAT", 24, 0, 24);
+    Digi_2D_[ ch.id() ] = ibooker.book2D(hName_digi, hTitle_digi + ";stripNo;iEta", 384, 1, 385, 8, 0.5,8.5);
+    Digi_1D_[ ch.id() ] = ibooker.book1D(hName_digi+"_VFAT", hTitle_digi+" VFAT;VFAT pos", 24, 0, 24);
   }
 }
 
@@ -121,6 +121,8 @@ void GEMDQMSourceDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       GEMDetId rId = roll->id();      
       const auto& digis_in_det = gemDigis->get(rId);
       for (auto d = digis_in_det.first; d != digis_in_det.second; ++d){
+	//std::cout << "event: (strip,iEta)=(" << d->strip() << "," << rId.roll() << "); vfatPos=" << findVFAT(1, roll->nstrips(), d->strip(),rId.roll()) << "\n";
+
 	Digi_2D_[ cId ]->Fill(d->strip(), rId.roll());
         Digi_1D_[ cId ]->Fill(findVFAT(1, roll->nstrips(), d->strip(), rId.roll()));
       }

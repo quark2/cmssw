@@ -20,6 +20,7 @@
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 
 #include <string>
+#include <iostream>
 
 //----------------------------------------------------------------------------------------------------
  
@@ -106,15 +107,15 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
     GEMDetId gid = ch.id();
     string hName = "recHit_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle = "recHit Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    recHitME_[ ch.id() ] = ibooker.book1D(hName, hTitle, 24,0,24);
+    recHitME_[ ch.id() ] = ibooker.book1D(hName, hTitle, 24,-0.5,23.5);
 
     string hName_2 = "VFAT_vs_ClusterSize_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_2 = "VFAT vs ClusterSize Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    VFAT_vs_ClusterSize_[ ch.id() ] = ibooker.book2D(hName_2, hTitle_2, 9, 1, 10, 24, 0, 24);
+    VFAT_vs_ClusterSize_[ ch.id() ] = ibooker.book2D(hName_2, hTitle_2, 9, 1, 10, 24, -0.5, 23.5);
     
     string hName_fired = "StripFired_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_fired = "StripsFired Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    StripsFired_vs_eta_[ ch.id() ] = ibooker.book2D(hName_fired, hTitle_fired, 384, 1, 385, 8, 1,9);
+    StripsFired_vs_eta_[ ch.id() ] = ibooker.book2D(hName_fired, hTitle_fired, 385, -0.5, 384.5, 8, 0.5,8.5);
 
     string hName_rh = "recHit_x_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
     string hTitle_rh = "recHit local x Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
@@ -124,6 +125,8 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
 
 void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& eventSetup)
 {
+  //std::cout << "GEMDQMSource::analyze irun=" << event.run() << " event=" << event.id().event() << std::endl;
+
   const GEMGeometry* GEMGeometry_  = initGeometry(eventSetup);
   if ( GEMGeometry_ == nullptr) return; 
 

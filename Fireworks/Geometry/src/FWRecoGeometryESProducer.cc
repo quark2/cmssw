@@ -111,9 +111,11 @@ FWRecoGeometryESProducer::produce( const FWRecoGeometryRecord& record )
   auto fwRecoGeometry = std::make_unique<FWRecoGeometry>();
 
   if( m_tracker || m_muon ) {
-    record.getRecord<GlobalTrackingGeometryRecord>().get( m_geomRecord );  
-    DetId detId( DetId::Tracker, 0 );
-    m_trackerGeom = (const TrackerGeometry*) m_geomRecord->slaveGeometry( detId );
+    record.getRecord<GlobalTrackingGeometryRecord>().get( m_geomRecord );
+    if (m_tracker){
+      DetId detId( DetId::Tracker, 0 );
+      m_trackerGeom = (const TrackerGeometry*) m_geomRecord->slaveGeometry( detId );
+    }
   }
     
   if( m_tracker )
