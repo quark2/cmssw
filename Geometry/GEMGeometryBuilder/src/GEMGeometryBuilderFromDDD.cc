@@ -128,7 +128,7 @@ GEMGeometryBuilderFromDDD::build( GEMGeometry& theGeometry,
 	LogDebug("GEMGeometryBuilderFromDDD") << "Adding ring " <<  ri << " to station " << "re " << re << " st " << st << std::endl;
 	if (ring->nSuperChambers()){
 	  station->add(ring);
-	  theGeometry->add(ring);
+	  theGeometry.add(ring);
 	}
 	else {
 	  delete ring;
@@ -138,7 +138,7 @@ GEMGeometryBuilderFromDDD::build( GEMGeometry& theGeometry,
       LogDebug("GEMGeometryBuilderFromDDD") << "Adding station " << st << " to region " << re << std::endl;
       if (station->nRings()){
 	region->add(station);
-	theGeometry->add(station);
+	theGeometry.add(station);
       }
       else {
 	delete station;
@@ -147,7 +147,7 @@ GEMGeometryBuilderFromDDD::build( GEMGeometry& theGeometry,
     }
     if (region->nStations()){
       LogDebug("GEMGeometryBuilderFromDDD") << "Adding region " << re << " to the geometry " << std::endl;
-      theGeometry->add(region);
+      theGeometry.add(region);
     }
     else {
       delete region;
