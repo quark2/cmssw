@@ -18,5 +18,7 @@
   <class name="GEMDeadStrips::DeadItem"/>
   <class name="GEMMaskedStrips"/>
   <class name="GEMMaskedStrips::MaskItem"/>
+  
+  <class name="GEMQC8Conf"/>
 
 </lcgdict>

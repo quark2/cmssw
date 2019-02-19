@@ -16,4 +16,5 @@ int main()
   testSerialization<std::vector<GEMeMap::GEMVFatMap>>();
   testSerialization<GEMeMap::GEMStripMap>();
   testSerialization<std::vector<GEMeMap::GEMStripMap>>();  
+  testSerialization<GEMQC8Conf>();
 }

@@ -2,3 +2,4 @@
 #include "CondFormats/GEMObjects/interface/GEMeMap.h"
 #include "CondFormats/GEMObjects/interface/GEMDeadStrips.h"
 #include "CondFormats/GEMObjects/interface/GEMMaskedStrips.h"
+#include "CondFormats/GEMObjects/interface/GEMQC8Conf.h"
