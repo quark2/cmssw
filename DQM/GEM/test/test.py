@@ -1,5 +1,9 @@
 import FWCore.ParameterSet.Config as cms
 
+import os
+
+from Configuration.Eras.Era_Phase2_cff import Phase2
+
 process = cms.Process('DQMTEST')
 
 
@@ -11,7 +15,8 @@ process.MessageLogger = cms.Service("MessageLogger",
   )
 )
 
-process.load('Configuration.Geometry.GeometryExtended2017Reco_cff')
+#process.load('Configuration.Geometry.GeometryExtended2017Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
 process.load("DQM.Integration.config.FrontierCondition_GT_cfi")
 
 
@@ -24,11 +29,12 @@ process.dqmSaver.tag = "GEM"
 
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
-    'file:/eos/cms/store/express/Commissioning2018/ExpressCosmics/FEVT/Express-v1/000/310/292/00000/6C23251D-4F18-E811-AEC5-02163E01A41D.root'    
+    #[ 'file:GEMMuons_190622_3/' + s for s in os.listdir("GEMMuons_190622_3") if s.startswith("step3_") and s.endswith(".root") ]
+    [ 'file:GEMMuons_190622_3/' + s for s in os.listdir("GEMMuons_190622_3") if s.startswith("step3_") and s.endswith(".root") ][ 0:10 ]
   ),
   inputCommands = cms.untracked.vstring(
-    'drop *',
-    'keep FEDRawDataCollection_*_*_*'
+    'keep *',
+    #'keep FEDRawDataCollection_*_*_*'
   )
 )
 
@@ -44,21 +50,21 @@ process.muonGEMDigis.useDBEMap = True
 process.muonGEMDigis.unPackStatusDigis = True
 
 ############## DB file ################# 
-from CondCore.CondDB.CondDB_cfi import *
-CondDB.DBParameters.authenticationPath = cms.untracked.string('/afs/cern.ch/cms/DB/conddb')
-CondDB.connect = cms.string('sqlite_fip:DQM/GEM/data/GEMeMap.db')
-
-process.GEMCabling = cms.ESSource("PoolDBESSource",
-    CondDB,
-    toGet = cms.VPSet(cms.PSet(
-        record = cms.string('GEMeMapRcd'),
-        tag = cms.string('GEMeMap_v2')
-    )),
-)
+#from CondCore.CondDB.CondDB_cfi import *
+#CondDB.DBParameters.authenticationPath = cms.untracked.string('/afs/cern.ch/cms/DB/conddb')
+#CondDB.connect = cms.string('sqlite_fip:DQM/GEM/data/GEMeMap.db')
+#
+#process.GEMCabling = cms.ESSource("PoolDBESSource",
+#    CondDB,
+#    toGet = cms.VPSet(cms.PSet(
+#        record = cms.string('GEMeMapRcd'),
+#        tag = cms.string('GEMeMap_v2')
+#    )),
+#)
 ####################################
 process.path = cms.Path(
-  process.muonGEMDigis *
-  process.gemRecHits *
+  #process.muonGEMDigis *
+  #process.gemRecHits *
   process.GEMDQM
 )
 

@@ -49,6 +49,7 @@ private:
   std::unordered_map<UInt_t,  MonitorElement*> VFAT_vs_ClusterSize_;
   std::unordered_map<UInt_t,  MonitorElement*> StripsFired_vs_eta_;
   std::unordered_map<UInt_t,  MonitorElement*> rh_vs_eta_;
+  std::unordered_map<UInt_t,  MonitorElement*> recGlobalPos;
 
 };
 
@@ -90,6 +91,8 @@ void GEMDQMSource::fillDescriptions(edm::ConfigurationDescriptions & description
 
 void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, edm::EventSetup const & iSetup)
 {
+  std::vector<std::vector<Int_t>> listLayerOcc;
+  
   GEMGeometry_ = initGeometry(iSetup);
   if ( GEMGeometry_ == nullptr) return ;  
 
@@ -100,25 +103,84 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
       gemChambers_.push_back(*sch->chamber(l+1));
     }
   }
+  
   ibooker.cd();
   ibooker.setCurrentFolder("GEM/recHit");
+  
   for (auto ch : gemChambers_){
     GEMDetId gid = ch.id();
-    string hName = "recHit_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
-    string hTitle = "recHit Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    recHitME_[ ch.id() ] = ibooker.book1D(hName, hTitle, 24,0,24);
-
-    string hName_2 = "VFAT_vs_ClusterSize_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
-    string hTitle_2 = "VFAT vs ClusterSize Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    VFAT_vs_ClusterSize_[ ch.id() ] = ibooker.book2D(hName_2, hTitle_2, 9, 1, 10, 24, 0, 24);
     
-    string hName_fired = "StripFired_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
-    string hTitle_fired = "StripsFired Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    StripsFired_vs_eta_[ ch.id() ] = ibooker.book2D(hName_fired, hTitle_fired, 384, 1, 385, 8, 1,9);
+    std::string strIdxName  = "Gemini_" + to_string(gid.chamber()) + "_GE" + 
+      ( gid.region() > 0 ? "p" : "m" ) + to_string(gid.station()) + "_" + to_string(gid.layer());
+    std::string strIdxTitle = "GEMINIm" + to_string(gid.chamber()) + " in GE" + 
+      ( gid.region() > 0 ? "+" : "-" ) + to_string(gid.station()) + "/" + to_string(gid.layer());
+    
+    std::string strStId = ( gid.region() > 0 ? "p" : "m" ) + std::to_string(gid.station());
+    std::string strStT  = ( gid.region() > 0 ? "+" : "-" ) + std::to_string(gid.station());
+    
+    std::string strLa = std::to_string(gid.layer());
+    std::string strCh = std::to_string(gid.chamber());
+    
+    string hName = "recHit_" + strIdxName;
+    string hTitle = "recHit " + strIdxTitle;
+    hTitle += ";VFAT;";
+    recHitME_[ gid ] = ibooker.book1D(hName, hTitle, 24,0,24);
 
-    string hName_rh = "recHit_x_Gemini_"+to_string(gid.chamber())+"_la_"+to_string(gid.layer());
-    string hTitle_rh = "recHit local x Gemini chamber : "+to_string(gid.chamber())+", layer : "+to_string(gid.layer());
-    rh_vs_eta_[ ch.id() ] = ibooker.book2D(hName_rh, hTitle_rh, 50, -25, 25, 8, 1,9);
+    string hName_2 = "VFAT_vs_ClusterSize_" + strIdxName;
+    string hTitle_2 = "VFAT vs ClusterSize " + strIdxTitle;
+    hTitle_2 += ";Cluster size;VFAT";
+    VFAT_vs_ClusterSize_[ gid ] = ibooker.book2D(hName_2, hTitle_2, 9, 1, 10, 24, 0, 24);
+    
+    string hName_fired = "StripFired_" + strIdxName;
+    string hTitle_fired = "StripsFired " + strIdxTitle;
+    hTitle_fired += ";Strip;iEta";
+    StripsFired_vs_eta_[ gid ] = ibooker.book2D(hName_fired, hTitle_fired, 384, 1, 385, 8, 1,9);
+
+    string hName_rh = "recHit_x_" + strIdxName;
+    string hTitle_rh = "recHit local x " + strIdxTitle;
+    hTitle_rh += ";Local x (cm);iEta";
+    rh_vs_eta_[ gid ] = ibooker.book2D(hName_rh, hTitle_rh, 50, -25, 25, 8, 1,9);
+    
+    Int_t nRegion  = gid.region();
+    Int_t nRing    = gid.ring();
+    Int_t nStation = gid.station();
+    Int_t nLayer   = gid.layer();
+    
+    Int_t nIdxOcc = 0;
+    
+    for ( ; nIdxOcc < (Int_t)listLayerOcc.size() ; nIdxOcc++ ) {
+      if ( listLayerOcc[ nIdxOcc ][ 0 ] == nRegion && 
+           listLayerOcc[ nIdxOcc ][ 1 ] == nRing && 
+           listLayerOcc[ nIdxOcc ][ 2 ] == nStation && 
+           listLayerOcc[ nIdxOcc ][ 3 ] == nLayer ) break;
+    }
+    
+    if ( nIdxOcc >= (Int_t)listLayerOcc.size() ) {
+      listLayerOcc.emplace_back();
+      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nRegion);
+      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nRing);
+      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nStation);
+      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nLayer);
+    }
+  }
+  
+  for ( auto listLayerInfo : listLayerOcc ) {
+    Int_t nRegion  = listLayerInfo[ 0 ];
+    Int_t nRing    = listLayerInfo[ 1 ];
+    Int_t nStation = listLayerInfo[ 2 ];
+    Int_t nLayer   = listLayerInfo[ 3 ];
+    
+    GEMDetId gid(nRegion, nRing, nStation, nLayer, 0, 0);
+    
+    std::string strIdxName  = std::string("GE") + ( gid.region() > 0 ? "p" : "m" ) + to_string(gid.station()) + 
+      "_" + to_string(gid.layer());
+    std::string strIdxTitle = std::string("GE") + ( gid.region() > 0 ? "+" : "-" ) + to_string(gid.station()) + 
+      "/" + to_string(gid.layer());
+    
+    string hName_rh = "recHit_globalPos_Gemini_" + strIdxName;
+    string hTitle_rh = "recHit global position Gemini chamber : " + strIdxTitle;
+    hTitle_rh += ";Global X (cm);Global Y (cm)";
+    recGlobalPos[ gid ] = ibooker.book2D(hName_rh, hTitle_rh, 100, -400, 400, 100, -400, 400);
   }
 }
 
@@ -145,10 +207,14 @@ void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& event
         rh_vs_eta_[ cId ]->Fill(hit->localPosition().x(), rId.roll());
         VFAT_vs_ClusterSize_[ cId ]->Fill(hit->clusterSize(), nVfat);
         for(int i = hit->firstClusterStrip(); i < (hit->firstClusterStrip() + hit->clusterSize()); i++){
-	  StripsFired_vs_eta_[ cId ]->Fill(i, rId.roll());
+          StripsFired_vs_eta_[ cId ]->Fill(i, rId.roll());
         }
-      }  
-    }   
+        
+        GlobalPoint recHitGP = GEMGeometry_->idToDet(hit->gemId())->surface().toGlobal(hit->localPosition());
+        GEMDetId idLayer(rId.region(), rId.ring(), rId.station(), rId.layer(), 0, 0);
+        recGlobalPos[ idLayer ]->Fill(recHitGP.x(), recHitGP.y());
+      }
+    }
   }
 }
 
