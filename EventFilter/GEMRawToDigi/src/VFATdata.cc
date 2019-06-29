@@ -49,7 +49,6 @@ VFATdata::VFATdata(const int vfatVer,
   tw.crc = checkCRC();
   // once crc is found, save new third word
   tw_ = tw.word;
-  std::cout<< "VFATdata chipID " <<chipID <<" vfatid "<<this->vfatId()<<std::endl;
 }
 
 uint8_t VFATdata::quality() {  
