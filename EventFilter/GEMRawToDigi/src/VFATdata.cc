@@ -14,13 +14,10 @@ VFATdata::VFATdata(const int vfatVer,
 		   const uint64_t msDatas)
 {
   // this constructor only used for packing sim digis
-  VFATfirst fw;
-  VFATsecond sw;
-  VFATthird tw;
+  VFATfirst fw{0};
+  VFATsecond sw{0};
+  VFATthird tw{0};
 
-  fw.word = 0;
-  sw.word = 0;
-  tw.word = 0;  
   fw.header = 0x1E;
 
   if (vfatVer == 3) {

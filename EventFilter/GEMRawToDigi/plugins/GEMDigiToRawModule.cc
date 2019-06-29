@@ -140,6 +140,8 @@ void GEMDigiToRawModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
         if (!gebData->vFATs()->empty()) {
           gebData->setChamberHeader(gebData->vFATs()->size()*3, gebId);
           gebData->setChamberTrailer(0, 0, gebData->vFATs()->size()*3);
+          std::cout << " gebData->getChamberHeader() " << std::bitset<64>(gebData->getChamberHeader()) << std::endl;
+          
           amcData->addGEB(*gebData);
         }
         
