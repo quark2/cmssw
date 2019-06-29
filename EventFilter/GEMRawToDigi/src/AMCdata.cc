@@ -13,7 +13,7 @@ void AMCdata::setAMCheader1(uint32_t dataLength, uint16_t bxID, uint32_t l1AID, 
   amch1_ = u.word;
 
   AMCTrailer ut{0};
-  ut.dataLengthT = dataLength;
+  ut.dataLength = dataLength;
   ut.l1AIDT = l1AID;
   amct_ = ut.word;
 }

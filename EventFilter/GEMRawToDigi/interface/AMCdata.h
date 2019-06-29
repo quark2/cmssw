@@ -30,7 +30,7 @@ namespace gem {
   union AMCTrailer {
     uint64_t word;
     struct {
-      uint64_t dataLengthT: 20; // Number of 64bit words in this event 
+      uint64_t dataLength : 20; // Number of 64bit words in this event 
       uint64_t l1AIDT     : 12; // 8bit long GLIB serial number (first 8 bits)
       uint64_t crc        : 32; // CRC added by the AMC13
     };
@@ -63,7 +63,7 @@ namespace gem {
   {
     
   public:
-    AMCdata() {};
+  AMCdata() : amch1_(0), amch2_(0), amct_(0), eh_(0), et_(0) {};
     ~AMCdata() {gebd_.clear();}
 
     void setAMCheader1(uint64_t word) { amch1_ = word;}
@@ -84,7 +84,8 @@ namespace gem {
     void setGEMeventTrailer(uint64_t word) { et_ = word;}
     uint64_t getGEMeventTrailer() const { return et_;}
 
-    uint32_t dataLength() const {return AMCTrailer{amct_}.dataLengthT;}
+    //uint32_t dataLength() const {return AMCTrailer{amct_}.dataLengthT;}
+    uint32_t dataLength() const {return AMCheader1{amch1_}.dataLength;}
     uint16_t bx()         const {return AMCheader1{amch1_}.bxID;}
     uint32_t l1A()        const {return AMCheader1{amch1_}.l1AID;}
     uint8_t  amcNum()     const {return AMCheader1{amch1_}.AMCnum;}

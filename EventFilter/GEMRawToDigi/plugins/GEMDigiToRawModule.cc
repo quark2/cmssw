@@ -125,10 +125,9 @@ void GEMDigiToRawModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
                 << " id:"<< gemId
                 << " ch:"<< chMap.chNum
                 << " st:"<< digi.strip()
-                << " bx:"<< digi.bx();
-
+                << " bx:"<< digi.bx();              
             }
-      
+
             if (!hasDigi) continue;
             // only make vfat with hits
             auto vfatData = std::make_unique<VFATdata>(geb_dc.vfatVer, bc, 0, vfatId, lsData, msData);
@@ -138,10 +137,9 @@ void GEMDigiToRawModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
         } // end of vfats in GEB
         
         if (!gebData->vFATs()->empty()) {
-          gebData->setChamberHeader(gebData->vFATs()->size()*3, gebId);
-          gebData->setChamberTrailer(0, 0, gebData->vFATs()->size()*3);
-          std::cout << " gebData->getChamberHeader() " << std::bitset<64>(gebData->getChamberHeader()) << std::endl;
-          
+          uint16_t vfatWordCnt = gebData->vFATs()->size()*3;
+          gebData->setChamberHeader(vfatWordCnt, gebId);
+          gebData->setChamberTrailer(0, 0, vfatWordCnt);          
           amcData->addGEB(*gebData);
         }
         
@@ -193,19 +191,22 @@ void GEMDigiToRawModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
   for (const auto & amc13e : amc13Events) {
     std::vector<uint64_t> words;    
     words.emplace_back(amc13e->getCDFHeader());
-    words.emplace_back(amc13e->getAMC13Header());    
+    words.emplace_back(amc13e->getAMC13Header());
     
-    for (const auto & w: *amc13e->getAMCheaders())
+    for (const auto & w: *amc13e->getAMCheaders()) {
       words.emplace_back(w);
-
+    }
+    LogDebug("GEMDigiToRawModule") <<"AMC size " << int(amc13e->nAMC());
     for (const auto & amc : *amc13e->getAMCpayloads()) {
       words.emplace_back(amc.getAMCheader1());
       words.emplace_back(amc.getAMCheader2());
       words.emplace_back(amc.getGEMeventHeader());
-      
+
+      LogDebug("GEMDigiToRawModule") <<"davCnt " << int(amc.davCnt());      
       for (const auto & geb: *amc.gebs()) {
         words.emplace_back(geb.getChamberHeader());
 
+        LogDebug("GEMDigiToRawModule") <<"vfatWordCnt " << int(geb.vfatWordCnt())/3;        
         for (const auto & vfat: *geb.vFATs()) {
           words.emplace_back(vfat.get_fw());
           words.emplace_back(vfat.get_sw());
@@ -230,7 +231,8 @@ void GEMDigiToRawModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
     uint64_t * w = reinterpret_cast<uint64_t* >(fedRawData.data());  
     for (const auto & word: words) *(w++) = word;
     
-    LogDebug("GEMDigiToRawModule") <<" words " << words.size();
+    LogDebug("GEMDigiToRawModule") <<"FED size " << words.size();
+
   }
 
   iEvent.put(std::move(fedRawDataCol));

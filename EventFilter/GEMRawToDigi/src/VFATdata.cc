@@ -2,8 +2,8 @@
 #include <iostream>
 using namespace gem;
 
-VFATdata::VFATdata() {
-  ver_ = 1;
+VFATdata::VFATdata() : ver_(0), phiPos_(0), fw_(0), sw_(0), tw_(0)
+{
 }    
 
 VFATdata::VFATdata(const int vfatVer,
@@ -49,6 +49,7 @@ VFATdata::VFATdata(const int vfatVer,
   tw.crc = checkCRC();
   // once crc is found, save new third word
   tw_ = tw.word;
+  std::cout<< "VFATdata chipID " <<chipID <<" vfatid "<<this->vfatId()<<std::endl;
 }
 
 uint8_t VFATdata::quality() {  
