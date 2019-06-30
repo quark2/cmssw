@@ -52,7 +52,8 @@ namespace gem {
   {
     
   public:
-    AMC13Event() {}
+    
+  AMC13Event() : cdfh_(0), amc13h_(0), amc13t_(0), cdft_(0) {}
     ~AMC13Event() {amcHeaders_.clear(); amcs_.clear();}
 
     void setCDFHeader(uint64_t word) { cdfh_ = word;}

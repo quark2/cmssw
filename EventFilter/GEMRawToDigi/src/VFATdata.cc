@@ -2,8 +2,8 @@
 #include <iostream>
 using namespace gem;
 
-VFATdata::VFATdata() {
-  ver_ = 1;
+VFATdata::VFATdata() : ver_(0), phiPos_(0), fw_(0), sw_(0), tw_(0)
+{
 }    
 
 VFATdata::VFATdata(const int vfatVer,

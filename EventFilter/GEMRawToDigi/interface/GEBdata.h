@@ -37,7 +37,7 @@ namespace gem {
       uint64_t InUfw           : 1;  // Input FIFO underflow
       uint64_t SkD             : 1;  // Stuck data
       uint64_t EvUfw           : 1;  // Event FIFO underflow
-      uint64_t VfWdCnt         : 12; // VFAT word count (in number of 64-bit words)
+      uint64_t VfWdCntT        : 12; // VFAT word count (in number of 64-bit words)
       uint64_t crc16           : 16; // CRC of OH data (currently not available – filled with 0)
     };
   };
@@ -46,7 +46,7 @@ namespace gem {
   {
   public:
     
-    GEBdata() {};
+  GEBdata() : ch_(0), ct_(0) {};
     ~GEBdata() {vfatd_.clear();}
 
     //!Read chamberHeader from the block.
@@ -54,7 +54,6 @@ namespace gem {
     void setChamberHeader(uint16_t vfatWordCnt, uint8_t inputID)
     {
       GEBchamberHeader u{0};
-      //      u.word = 0;
       u.VfWdCnt = vfatWordCnt;
       u.inputID = inputID;
       ch_ = u.word;
@@ -68,7 +67,7 @@ namespace gem {
       GEBchamberTrailer u{0};
       u.ecOH = ecOH;
       u.bcOH = bcOH;
-      u.VfWdCnt = vfatWordCntT;      
+      u.VfWdCntT = vfatWordCntT;
       ct_ = u.word;
     }
     uint64_t getChamberTrailer() const { return ct_;}
@@ -86,7 +85,7 @@ namespace gem {
     uint8_t  l1aF()            const {return GEBchamberHeader{ch_}.L1aF;}
     uint8_t  inF()             const {return GEBchamberHeader{ch_}.InF;}
     uint8_t  evtF()            const {return GEBchamberHeader{ch_}.EvtF;}
-    uint16_t vfWdCnt()         const {return GEBchamberHeader{ch_}.VfWdCnt;}
+    uint16_t vfatWordCnt()     const {return GEBchamberHeader{ch_}.VfWdCnt;}
     uint8_t  inputID()         const {return GEBchamberHeader{ch_}.inputID;}
     uint32_t zeroSupWordsCnt() const {return GEBchamberHeader{ch_}.zeroSupWordsCnt;}
     
@@ -95,7 +94,7 @@ namespace gem {
     uint8_t  inUfw()           const {return GEBchamberTrailer{ct_}.InUfw;}
     uint8_t  stuckData()       const {return GEBchamberTrailer{ct_}.SkD;}
     uint8_t  evUfw()           const {return GEBchamberTrailer{ct_}.EvUfw;}
-    uint16_t vfatWordCnt()     const {return GEBchamberTrailer{ct_}.VfWdCnt;}
+    uint16_t vfatWordCntT()    const {return GEBchamberTrailer{ct_}.VfWdCntT;}
     uint16_t crc()             const {return GEBchamberTrailer{ct_}.crc16;}
 
     //!Adds VFAT data to the vector

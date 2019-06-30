@@ -76,7 +76,7 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
     const FEDRawData& fedData = fed_buffers->FEDData(fedId);
     
     int nWords = fedData.size()/sizeof(uint64_t);
-    LogDebug("GEMRawToDigiModule") <<" words " << nWords;
+    LogDebug("GEMDigiToRawModule") <<"FED size " << nWords<<std::endl;
     
     if (nWords<5) continue;
     const unsigned char * data = fedData.data();
@@ -87,21 +87,24 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
     
     amc13Event->setCDFHeader(*word);
     amc13Event->setAMC13Header(*(++word));
-    
+
     // Readout out AMC headers
-    for (uint8_t i = 0; i < amc13Event->nAMC(); ++i)
+    LogDebug("GEMDigiToRawModule") <<"AMC size " << int(amc13Event->nAMC());    
+    for (uint8_t i = 0; i < amc13Event->nAMC(); ++i) {
       amc13Event->addAMCheader(*(++word));
-    
+    }
     // Readout out AMC payloads
     for (uint8_t i = 0; i < amc13Event->nAMC(); ++i) {
       auto amcData = std::make_unique<AMCdata>();
-      amcData->setAMCheader1(*(++word));      
+      amcData->setAMCheader1(*(++word));
       amcData->setAMCheader2(*(++word));
       amcData->setGEMeventHeader(*(++word));
+      
       uint16_t amcBx = amcData->bx();
       uint8_t amcNum = amcData->amcNum();
 
       // Fill GEB
+      LogDebug("GEMDigiToRawModule") <<"davCnt " << int(amcData->davCnt());      
       for (uint8_t j = 0; j < amcData->davCnt(); ++j) {
 	auto gebData = std::make_unique<GEBdata>();
 	gebData->setChamberHeader(*(++word));
@@ -110,7 +113,8 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
 	GEMROMapping::chamEC geb_ec = {fedId, amcNum, gebId};        
 	GEMROMapping::chamDC geb_dc = gemROMap->chamberPos(geb_ec);
 	GEMDetId gemChId = geb_dc.detId;
-
+        
+        LogDebug("GEMDigiToRawModule") <<"vfatWordCnt head " << int(gebData->vfatWordCnt())/3;
 	for (uint16_t k = 0; k < gebData->vfatWordCnt()/3; k++) {
 	  auto vfatData = std::make_unique<VFATdata>();
 	  vfatData->read_fw(*(++word));
@@ -126,7 +130,8 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
 	    edm::LogWarning("GEMRawToDigiModule") << "InValid: amcNum "<< int(amcNum)
 						  << " gebId "<< int(gebId)
 						  << " vfatId "<< int(vfatId)
-						  << " vfat Pos "<< int(vfatData->position());
+						  << " vfat Pos "<< int(vfatData->position())
+						  << " vfat ver "<< int(geb_dc.vfatVer);
 	    continue;
 	  }
           // check vfat data
@@ -140,7 +145,7 @@ void GEMRawToDigiModule::produce(edm::StreamID iID, edm::Event & iEvent, edm::Ev
 						    <<vfatData->crc()<<"   "<<vfatData->checkCRC();	      
 	    }
 	  }
-	            
+          
           GEMROMapping::vfatDC vfat_dc = gemROMap->vfatPos(vfat_ec);
 
 	  vfatData->setPhi(vfat_dc.localPhi);
