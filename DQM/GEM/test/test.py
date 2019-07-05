@@ -29,8 +29,7 @@ process.dqmSaver.tag = "GEM"
 
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
-    #[ 'file:GEMMuons_190622_3/' + s for s in os.listdir("GEMMuons_190622_3") if s.startswith("step3_") and s.endswith(".root") ]
-    [ 'file:GEMMuons_190622_3/' + s for s in os.listdir("GEMMuons_190622_3") if s.startswith("step3_") and s.endswith(".root") ][ 0:10 ]
+    'file:/eos/cms/store/express/Commissioning2018/ExpressCosmics/FEVT/Express-v1/000/310/292/00000/6C23251D-4F18-E811-AEC5-02163E01A41D.root'
   ),
   inputCommands = cms.untracked.vstring(
     'keep *',
@@ -48,6 +47,8 @@ process.load("DQM.GEM.GEMDQM_cff")
 
 process.muonGEMDigis.useDBEMap = True
 process.muonGEMDigis.unPackStatusDigis = True
+
+process.GEMDQMStatusDigi.pathOfPrevDQMRoot = "DQM_V0001_GEM_R000030000.root"
 
 ############## DB file ################# 
 #from CondCore.CondDB.CondDB_cfi import *

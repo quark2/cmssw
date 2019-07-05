@@ -95,6 +95,10 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   for (auto sch : superChambers_){
     int n_lay = sch->nChambers();
     for (int l=0;l<n_lay;l++){
+      Bool_t bExist = false;
+      for ( auto ch : gemChambers_ ) if ( ch.id() == sch->chamber(l+1)->id() ) bExist = true;
+      if ( bExist ) continue;
+      
       gemChambers_.push_back(*sch->chamber(l+1));
     }
   }

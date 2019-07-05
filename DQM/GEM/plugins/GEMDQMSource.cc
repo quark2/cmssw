@@ -37,6 +37,9 @@ protected:
 
 private:
   edm::EDGetToken tagRecHit_;
+  
+  float fGlobXMin_, fGlobXMax_;
+  float fGlobYMin_, fGlobYMax_;
 
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
@@ -80,18 +83,29 @@ const GEMGeometry* GEMDQMSource::initGeometry(edm::EventSetup const & iSetup) {
 GEMDQMSource::GEMDQMSource(const edm::ParameterSet& cfg)
 {
   tagRecHit_ = consumes<GEMRecHitCollection>(cfg.getParameter<edm::InputTag>("recHitsInputLabel")); 
+  
+  fGlobXMin_ = cfg.getParameter<double>("global_x_bound_min");
+  fGlobXMax_ = cfg.getParameter<double>("global_x_bound_max");
+  fGlobYMin_ = cfg.getParameter<double>("global_y_bound_min");
+  fGlobYMax_ = cfg.getParameter<double>("global_y_bound_max");
 }
 
 void GEMDQMSource::fillDescriptions(edm::ConfigurationDescriptions & descriptions)
 {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("recHitsInputLabel", edm::InputTag("gemRecHits", "")); 
+  
+  desc.add<double>("global_x_bound_min", -400);
+  desc.add<double>("global_x_bound_max",  400);
+  desc.add<double>("global_y_bound_min", -400);
+  desc.add<double>("global_y_bound_max",  400);
+  
   descriptions.add("GEMDQMSource", desc);  
 }
 
 void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, edm::EventSetup const & iSetup)
 {
-  std::vector<std::vector<Int_t>> listLayerOcc;
+  std::vector<GEMDetId> listLayerOcc;
   
   GEMGeometry_ = initGeometry(iSetup);
   if ( GEMGeometry_ == nullptr) return ;  
@@ -100,6 +114,10 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
   for (auto sch : superChambers_){
     int n_lay = sch->nChambers();
     for (int l=0;l<n_lay;l++){
+      Bool_t bExist = false;
+      for ( auto ch : gemChambers_ ) if ( ch.id() == sch->chamber(l+1)->id() ) bExist = true;
+      if ( bExist ) continue;
+      
       gemChambers_.push_back(*sch->chamber(l+1));
     }
   }
@@ -141,37 +159,14 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
     hTitle_rh += ";Local x (cm);iEta";
     rh_vs_eta_[ gid ] = ibooker.book2D(hName_rh, hTitle_rh, 50, -25, 25, 8, 1,9);
     
-    Int_t nRegion  = gid.region();
-    Int_t nRing    = gid.ring();
-    Int_t nStation = gid.station();
-    Int_t nLayer   = gid.layer();
-    
+    GEMDetId lid(gid.region(), gid.ring(), gid.station(), gid.layer(), 0, 0);
     Int_t nIdxOcc = 0;
     
-    for ( ; nIdxOcc < (Int_t)listLayerOcc.size() ; nIdxOcc++ ) {
-      if ( listLayerOcc[ nIdxOcc ][ 0 ] == nRegion && 
-           listLayerOcc[ nIdxOcc ][ 1 ] == nRing && 
-           listLayerOcc[ nIdxOcc ][ 2 ] == nStation && 
-           listLayerOcc[ nIdxOcc ][ 3 ] == nLayer ) break;
-    }
-    
-    if ( nIdxOcc >= (Int_t)listLayerOcc.size() ) {
-      listLayerOcc.emplace_back();
-      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nRegion);
-      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nRing);
-      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nStation);
-      listLayerOcc[ listLayerOcc.size() - 1 ].push_back(nLayer);
-    }
+    for ( ; nIdxOcc < (Int_t)listLayerOcc.size() ; nIdxOcc++ ) if ( listLayerOcc[ nIdxOcc ] == lid ) break;
+    if ( nIdxOcc >= (Int_t)listLayerOcc.size() ) listLayerOcc.push_back(lid);
   }
   
-  for ( auto listLayerInfo : listLayerOcc ) {
-    Int_t nRegion  = listLayerInfo[ 0 ];
-    Int_t nRing    = listLayerInfo[ 1 ];
-    Int_t nStation = listLayerInfo[ 2 ];
-    Int_t nLayer   = listLayerInfo[ 3 ];
-    
-    GEMDetId gid(nRegion, nRing, nStation, nLayer, 0, 0);
-    
+  for ( auto gid : listLayerOcc ) {
     std::string strIdxName  = std::string("GE") + ( gid.region() > 0 ? "p" : "m" ) + to_string(gid.station()) + 
       "_" + to_string(gid.layer());
     std::string strIdxTitle = std::string("GE") + ( gid.region() > 0 ? "+" : "-" ) + to_string(gid.station()) + 
@@ -180,7 +175,8 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, 
     string hName_rh = "recHit_globalPos_Gemini_" + strIdxName;
     string hTitle_rh = "recHit global position Gemini chamber : " + strIdxTitle;
     hTitle_rh += ";Global X (cm);Global Y (cm)";
-    recGlobalPos[ gid ] = ibooker.book2D(hName_rh, hTitle_rh, 100, -400, 400, 100, -400, 400);
+    recGlobalPos[ gid ] = ibooker.book2D(hName_rh, hTitle_rh, 
+        100, fGlobXMin_, fGlobXMax_, 100, fGlobYMin_, fGlobYMax_);
   }
 }
 
