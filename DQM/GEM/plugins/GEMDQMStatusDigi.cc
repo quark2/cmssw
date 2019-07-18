@@ -30,10 +30,15 @@
 
 typedef struct tagTimeStoreItem {
   std::string strName;
+  std::string strTitle;
   std::string strAxisX;
+  
   MonitorElement *h2Histo;
   
   Int_t nNbinY;
+  Int_t nNbinMin;
+  Int_t nNbinMax;
+  
   std::vector<std::vector<Double_t>> listRecord;
 } TimeStoreItem;
 
@@ -52,10 +57,11 @@ protected:
   void bookHistogramsAMCPart(DQMStore::IBooker &);
   void bookHistogramsTimeRecordPart(DQMStore::IBooker &);
   
+  int SetInfoChambers();
   int SetConfigTimeRecord();
   int LoadPrevData();
   
-  Int_t seekIdx(std::vector<GEMDetId> &listLayers, GEMDetId &id);
+  Int_t seekIdx(std::vector<GEMDetId> &listLayers, UInt_t unId);
   
   void analyze(edm::Event const& e, edm::EventSetup const& eSetup) override;
   void endRun(edm::Run const& run, edm::EventSetup const& eSetup) override;
@@ -76,8 +82,6 @@ private:
   
   int nVfat_ = 24;
   
-  int nNCol_;
-  int nNRow_;
   int nNCh_;
   
   int cBit_ = 9;
@@ -89,6 +93,12 @@ private:
   int nNEvtPerSec_;
   int nNSecPerBin_;
   int nNTimeBinTotal_;
+  int nNTimeBinPrimitive_;
+  
+  int nIdxFirstStrip_;
+  
+  int nNBxBin_;
+  int nNBxRange_;
   
   std::string strFmtSummaryLabel_;
   bool bFlipSummary_;
@@ -166,10 +176,7 @@ GEMDQMStatusDigi::GEMDQMStatusDigi(const edm::ParameterSet& cfg)
   tagAMC_ = consumes<GEMAMCdataCollection>(cfg.getParameter<edm::InputTag>("AMCInputLabel")); 
   tagDigi_ = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("digisInputLabel")); 
   
-  listAMCSlots_ = cfg.getParameter<std::vector<int>>("numOfAMCSlots");
-  nNRow_ = cfg.getParameter<int>("numOfChamberRow");
-  nNCol_ = cfg.getParameter<int>("numOfChamberColumn");
-  nNCh_ = nNRow_ * nNCol_;
+  listAMCSlots_ = cfg.getParameter<std::vector<int>>("AMCSlots");
   
   strFmtSummaryLabel_ = cfg.getParameter<std::string>("summaryLabelFmt");
   bFlipSummary_ = cfg.getParameter<bool>("flipSummary");
@@ -178,7 +185,12 @@ GEMDQMStatusDigi::GEMDQMStatusDigi(const edm::ParameterSet& cfg)
   strPathPrevDQMRoot_ = cfg.getParameter<std::string>("pathOfPrevDQMRoot");
   nNEvtPerSec_ = cfg.getParameter<int>("numOfEvtPerSec");
   nNSecPerBin_ = cfg.getParameter<int>("secOfEvtPerBin");
-  nNTimeBinTotal_ = cfg.getParameter<int>("totalTimeInterval");
+  nNTimeBinPrimitive_ = cfg.getParameter<int>("totalTimeInterval");
+  
+  nIdxFirstStrip_ = cfg.getParameter<int>("idxFirstStrip");
+  
+  nNBxRange_ = cfg.getParameter<int>("bxRange");
+  nNBxBin_ = cfg.getParameter<int>("bxBin");
   
 }
 
@@ -191,9 +203,7 @@ void GEMDQMStatusDigi::fillDescriptions(edm::ConfigurationDescriptions & descrip
   desc.add<edm::InputTag>("digisInputLabel", edm::InputTag("muonGEMDigis", "")); 
   
   std::vector<int> listAMCSlotsDef = {0, 1, 2, 3, 4, 5, 6, 7};
-  desc.add<std::vector<int>>("numOfAMCSlots", listAMCSlotsDef); // TODO: Find how to get this from the geometry
-  desc.add<int>("numOfChamberRow", 1);
-  desc.add<int>("numOfChamberColumn", 36);
+  desc.add<std::vector<int>>("AMCSlots", listAMCSlotsDef); // TODO: Find how to get this from the geometry
   
   desc.add<std::string>("summaryLabelFmt", "GE%(station_signed)+i/%(layer)i");
   desc.add<bool>("flipSummary", false);
@@ -202,7 +212,12 @@ void GEMDQMStatusDigi::fillDescriptions(edm::ConfigurationDescriptions & descrip
   desc.add<std::string>("pathOfPrevDQMRoot", "");
   desc.add<int>("numOfEvtPerSec", 100);
   desc.add<int>("secOfEvtPerBin", 10);
-  desc.add<int>("totalTimeInterval", 500);
+  desc.add<int>("totalTimeInterval", 50000);
+  
+  desc.add<int>("idxFirstStrip", 0);
+  
+  desc.add<int>("bxRange", 10);
+  desc.add<int>("bxBin", 20);
   
   descriptions.add("GEMDQMStatusDigi", desc);  
 }
@@ -220,303 +235,7 @@ std::string GEMDQMStatusDigi::suffixLayer(GEMDetId &id) {
 }
 
 
-// 0: General; for whole AMC slots
-int GEMDQMStatusDigi::SetConfigTimeRecord() {
-  TimeStoreItem newTimeStore;
-  
-  // Very general GEMDetId
-  newTimeStore.strName  = "per_time_status_AMCslots";
-  newTimeStore.strAxisX = "AMC slot";
-  newTimeStore.nNbinY   = listAMCSlots_.size();
-  listTimeStore_[ 0 ] = newTimeStore;
-  
-  for ( auto layerId : m_listLayers ) {
-    std::string strSuffix = ( layerId.region() > 0 ? "p" : "m" ) + std::to_string(layerId.station()) 
-        + "_" + std::to_string(layerId.layer());
-    
-    newTimeStore.strName  = "per_time_status_GEB_" + suffixLayer(layerId);
-    newTimeStore.strAxisX = "Chamber";
-    newTimeStore.nNbinY   = nNCh_;
-    listTimeStore_[ layerId ] = newTimeStore;
-  }
-  
-  for ( auto ch : gemChambers_ ) {
-    auto chId = ch.id();
-    GEMDetId chIdStatus(chId.region(), chId.ring(), chId.station(), chId.layer(), chId.chamber(), 1);
-    GEMDetId chIdDigi(chId.region(), chId.ring(), chId.station(), chId.layer(), chId.chamber(), 2);
-    
-    std::string strSuffix = suffixChamber(chId);
-    
-    newTimeStore.strName  = "per_time_status_chamber_" + strSuffix;
-    newTimeStore.strAxisX = "VFAT";
-    newTimeStore.nNbinY   = nVfat_;
-    listTimeStore_[ chIdStatus ] = newTimeStore;
-    
-    newTimeStore.strName  = "per_time_digi_chamber_" + strSuffix;
-    newTimeStore.strAxisX = "VFAT";
-    newTimeStore.nNbinY   = nVfat_;
-    listTimeStore_[ chIdDigi ] = newTimeStore;
-  }
-  
-  return 0;
-}
-
-
-int GEMDQMStatusDigi::LoadPrevData() {
-  TFile *fPrev;
-  Bool_t bSync = true;
-  
-  nStackedEvt_ = 0;
-  
-  for ( auto &itStore : listTimeStore_ ) itStore.second.listRecord.clear();
-  
-  if ( strPathPrevDQMRoot_ == "" ) return 0;
-  
-  std::ifstream fExist(strPathPrevDQMRoot_.c_str());
-  if ( !fExist.good() ) return 0;
-  fExist.close();
-  
-  fPrev = new TFile(strPathPrevDQMRoot_.c_str());
-  if ( fPrev == NULL ) return 1;
-  
-  std::cout << strPathPrevDQMRoot_ << " is being loaded" << std::endl;
-  std::string strRunnum = ( (TDirectoryFile *)fPrev->Get("DQMData") )->GetListOfKeys()->At(0)->GetName();
-  
-  for ( auto &itStore : listTimeStore_ ) {
-    TH2F *h2Prev = (TH2F *)fPrev->Get(( "DQMData/" + strRunnum 
-      + "/GEM/Run summary/StatusDigi/" + itStore.second.strName ).c_str());
-    auto &listCurr = itStore.second.listRecord;
-    
-    listCurr.clear();
-    
-    if ( h2Prev == NULL ) continue; // Hmmm, is it an error...?
-    
-    Int_t nNbinX = h2Prev->GetNbinsX();
-    Int_t nNbinY = h2Prev->GetNbinsY();
-    
-    Int_t nX, nY;
-    Int_t nXMaxOcc = 0;
-    Int_t nNNonFullFill = 0;
-    
-    for ( nX = 1 ; nX <= nNbinX ; nX++ ) {
-      Int_t nNEvtCurrTime = h2Prev->GetBinContent(nX, 0); // The (nX, 0)-bin keeps the number of filled events
-      if (nNEvtCurrTime < nNSecPerBin_ * nNEvtPerSec_ ) nNNonFullFill++;
-      if ( nNEvtCurrTime > 0 ) nXMaxOcc = nX;
-    }
-    
-    if ( nNNonFullFill > 1 ) { // The last bin may not full
-      std::cerr << "WARNING: There is a bin of the previous histograms which is not fully filled" << std::endl;
-    }
-    
-    for ( nY = 1 ; nY <= nNbinY ; nY++ ) {
-      listCurr.emplace_back();
-      
-      if ( nXMaxOcc > 0 ) {
-        for ( nX = 1 ; nX <= nXMaxOcc ; nX++ ) {
-          listCurr[ nY - 1 ].push_back(h2Prev->GetBinContent(nX, nY));
-        }
-      } else { // Empty...?
-        listCurr[ nY - 1 ].push_back(0);
-      }
-    }
-    
-    if ( nXMaxOcc <= 0 ) std::cout << "nXMacOcc has a problem" << std::endl;
-    if ( nXMaxOcc <= 0 ) continue; // Empty...?
-    
-    // Keeping the number of lastly stacked events
-    // And also checking if the sync is okay
-    if ( nStackedEvt_ == 0 ) nStackedEvt_ = h2Prev->GetBinContent(nXMaxOcc, 0);
-    else {
-      if ( nStackedEvt_ != h2Prev->GetBinContent(nXMaxOcc, 0) ) bSync = false;
-    }
-  }
-  
-  if ( !bSync ) { // No sync...!
-    std::cerr << "WARNING: No sync on time histograms" << std::endl;
-  }
-  
-  fPrev->Close();
-  
-  return 0;
-}
-
-
-void GEMDQMStatusDigi::bookHistogramsChamberPart(DQMStore::IBooker &ibooker, GEMDetId &gid) {
-  std::string hName, hTitle;
-  
-  UInt_t unBinPos;
-  //std::cout << "B: " << gid << std::endl;
-  
-  std::string strIdxName  = suffixChamber(gid);
-  std::string strIdxTitle = "GEMINIm" + to_string(gid.chamber()) + " in GE" + 
-    ( gid.region() > 0 ? "+" : "-" ) + to_string(gid.station()) + "/" + to_string(gid.layer());
-  
-  hName = "vfatStatus_QualityFlag_" + strIdxName;
-  hTitle = "VFAT quality " + strIdxTitle;
-  hTitle += ";VFAT;";
-  listVFATQualityFlag_[ gid ] = ibooker.book2D(hName, hTitle, nVfat_, 0, nVfat_, 9, 0, 9);
-  
-  hName = "vfatStatus_BC_" + strIdxName;
-  hTitle = "VFAT bunch crossing " + strIdxTitle;
-  hTitle += ";Bunch crossing;VFAT";
-  listVFATBC_[ gid ] = ibooker.book2D(hName, hTitle, 10, -5, 5, nVfat_, 0, nVfat_);
-  
-  hName = "vfatStatus_EC_" + strIdxName;
-  hTitle = "VFAT event counter " + strIdxTitle;
-  hTitle += ";Event counter;VFAT";
-  listVFATEC_[ gid ] = ibooker.book2D(hName, hTitle, 256, 0, 256, nVfat_, 0, nVfat_);
-  
-  unBinPos = 1;
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "Good", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "CRC fail", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1010 fail", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1100 fail", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1110 fail", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "Hamming error", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "AFULL", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "SEUlogic", 2);
-  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "SUEI2C", 2);
-  
-  m_mapStatusFill[ gid ] = false;
-  m_mapStatusErr[ gid ] = false;
-}
-
-
-void GEMDQMStatusDigi::bookHistogramsStationPart(DQMStore::IBooker &ibooker, GEMDetId &lid) {
-  UInt_t unBinPos;
-  
-  Int_t  re = lid.region();
-  UInt_t st = lid.station();
-  UInt_t la = lid.layer();
-  
-  auto newbookGEB = [this](DQMStore::IBooker &ibooker, 
-                           std::string strName, std::string strTitle, std::string strAxis, 
-                           GEMDetId &lid, int nLayer, int nStation, int re, 
-                           int nBin, float fMin, float fMax)->MonitorElement *
-  {
-    strName  = strName  + "_" + suffixLayer(lid);
-    strTitle = strTitle + ", station: " + (re>=0 ? "+" : "-") + std::to_string(nStation);
-    
-    if ( bPerSuperchamber_ ) {
-      strName  += "_la_" + std::to_string(nLayer);
-      strTitle += ", layer: " + std::to_string(nLayer);
-    }
-    
-    strTitle += ";Chamber;" + strAxis;
-    
-    return ibooker.book2D(strName, strTitle, this->nNCh_, 0, this->nNCh_, nBin, fMin, fMax);
-  };
-  
-  listGEBInputStatus_[ lid ]  = newbookGEB(ibooker, "geb_input_status", 
-      "inputStatus",       "",                           lid, la, st, re, eBit_, 0, eBit_);
-  listGEBInputID_[ lid ]      = newbookGEB(ibooker, "geb_input_ID", 
-      "inputID",           "Input ID",                   lid, la, st, re, 32, 0, 32);
-  listGEBVFATWordCnt_[ lid ]  = newbookGEB(ibooker, "geb_no_vfats", 
-      "nvfats in header",  "Number of VFATs in header",  lid, la, st, re, 25, 0, 25);
-  listGEBVFATWordCntT_[ lid ] = newbookGEB(ibooker, "geb_no_vfatsT", 
-      "nvfats in trailer", "Number of VFATs in trailer", lid, la, st, re, 25, 0, 25);
-  listGEBZeroSupWordsCnt_[ lid ] = newbookGEB(ibooker, "geb_zeroSupWordsCnt", 
-      "zeroSupWordsCnt",   "Zero sup. words count",      lid, la, st, re, 10, 0, 10);
-  
-  listGEBbcOH_[ lid ]  = newbookGEB(ibooker, "geb_bcOH",  "OH bunch crossing", 
-      "OH bunch crossing", lid, la, st, re, 3600, 0, 3600);
-  listGEBecOH_[ lid ]  = newbookGEB(ibooker, "geb_ecOH",  "OH event coounter", 
-      "OH event counter", lid, la, st, re, 256, 0, 256);
-  listGEBOHCRC_[ lid ] = newbookGEB(ibooker, "geb_OHCRC", "CRC of OH data", 
-      "CRC of OH data", lid, la, st, re, 65536, 0, 65536);
-  
-  unBinPos = 1;
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "BX mismatch GLIB OH", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "BX mismatch GLIB VFAT", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "OOS GLIB OH", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "OOS GLIB VFAT", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "No VFAT marker", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event size warn", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "L1AFIFO near full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "InFIFO near full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "EvtFIFO near full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event size overflow", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "L1AFIFO full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "InFIFO full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "EvtFIFO full", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Input FIFO underflow", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Stuck data", 2);
-  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event FIFO underflow", 2);
-}
-
-
-void GEMDQMStatusDigi::bookHistogramsAMCPart(DQMStore::IBooker &ibooker) {
-  h2AMCStatus_ = ibooker.book2D("amc_statusflag", "Status of AMC slots;AMC slot;", 
-      listAMCSlots_.size(), 0, listAMCSlots_.size(), amcStatusBit_, 0, amcStatusBit_);
-  
-  uint32_t unBinPos = 1;
-  h2AMCStatus_->setBinLabel(unBinPos++, "BC0 not locked", 2);
-  h2AMCStatus_->setBinLabel(unBinPos++, "DAQ not ready", 2);
-  h2AMCStatus_->setBinLabel(unBinPos++, "DAQ clock not locked", 2);
-  h2AMCStatus_->setBinLabel(unBinPos++, "MMCM not locked", 2);
-  h2AMCStatus_->setBinLabel(unBinPos++, "Back pressure", 2);
-  h2AMCStatus_->setBinLabel(unBinPos++, "GLIB out-of-sync", 2);
-}
-
-
-void GEMDQMStatusDigi::bookHistogramsTimeRecordPart(DQMStore::IBooker &ibooker) {
-  for ( auto &itStore : listTimeStore_ ) {
-    auto &infoCurr = itStore.second;
-    infoCurr.h2Histo = ibooker.book2D(infoCurr.strName, 
-      ";Time (per " + std::to_string(nNSecPerBin_) + " sec);" + infoCurr.strAxisX, 
-      nNTimeBinTotal_, 0, nNTimeBinTotal_, infoCurr.nNbinY, 0, infoCurr.nNbinY);
-  }
-}
-
-
-// To make labels like python, with std::(unordered_)map
-std::string printfWithMap(std::string strFmt, std::unordered_map<std::string, Int_t> mapArg) {
-  std::string strRes = strFmt;
-  char szOutFmt[ 64 ];
-  size_t unPos, unPosEnd;
-  
-  for ( unPos = strRes.find('%') ; unPos != std::string::npos ; unPos = strRes.find('%', unPos + 1) ) {
-    unPosEnd = strRes.find(')', unPos);
-    if ( strRes[ unPos + 1 ] != '(' || unPosEnd == std::string::npos ) break; // Syntax error
-    
-    // Extracting the key
-    std::string strKey = strRes.substr(unPos + 2, unPosEnd - ( unPos + 2 ));
-    
-    // To treat formats like '%5i' or '%02i', extracting '5' or '02'
-    // After do this, 
-    std::string strOptNum = "%";
-    unPosEnd++;
-    
-    for ( ;; unPosEnd++ ) {
-      if ( !( '0' <= strRes[ unPosEnd ] && strRes[ unPosEnd ] <= '9' ) && 
-           strRes[ unPosEnd ] != '+' ) break;
-      strOptNum += strRes[ unPosEnd ];
-    }
-    
-    if ( strRes[ unPosEnd ] != 'i' && strRes[ unPosEnd ] != 'd' ) break; // Syntax error
-    strOptNum += strRes[ unPosEnd ];
-    unPosEnd++;
-    
-    sprintf(szOutFmt, strOptNum.c_str(), mapArg[ strKey ]);
-    strRes = strRes.substr(0, unPos) + szOutFmt + strRes.substr(unPosEnd);
-  }
-  
-  if ( unPos != std::string::npos ) { // It means... an syntax error occurs!
-    std::cerr << "ERROR: Syntax error on printfWithMap(); " << std::endl;
-    return "";
-  }
-  
-  return strRes;
-}
-
-
-void GEMDQMStatusDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, edm::EventSetup const & iSetup)
-{
-  // Start: Loading the GEM geometry
-  
-  GEMGeometry_ = initGeometry(iSetup);
-  if ( GEMGeometry_ == nullptr) return;
-  
+int GEMDQMStatusDigi::SetInfoChambers() {
   const std::vector<const GEMSuperChamber*>& superChambers_ = GEMGeometry_->superChambers();   
   for ( auto sch : superChambers_ ) {
     int nLayer = sch->nChambers();
@@ -584,6 +303,366 @@ void GEMDQMStatusDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   
   nNCh_ = (int)m_listChambers.size();
   
+  return 0;
+}
+
+
+// 0: General; for whole AMC slots
+int GEMDQMStatusDigi::SetConfigTimeRecord() {
+  TimeStoreItem newTimeStore;
+  
+  newTimeStore.nNbinMin = 0;
+  newTimeStore.nNbinMax = 0;
+  
+  std::string strCommonName = "per_time_";
+  
+  // Very general GEMDetId
+  newTimeStore.strName  = strCommonName + "status_AMCslots";
+  newTimeStore.strTitle = "Status of AMC slots per time";
+  newTimeStore.strAxisX = "AMC slot";
+  newTimeStore.nNbinY   = listAMCSlots_.size();
+  listTimeStore_[ 0 ] = newTimeStore;
+  
+  for ( auto layerId : m_listLayers ) {
+    std::string strSuffix = ( layerId.region() > 0 ? "p" : "m" ) + std::to_string(layerId.station()) 
+        + "_" + std::to_string(layerId.layer());
+    
+    newTimeStore.strName  = strCommonName + "status_GEB_" + suffixLayer(layerId);
+    newTimeStore.strTitle = "";
+    newTimeStore.strAxisX = "Chamber";
+    
+    newTimeStore.nNbinY   = nNCh_;
+    listTimeStore_[ layerId ] = newTimeStore;
+  }
+  
+  for ( auto ch : gemChambers_ ) {
+    auto chId = ch.id();
+    GEMDetId chIdStatus(chId.region(), chId.ring(), chId.station(), chId.layer(), chId.chamber(), 1);
+    GEMDetId chIdDigi(chId.region(), chId.ring(), chId.station(), chId.layer(), chId.chamber(), 2);
+    GEMDetId chIdBx(chId.region(), chId.ring(), chId.station(), chId.layer(), chId.chamber(), 3);
+    
+    std::string strSuffix = suffixChamber(chId);
+    
+    newTimeStore.strName  = strCommonName + "status_chamber_" + strSuffix;
+    newTimeStore.strTitle = "";
+    newTimeStore.strAxisX = "VFAT";
+    
+    newTimeStore.nNbinY   = nVfat_;
+    listTimeStore_[ chIdStatus ] = newTimeStore;
+    
+    newTimeStore.strName  = strCommonName + "digi_chamber_" + strSuffix;
+    newTimeStore.strTitle = "";
+    newTimeStore.strAxisX = "VFAT";
+    
+    newTimeStore.nNbinY   = nVfat_;
+    listTimeStore_[ chIdDigi ] = newTimeStore;
+    
+    newTimeStore.strName  = strCommonName + "bx_chamber_" + strSuffix;
+    newTimeStore.strTitle = "";
+    newTimeStore.strAxisX = "Bunch crossing";
+    
+    newTimeStore.nNbinY   =  nNBxBin_;
+    newTimeStore.nNbinMin = -nNBxRange_;
+    newTimeStore.nNbinMax =  nNBxRange_;
+    
+    listTimeStore_[ chIdBx ] = newTimeStore;
+    
+    newTimeStore.nNbinMin = newTimeStore.nNbinMax = 0;
+  }
+  
+  return 0;
+}
+
+
+int GEMDQMStatusDigi::LoadPrevData() {
+  TFile *fPrev;
+  Bool_t bSync = true;
+  
+  nStackedEvt_ = 0;
+  
+  for ( auto &itStore : listTimeStore_ ) itStore.second.listRecord.clear();
+  
+  if ( strPathPrevDQMRoot_ == "" ) return 0;
+  
+  std::ifstream fExist(strPathPrevDQMRoot_.c_str());
+  if ( !fExist.good() ) return 0;
+  fExist.close();
+  
+  fPrev = new TFile(strPathPrevDQMRoot_.c_str());
+  if ( fPrev == NULL ) return 1;
+  
+  std::cout << strPathPrevDQMRoot_ << " is being loaded" << std::endl;
+  std::string strRunnum = ( (TDirectoryFile *)fPrev->Get("DQMData") )->GetListOfKeys()->At(0)->GetName();
+  
+  for ( auto &itStore : listTimeStore_ ) {
+    TH2F *h2Prev = (TH2F *)fPrev->Get(( "DQMData/" + strRunnum 
+      + "/GEM/Run summary/StatusDigi/" + itStore.second.strName ).c_str());
+    auto &listCurr = itStore.second.listRecord;
+    
+    listCurr.clear();
+    
+    if ( h2Prev == NULL ) continue; // Hmmm, is it an error...?
+    
+    Int_t nNbinX = h2Prev->GetNbinsX();
+    Int_t nNbinY = h2Prev->GetNbinsY();
+    
+    Int_t nX, nY;
+    Int_t nXMaxOcc = 0;
+    Int_t nNNonFullFill = 0;
+    
+    for ( nX = 1 ; nX <= nNbinX ; nX++ ) {
+      Int_t nNEvtCurrTime = h2Prev->GetBinContent(nX, 0); // The (nX, 0)-bin keeps the number of filled events
+      if ( 0 < nNEvtCurrTime && nNEvtCurrTime < nNSecPerBin_ * nNEvtPerSec_ ) nNNonFullFill++;
+      if ( nNEvtCurrTime > 0 ) nXMaxOcc = nX;
+    }
+    
+    if ( nNNonFullFill > 1 ) { // The last bin may not full
+      std::cerr << "WARNING: There is a bin of the previous histograms which is not fully filled" << std::endl;
+    }
+    
+    for ( nY = 1 ; nY <= nNbinY ; nY++ ) {
+      listCurr.emplace_back();
+      
+      if ( nXMaxOcc > 0 ) {
+        for ( nX = 1 ; nX <= nXMaxOcc ; nX++ ) {
+          //listCurr[ nY - 1 ].push_back(h2Prev->GetBinContent(nX, nY));
+          listCurr[ nY - 1 ].push_back(0); // If hadd is used, then it must be blanked
+        }
+        
+        if ( nNNonFullFill <= 0 ) listCurr[ nY - 1 ].push_back(0);
+      } else { // Empty...?
+        listCurr[ nY - 1 ].push_back(0);
+      }
+    }
+    
+    if ( nXMaxOcc <= 0 ) std::cout << "nXMacOcc has a problem" << std::endl;
+    if ( nXMaxOcc <= 0 ) continue; // Empty...?
+    
+    // Keeping the number of lastly stacked events
+    // And also checking if the sync is okay
+    if ( nStackedEvt_ == 0 ) nStackedEvt_ = h2Prev->GetBinContent(nXMaxOcc, 0);
+    else {
+      if ( nStackedEvt_ != h2Prev->GetBinContent(nXMaxOcc, 0) ) bSync = false;
+    }
+  }
+  
+  if ( nStackedEvt_ == nNSecPerBin_ * nNEvtPerSec_ ) nStackedEvt_ = 0;
+  
+  if ( !bSync ) { // No sync...!
+    std::cerr << "WARNING: No sync on time histograms" << std::endl;
+  }
+  
+  fPrev->Close();
+  
+  return 0;
+}
+
+
+void GEMDQMStatusDigi::bookHistogramsChamberPart(DQMStore::IBooker &ibooker, GEMDetId &gid) {
+  std::string hName, hTitle;
+  
+  UInt_t unBinPos;
+  //std::cout << "B: " << gid << std::endl;
+  
+  std::string strIdxName  = suffixChamber(gid);
+  std::string strIdxTitle = "GEMINIm" + to_string(gid.chamber()) + " in GE" + 
+    ( gid.region() > 0 ? "+" : "-" ) + to_string(gid.station()) + "/" + to_string(gid.layer());
+  
+  hName = "vfatStatus_QualityFlag_" + strIdxName;
+  hTitle = "VFAT quality " + strIdxTitle;
+  hTitle += ";VFAT;";
+  std::cout << "booking: " << gid << std::endl;
+  listVFATQualityFlag_[ gid ] = ibooker.book2D(hName, hTitle, nVfat_, 0, nVfat_, 9, 0, 9);
+  
+  hName = "vfatStatus_BC_" + strIdxName;
+  hTitle = "VFAT bunch crossing " + strIdxTitle;
+  hTitle += ";Bunch crossing;VFAT";
+  listVFATBC_[ gid ] = ibooker.book2D(hName, hTitle, nNBxBin_, -nNBxRange_, nNBxRange_, nVfat_, 0, nVfat_);
+  
+  hName = "vfatStatus_EC_" + strIdxName;
+  hTitle = "VFAT event counter " + strIdxTitle;
+  hTitle += ";Event counter;VFAT";
+  listVFATEC_[ gid ] = ibooker.book2D(hName, hTitle, 256, 0, 256, nVfat_, 0, nVfat_);
+  
+  unBinPos = 1;
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "Good", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "CRC fail", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1010 fail", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1100 fail", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "b1110 fail", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "Hamming error", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "AFULL", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "SEUlogic", 2);
+  listVFATQualityFlag_[ gid ]->setBinLabel(unBinPos++, "SUEI2C", 2);
+  
+  m_mapStatusFill[ gid ] = false;
+  m_mapStatusErr[ gid ] = false;
+}
+
+
+void GEMDQMStatusDigi::bookHistogramsStationPart(DQMStore::IBooker &ibooker, GEMDetId &lid) {
+  UInt_t unBinPos;
+  
+  Int_t  re = lid.region();
+  UInt_t st = lid.station();
+  UInt_t la = lid.layer();
+  
+  auto newbookGEB = [this](DQMStore::IBooker &ibooker, 
+                           std::string strName, std::string strTitle, std::string strAxis, 
+                           GEMDetId &lid, int nLayer, int nStation, int re, 
+                           int nBin, float fMin, float fMax)->MonitorElement *
+  {
+    strName  = strName  + "_" + suffixLayer(lid);
+    strTitle = strTitle + ", station: " + (re>=0 ? "+" : "-") + std::to_string(nStation);
+    
+    if ( bPerSuperchamber_ ) {
+      strTitle += ", layer: " + std::to_string(nLayer);
+    }
+    
+    strTitle += ";Chamber;" + strAxis;
+    
+    auto hNew = ibooker.book2D(strName, strTitle, this->nNCh_, 0, this->nNCh_, nBin, fMin, fMax);
+    
+    for ( Int_t i = 0 ; i < this->nNCh_ ; i++ ) {
+      auto &gid = this->m_listChambers[ i ];
+      Int_t nCh = gid.chamber() + ( this->bPerSuperchamber_ ? 0 : gid.layer() - 1 );
+      hNew->setBinLabel(i + 1, std::to_string(nCh), 1);
+    }
+    
+    return hNew;
+  };
+  
+  listGEBInputStatus_[ lid ]  = newbookGEB(ibooker, "geb_input_status", 
+      "inputStatus",       "",                           lid, la, st, re, eBit_, 0, eBit_);
+  listGEBInputID_[ lid ]      = newbookGEB(ibooker, "geb_input_ID", 
+      "inputID",           "Input ID",                   lid, la, st, re, 32, 0, 32);
+  listGEBVFATWordCnt_[ lid ]  = newbookGEB(ibooker, "geb_no_vfats", 
+      "nvfats in header",  "Number of VFATs in header",  lid, la, st, re, 25, 0, 25);
+  listGEBVFATWordCntT_[ lid ] = newbookGEB(ibooker, "geb_no_vfatsT", 
+      "nvfats in trailer", "Number of VFATs in trailer", lid, la, st, re, 25, 0, 25);
+  listGEBZeroSupWordsCnt_[ lid ] = newbookGEB(ibooker, "geb_zeroSupWordsCnt", 
+      "zeroSupWordsCnt",   "Zero sup. words count",      lid, la, st, re, 10, 0, 10);
+  
+  listGEBbcOH_[ lid ]  = newbookGEB(ibooker, "geb_bcOH",  "OH bunch crossing", 
+      "OH bunch crossing", lid, la, st, re, 3600, 0, 3600);
+  listGEBecOH_[ lid ]  = newbookGEB(ibooker, "geb_ecOH",  "OH event coounter", 
+      "OH event counter", lid, la, st, re, 256, 0, 256);
+  listGEBOHCRC_[ lid ] = newbookGEB(ibooker, "geb_OHCRC", "CRC of OH data", 
+      "CRC of OH data", lid, la, st, re, 65536, 0, 65536);
+  
+  unBinPos = 1;
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "BX mismatch GLIB OH", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "BX mismatch GLIB VFAT", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "OOS GLIB OH", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "OOS GLIB VFAT", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "No VFAT marker", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event size warn", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "L1AFIFO near full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "InFIFO near full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "EvtFIFO near full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event size overflow", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "L1AFIFO full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "InFIFO full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "EvtFIFO full", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Input FIFO underflow", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Stuck data", 2);
+  listGEBInputStatus_[ lid ]->setBinLabel(unBinPos++, "Event FIFO underflow", 2);
+}
+
+
+void GEMDQMStatusDigi::bookHistogramsAMCPart(DQMStore::IBooker &ibooker) {
+  h2AMCStatus_ = ibooker.book2D("amc_statusflag", "Status of AMC slots;AMC slot;", 
+      listAMCSlots_.size(), 0, listAMCSlots_.size(), amcStatusBit_, 0, amcStatusBit_);
+  
+  uint32_t unBinPos = 1;
+  h2AMCStatus_->setBinLabel(unBinPos++, "BC0 not locked", 2);
+  h2AMCStatus_->setBinLabel(unBinPos++, "DAQ not ready", 2);
+  h2AMCStatus_->setBinLabel(unBinPos++, "DAQ clock not locked", 2);
+  h2AMCStatus_->setBinLabel(unBinPos++, "MMCM not locked", 2);
+  h2AMCStatus_->setBinLabel(unBinPos++, "Back pressure", 2);
+  h2AMCStatus_->setBinLabel(unBinPos++, "GLIB out-of-sync", 2);
+}
+
+
+void GEMDQMStatusDigi::bookHistogramsTimeRecordPart(DQMStore::IBooker &ibooker) {
+  //Int_t nNBinX = ( listTimeStore_[ 0 ].listRecord.size() / nNTimeBinTotal_ + 1 ) * nNTimeBinTotal_;
+  
+  for ( auto &itStore : listTimeStore_ ) {
+    auto &infoCurr = itStore.second;
+    
+    Float_t fMin = 0, fMax = infoCurr.nNbinY;
+    
+    if ( infoCurr.nNbinMin < infoCurr.nNbinMax ) {
+      fMin = infoCurr.nNbinMin;
+      fMax = infoCurr.nNbinMax;
+    }
+    
+    infoCurr.h2Histo = ibooker.book2D(infoCurr.strName, 
+      //infoCurr.strTitle + ";Time (per " + std::to_string(nNSecPerBin_) + " sec);" + infoCurr.strAxisX, 
+      infoCurr.strTitle + ";Per " + std::to_string(nNSecPerBin_ * nNEvtPerSec_) + " events;" + infoCurr.strAxisX, 
+      nNTimeBinPrimitive_, 0, nNTimeBinPrimitive_, infoCurr.nNbinY, fMin, fMax);
+    
+    if ( seekIdx(m_listLayers, itStore.first) >= 0 ) {
+      for ( Int_t i = 0 ; i < nNCh_ ; i++ ) {
+        auto &gid = m_listChambers[ i ];
+        Int_t nCh = gid.chamber() + ( bPerSuperchamber_ ? 0 : gid.layer() - 1 );
+        infoCurr.h2Histo->setBinLabel(i + 1, std::to_string(nCh), 2);
+      }
+    }
+  }
+}
+
+
+// To make labels like python, with std::(unordered_)map
+std::string printfWithMap(std::string strFmt, std::unordered_map<std::string, Int_t> mapArg) {
+  std::string strRes = strFmt;
+  char szOutFmt[ 64 ];
+  size_t unPos, unPosEnd;
+  
+  for ( unPos = strRes.find('%') ; unPos != std::string::npos ; unPos = strRes.find('%', unPos + 1) ) {
+    unPosEnd = strRes.find(')', unPos);
+    if ( strRes[ unPos + 1 ] != '(' || unPosEnd == std::string::npos ) break; // Syntax error
+    
+    // Extracting the key
+    std::string strKey = strRes.substr(unPos + 2, unPosEnd - ( unPos + 2 ));
+    
+    // To treat formats like '%5i' or '%02i', extracting '5' or '02'
+    // After do this, 
+    std::string strOptNum = "%";
+    unPosEnd++;
+    
+    for ( ;; unPosEnd++ ) {
+      if ( !( '0' <= strRes[ unPosEnd ] && strRes[ unPosEnd ] <= '9' ) && 
+           strRes[ unPosEnd ] != '+' ) break;
+      strOptNum += strRes[ unPosEnd ];
+    }
+    
+    if ( strRes[ unPosEnd ] != 'i' && strRes[ unPosEnd ] != 'd' ) break; // Syntax error
+    strOptNum += strRes[ unPosEnd ];
+    unPosEnd++;
+    
+    sprintf(szOutFmt, strOptNum.c_str(), mapArg[ strKey ]);
+    strRes = strRes.substr(0, unPos) + szOutFmt + strRes.substr(unPosEnd);
+  }
+  
+  if ( unPos != std::string::npos ) { // It means... an syntax error occurs!
+    std::cerr << "ERROR: Syntax error on printfWithMap(); " << std::endl;
+    return "";
+  }
+  
+  return strRes;
+}
+
+
+void GEMDQMStatusDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &, edm::EventSetup const & iSetup)
+{
+  // Start: Loading the GEM geometry
+  
+  GEMGeometry_ = initGeometry(iSetup);
+  if ( GEMGeometry_ == nullptr) return;
+  
+  SetInfoChambers();
+  
   // Setting the informations for time histograms
   SetConfigTimeRecord();
   LoadPrevData();
@@ -650,6 +729,12 @@ void GEMDQMStatusDigi::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const
   h2SummaryStatus_ = ibooker.book2D("reportSummaryMap", ";Chamber;", nNCh_, 0, nNCh_, 
       m_listLayers.size(), 0, m_listLayers.size());
   
+  for ( Int_t i = 0 ; i < nNCh_ ; i++ ) {
+    auto &gid = this->m_listChambers[ i ];
+    Int_t nCh = gid.chamber() + ( bPerSuperchamber_ ? 0 : gid.layer() - 1 );
+    h2SummaryStatus_->setBinLabel(i + 1, std::to_string(nCh), 1);
+  }
+  
   Int_t nIdxLayer = 0;
   std::unordered_map<std::string, Int_t> mapArg;
   
@@ -692,13 +777,15 @@ void GEMDQMStatusDigi::FillBits(MonitorElement *monitor, uint64_t unVal, int nNu
 }
 
 
-Int_t GEMDQMStatusDigi::seekIdx(std::vector<GEMDetId> &listLayers, GEMDetId &id) {
+Int_t GEMDQMStatusDigi::seekIdx(std::vector<GEMDetId> &listLayers, UInt_t unId) {
+  if ( unId < 256 ) return -1;
+  
+  GEMDetId id(unId);
   for ( Int_t nIdx = 0 ; nIdx < (Int_t)listLayers.size() ; nIdx++ ) if ( id == listLayers[ nIdx ] ) return nIdx;
   return -1;
 }
   
 
-std::map<Int_t, Bool_t> g_mapAMC;
 void GEMDQMStatusDigi::analyze(edm::Event const& event, edm::EventSetup const& eventSetup)
 {
   edm::Handle<GEMVfatStatusDigiCollection> gemVFAT;
@@ -809,11 +896,11 @@ void GEMDQMStatusDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       uint64_t unBit = 0;
       uint64_t unStatus = 0;
       
-      unStatus |= ( ( amc->bc0locked()      != 1 ? 1 : 0 ) << unBit++ ); 
+      unStatus |= ( ( amc->bc0locked()      == 0 ? 1 : 0 ) << unBit++ ); 
       unStatus |= ( ( amc->daqReady()       != 1 ? 1 : 0 ) << unBit++ ); 
-      unStatus |= ( ( amc->daqClockLocked() != 1 ? 1 : 0 ) << unBit++ ); 
-      unStatus |= ( ( amc->mmcmLocked()     != 0 ? 1 : 0 ) << unBit++ ); 
-      unStatus |= ( ( amc->backPressure()   != 1 ? 1 : 0 ) << unBit++ ); 
+      unStatus |= ( ( amc->daqClockLocked() == 0 ? 1 : 0 ) << unBit++ ); 
+      unStatus |= ( ( amc->mmcmLocked()     != 1 ? 1 : 0 ) << unBit++ ); 
+      unStatus |= ( ( amc->backPressure()   == 1 ? 1 : 0 ) << unBit++ ); 
       unStatus |= ( ( amc->oosGlib()        != 0 ? 1 : 0 ) << unBit++ );
       
       FillBits(h2AMCStatus_, unStatus, amcStatusBit_, nIdAMC);
@@ -825,16 +912,15 @@ void GEMDQMStatusDigi::analyze(edm::Event const& event, edm::EventSetup const& e
       h1_amc_chTimeOut_->Fill(amc->linkTo());
       
       if ( unStatus != 0 ) ( listCurr.listRecord[ nIdAMC ] )[ listCurr.listRecord[ nIdAMC ].size() - 1 ]++;
-      g_mapAMC[ amc->amcNum() ] = true;
     }
   }
   
-  auto findVFAT = [this](float min_, float max_, float x_, int roll_)->int {
+  /*auto findVFAT = [this](float min_, int nNumStripPerVFAT, float x_, int roll_)->int {
     float step = max_/3;
     if ( x_ < (min_+step) ) { return 8 - roll_;}
     else if ( x_ < (min_+2*step) )  { return 16 - roll_;}
     else { return this->nVfat_ - roll_;}
-  };
+  };*/
   
   // Checking if there is a fire (data)
   for ( auto ch : gemChambers_ ) {
@@ -845,18 +931,32 @@ void GEMDQMStatusDigi::analyze(edm::Event const& event, edm::EventSetup const& e
     std::unordered_map<Int_t, Int_t> mapBXVFAT;
     
     GEMDetId chIdDigi(cId.region(), cId.ring(), cId.station(), cId.layer(), cId.chamber(), 2);
-    auto &listCurr = listTimeStore_[ chIdDigi ];
+    GEMDetId chIdBx(cId.region(), cId.ring(), cId.station(), cId.layer(), cId.chamber(), 3);
+    
+    auto &listCurrDigi = listTimeStore_[ chIdDigi ];
+    auto &listCurrBx   = listTimeStore_[ chIdBx ];
     
     for ( auto roll : ch.etaPartitions() ) {
       GEMDetId rId = roll->id();      
       const auto &digis_in_det = gemDigis->get(rId);
       
       for ( auto d = digis_in_det.first ; d != digis_in_det.second ; ++d ){
-        Int_t nVFAT = findVFAT(1, roll->nstrips(), d->strip(), rId.roll());
+        //Int_t nVFAT = findVFAT(0, roll->nstrips(), d->strip(), rId.roll()); // Starts at 0
+        Int_t nIdxStrip = d->strip() - nIdxFirstStrip_;
+        Int_t nVFAT = 8 * ( (Int_t)( nIdxStrip / ( roll->nstrips() / 3 ) ) + 1 ) - rId.roll(); // Strip:Start at 0
         
         bIsHit = true;
         mapBXVFAT[ nVFAT ] = d->bx();
-        ( listCurr.listRecord[ nVFAT ] )[ listCurr.listRecord[ nVFAT ].size() - 1 ]++;
+        ( listCurrDigi.listRecord[ nVFAT ] )[ listCurrDigi.listRecord[ nVFAT ].size() - 1 ]++;
+        
+        Int_t nIdxBx;
+        
+        if      ( d->bx() <  listCurrBx.nNbinMin ) nIdxBx = 0;
+        else if ( d->bx() >= listCurrBx.nNbinMax ) nIdxBx = listCurrBx.nNbinY - 1;
+        else nIdxBx = (Int_t)( listCurrBx.nNbinY * 1.0 * 
+            ( d->bx() - listCurrBx.nNbinMin ) / ( listCurrBx.nNbinMax - listCurrBx.nNbinMin ) );
+        
+        ( listCurrBx.listRecord[ nIdxBx ] )[ listCurrBx.listRecord[ nIdxBx ].size() - 1 ]++;
       }
       
       if ( bIsHit ) break;
@@ -881,9 +981,6 @@ void GEMDQMStatusDigi::analyze(edm::Event const& event, edm::EventSetup const& e
 
 void GEMDQMStatusDigi::endRun(edm::Run const& run, edm::EventSetup const& eSetup) {
   //std::cout << "End run" << std::endl;
-  std::cout << "AMC slots: ";
-  for ( auto itemA : g_mapAMC ) std::cout << itemA.first << " ";
-  std::cout << std::endl;
   
   for ( auto chamber : gemChambers_ ) {
     auto gid = chamber.id();
@@ -900,7 +997,7 @@ void GEMDQMStatusDigi::endRun(edm::Run const& run, edm::EventSetup const& eSetup
     Int_t nIdxLayer   = seekIdx(m_listLayers,   layerId);
     Int_t nIdxChamber = seekIdx(m_listChambers, chamberId);
     
-    h2SummaryStatus_->setBinContent(nIdxChamber, nIdxLayer + 1, unVal);
+    if ( h2SummaryStatus_ ) h2SummaryStatus_->setBinContent(nIdxChamber, nIdxLayer + 1, unVal);
     
     // The below is for under/overflow of BX histograms
     Int_t nNbinX = listVFATBC_[ gid ]->getNbinsX();
@@ -913,15 +1010,17 @@ void GEMDQMStatusDigi::endRun(edm::Run const& run, edm::EventSetup const& eSetup
           listVFATBC_[ gid ]->getBinContent(nNbinX, i) + listVFATBC_[ gid ]->getBinContent(nNbinX + 1 , i));
     }
   }
-  
+   
   for ( auto &itStore : listTimeStore_ ) {
     auto &listCurr = itStore.second.listRecord;
     MonitorElement *h2Curr = itStore.second.h2Histo;
     
-    h2Curr->setBinContent(0, 0, nNSecPerBin_);
+    h2Curr->setBinContent(0, 0, nNSecPerBin_ * nNEvtPerSec_);
+    h2Curr->setBinContent(0, 1, 1);
     
     Int_t nSize = listCurr[ 0 ].size();
-    Int_t nXOffset = std::max(nSize - nNTimeBinTotal_, 0);
+    //Int_t nXOffset = std::max(nSize - nNTimeBinTotal_, 0);
+    Int_t nXOffset = 0;
     Int_t nNbinY = listCurr.size();
     
     for ( Int_t nX = nXOffset ; nX < nSize ; nX++ ) {

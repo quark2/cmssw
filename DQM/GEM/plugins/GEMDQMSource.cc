@@ -40,6 +40,8 @@ private:
   
   float fGlobXMin_, fGlobXMax_;
   float fGlobYMin_, fGlobYMax_;
+  
+  int nIdxFirstStrip_;
 
   const GEMGeometry* initGeometry(edm::EventSetup const & iSetup);
   int findVFAT(float min_, float max_, float x_, int roll_);
@@ -84,6 +86,8 @@ GEMDQMSource::GEMDQMSource(const edm::ParameterSet& cfg)
 {
   tagRecHit_ = consumes<GEMRecHitCollection>(cfg.getParameter<edm::InputTag>("recHitsInputLabel")); 
   
+  nIdxFirstStrip_ = cfg.getParameter<int>("idxFirstStrip");
+  
   fGlobXMin_ = cfg.getParameter<double>("global_x_bound_min");
   fGlobXMax_ = cfg.getParameter<double>("global_x_bound_max");
   fGlobYMin_ = cfg.getParameter<double>("global_y_bound_min");
@@ -94,6 +98,8 @@ void GEMDQMSource::fillDescriptions(edm::ConfigurationDescriptions & description
 {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("recHitsInputLabel", edm::InputTag("gemRecHits", "")); 
+  
+  desc.add<int>("idxFirstStrip", 0);
   
   desc.add<double>("global_x_bound_min", -400);
   desc.add<double>("global_x_bound_max",  400);
@@ -198,7 +204,9 @@ void GEMDQMSource::analyze(edm::Event const& event, edm::EventSetup const& event
       const auto& recHitsRange = gemRecHits->get(rId); 
       auto gemRecHit = recHitsRange.first;
       for ( auto hit = gemRecHit; hit != recHitsRange.second; ++hit ) {
-        int nVfat = findVFAT(1.0, 385.0, hit->firstClusterStrip()+0.5*hit->clusterSize(), rId.roll());
+        //int nVfat = findVFAT(0.0, 384.0, hit->firstClusterStrip()+0.5*hit->clusterSize(), rId.roll());
+        Int_t nIdxStrip = hit->firstClusterStrip()+0.5*hit->clusterSize() - nIdxFirstStrip_;
+        Int_t nVfat = 8 * ( (Int_t)( nIdxStrip / ( roll->nstrips() / 3 ) ) + 1 ) - rId.roll(); // Strip:Start at 0
         recHitME_[ cId ]->Fill(nVfat);
         rh_vs_eta_[ cId ]->Fill(hit->localPosition().x(), rId.roll());
         VFAT_vs_ClusterSize_[ cId ]->Fill(hit->clusterSize(), nVfat);
