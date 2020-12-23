@@ -137,11 +137,11 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, e
 
   for (const auto& ch : gemChambers_) {
     GEMDetId gid = ch.id();
-
-    std::string strIdxName = "Gemini_" + to_string(gid.chamber()) + "_GE" + (gid.region() > 0 ? "p" : "m") +
-                             to_string(gid.station()) + "_" + to_string(gid.layer());
-    std::string strIdxTitle = "GEMINIm" + to_string(gid.chamber()) + " in GE" + (gid.region() > 0 ? "+" : "-") +
-                              to_string(gid.station()) + "/" + to_string(gid.layer());
+    
+    std::string strIdxName = "_GE1" + to_string(gid.station()) +  // "GE1" will be replaced by "GE[12]"
+           (gid.region() > 0 ? "-P-" : "-M-") + 
+           to_string(gid.chamber()) + "L" + to_string(gid.layer()) + ( gid.chamber() % 2 == 0 ? "-L" : "-S" );
+    std::string strIdxTitle = strIdxName;
 
     std::string strStId = (gid.region() > 0 ? "p" : "m") + std::to_string(gid.station());
     std::string strStT = (gid.region() > 0 ? "+" : "-") + std::to_string(gid.station());
@@ -186,8 +186,8 @@ void GEMDQMSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, e
     std::string strIdxTitle =
         std::string("GE") + (gid.region() > 0 ? "+" : "-") + to_string(gid.station()) + "/" + to_string(gid.layer());
 
-    string hName_rh = "recHit_globalPos_Gemini_" + strIdxName;
-    string hTitle_rh = "recHit global position Gemini chamber : " + strIdxTitle;
+    string hName_rh = "recHit_globalPos_" + strIdxName;
+    string hTitle_rh = "recHit global position on chambers : " + strIdxTitle;
     hTitle_rh += ";Global X (cm);Global Y (cm)";
     recGlobalPos[gid] = ibooker.book2D(hName_rh, hTitle_rh, 100, fGlobXMin_, fGlobXMax_, 100, fGlobYMin_, fGlobYMax_);
   }

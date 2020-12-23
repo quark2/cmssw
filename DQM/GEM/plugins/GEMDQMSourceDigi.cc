@@ -109,10 +109,12 @@ void GEMDQMSourceDigi::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const
   for (const auto& ch : gemChambers_) {
     GEMDetId gid = ch.id();
 
-    std::string strIdxName = "Gemini_" + to_string(gid.chamber()) + "_GE" + (gid.region() > 0 ? "p" : "m") +
-                             to_string(gid.station()) + "_" + to_string(gid.layer());
-    std::string strIdxTitle = "GEMINIm" + to_string(gid.chamber()) + " in GE" + (gid.region() > 0 ? "+" : "-") +
-                              to_string(gid.station()) + "/" + to_string(gid.layer());
+    //std::string strIdxName = "Gemini_" + to_string(gid.chamber()) + "_GE" + (gid.region() > 0 ? "p" : "m") +
+    //                         to_string(gid.station()) + "_" + to_string(gid.layer());
+    std::string strIdxName = "_GE1" + to_string(gid.station()) +  // "GE1" will be replaced by "GE[12]"
+           (gid.region() > 0 ? "-P-" : "-M-") + 
+           to_string(gid.chamber()) + "L" + to_string(gid.layer()) + ( gid.chamber() % 2 == 0 ? "-L" : "-S" );
+    std::string strIdxTitle = strIdxName;
 
     string hName_digi = "Digi_Strips_" + strIdxName;
     string hTitle_digi = "Digi Strip " + strIdxTitle;
