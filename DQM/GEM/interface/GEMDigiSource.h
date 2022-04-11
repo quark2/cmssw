@@ -60,6 +60,8 @@ private:
 
   MonitorElement* h2SummaryOcc_;
 
+  std::string strFolderMain_;
+
   Int_t nBXMin_, nBXMax_;
   Float_t fRadiusMin_;
   Float_t fRadiusMax_;

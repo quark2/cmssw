@@ -91,6 +91,8 @@ public:
       return ibooker_->bookProfile2D(name, title, nbinsx, xlow, xup, nbinsy, ylow, yup, zlow, zup);
     }
 
+    DQMStore::IBooker *getBooker() { return ibooker_; }
+
   private:
     DQMStore::IBooker *ibooker_;
     const TString name_suffix_;
@@ -472,7 +474,8 @@ public:
           nNumChambers_(nNumChambers),
           nNumEtaPartitions_(nNumEtaPartitions),
           nMaxVFAT_(nMaxVFAT),
-          nNumDigi_(nNumDigi){};
+          nNumDigi_(nNumDigi),
+          fMinPhi_(0){};
 
     bool operator==(const MEStationInfo &other) const {
       return (nRegion_ == other.nRegion_ && nStation_ == other.nStation_ && nLayer_ == other.nLayer_ &&
@@ -489,7 +492,13 @@ public:
     Int_t nNumDigi_;  // the number of digis of each VFAT
 
     Float_t fMinPhi_;
+
+    std::vector<Float_t> listRadiusEvenChamber_;
+    std::vector<Float_t> listRadiusOddChamber_;
   };
+
+  int readGeometryRadiusInfoChamber(const GEMStation *station, MEStationInfo &stationInfo);
+  int readGeometryPhiInfoChamber(const GEMStation *station, MEStationInfo &stationInfo);
 
 public:
   explicit GEMDQMBase(const edm::ParameterSet &cfg);
@@ -546,6 +555,7 @@ protected:
   inline int getMaxVFAT(const int);
   inline int getDetOccXBin(const int, const int, const int);
   inline Float_t restrictAngle(const Float_t fTheta, const Float_t fStart);
+  inline std::string getNameDirLayer(ME3IdsKey key3);
 
   const GEMGeometry *GEMGeometry_;
   edm::ESGetToken<GEMGeometry, MuonGeometryRecord> geomToken_;
@@ -619,6 +629,13 @@ inline Float_t GEMDQMBase::restrictAngle(const Float_t fTheta, const Float_t fSt
   Float_t fLoop = (fTheta - fStart) / (2 * M_PI);
   int nLoop = (fLoop >= 0 ? (int)fLoop : (int)fLoop - 1);
   return fTheta - nLoop * 2 * M_PI;
+}
+
+inline std::string GEMDQMBase::getNameDirLayer(ME3IdsKey key3) {
+  auto nStation = keyToStation(key3);
+  const char *szRegion = (keyToRegion(key3) > 0 ? "P" : "M");
+  auto nLayer = keyToLayer(key3);
+  return std::string(Form("GE%i1-%s-L%i", nStation, szRegion, nLayer));
 }
 
 #endif  // DQM_GEM_INTERFACE_GEMDQMBase_h

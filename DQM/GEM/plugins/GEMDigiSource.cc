@@ -28,14 +28,16 @@ void GEMDigiSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, 
     return;
   loadChambers();
 
+  strFolderMain_ = "GEM/Digis";
+
   fRadiusMin_ = 120.0;
   fRadiusMax_ = 250.0;
   float radS = -5.0 / 180 * M_PI;
   float radL = 355.0 / 180 * M_PI;
 
-  mapTotalDigi_layer_ = MEMap3Inf(this, "det", "Digi Occupancy", 36, 0.5, 36.5, 24, -0.5, 24 - 0.5, "Chamber", "VFAT");
+  mapTotalDigi_layer_ = MEMap3Inf(this, "occ", "Digi Occupancy", 36, 0.5, 36.5, 24, -0.5, 24 - 0.5, "Chamber", "VFAT");
   mapDigiWheel_layer_ = MEMap3Inf(
-      this, "rphi_occ", "Digi R-Phi Occupancy", 360, radS, radL, 8, fRadiusMin_, fRadiusMax_, "#phi (rad)", "R [cm]");
+      this, "occ_rphi", "Digi R-Phi Occupancy", 360, radS, radL, 8, fRadiusMin_, fRadiusMax_, "#phi (rad)", "R [cm]");
   mapDigiOcc_ieta_ = MEMap3Inf(this, "occ_ieta", "Digi iEta Occupancy", 8, 0.5, 8.5, "iEta", "Number of fired digis");
   mapDigiOcc_phi_ =
       MEMap3Inf(this, "occ_phi", "Digi Phi Occupancy", 108, -5, 355, "#phi (degree)", "Number of fired digis");
@@ -69,7 +71,7 @@ void GEMDigiSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, 
   }
 
   ibooker.cd();
-  ibooker.setCurrentFolder("GEM/Digis");
+  ibooker.setCurrentFolder(strFolderMain_);
   GenerateMEPerChamber(ibooker);
 
   h2SummaryOcc_ = nullptr;
@@ -125,6 +127,8 @@ int GEMDigiSource::ProcessWithMEMap3WithChamber(BookingHelper& bh, ME4IdsKey key
   ME3IdsKey key3 = key4Tokey3(key);
   MEStationInfo& stationInfo = mapStationInfo_[key3];
 
+  bh.getBooker()->setCurrentFolder(strFolderMain_ + "/Chambers_" + getNameDirLayer(key3));
+
   int nNumVFATPerEta = stationInfo.nMaxVFAT_ / stationInfo.nNumEtaPartitions_;
   int nNumCh = stationInfo.nNumDigi_;
 
@@ -132,6 +136,8 @@ int GEMDigiSource::ProcessWithMEMap3WithChamber(BookingHelper& bh, ME4IdsKey key
   mapDigiOccPerCh_.SetBinConfY(stationInfo.nNumEtaPartitions_);
   mapDigiOccPerCh_.bookND(bh, key);
   mapDigiOccPerCh_.SetLabelForIEta(key, 2);
+
+  bh.getBooker()->setCurrentFolder(strFolderMain_);
 
   return 0;
 }

@@ -117,6 +117,10 @@ protected:
                             Int_t nLumiCurr,
                             NumStatus numStatusNew);
   void createLumiFuncHist(edm::Service<DQMStore> &store, std::string strSuffix, Int_t nIdxLayer, Int_t nLumiCurr);
+  void createInactiveChannelFracHist(edm::Service<DQMStore> &store,
+                                     std::string strSuffix,
+                                     Int_t nIdxLayer,
+                                     Int_t nNumChamber);
 
   Float_t fCutErr_, fCutLowErr_, fCutWarn_;
 
@@ -200,7 +204,7 @@ void GEMDQMHarvester::drawSummaryHistogram(edm::Service<DQMStore> &store, Int_t 
   std::string strSrcStatusWAMC = "GEM/DAQStatus/chamberAMCWarnings";
   std::string strSrcStatusEAMC13 = "GEM/DAQStatus/chamberAMC13Errors";
 
-  std::string strSrcVFATOcc = "GEM/Digis/det";
+  std::string strSrcVFATOcc = "GEM/Digis/occ";
   std::string strSrcVFATStatusW = "GEM/DAQStatus/vfat_statusWarnSum";
   std::string strSrcVFATStatusE = "GEM/DAQStatus/vfat_statusErrSum";
 
@@ -259,6 +263,8 @@ void GEMDQMHarvester::drawSummaryHistogram(edm::Service<DQMStore> &store, Int_t 
       h2SumVFAT->setYTitle(h2SrcVFATStatusE->getAxisTitle(2));
 
       createLumiFuncHist(store, strSuffix, nIdxLayer, nLumiCurr);
+
+      createInactiveChannelFracHist(store, strSuffix, nIdxLayer, h2SrcVFATOcc->getNbinsX());
     }
   }
 
@@ -321,8 +327,8 @@ void GEMDQMHarvester::createSummaryHist(edm::Service<DQMStore> &store,
     std::string strLabelFull = h2Src->getTH2F()->GetYaxis()->GetBinLabel(i);
     Int_t nBinXActual = (Int_t)(h2Src->getBinContent(0, i) + 0.5);
     auto nPos = strLabelFull.find(';');
-    auto strLabel = strLabelFull.substr(0, nPos);
     auto strLayer = strLabelFull.substr(nPos + 1);
+    auto strLabel = strLayer.substr(1);
     listLayers.push_back(strLabelFull.substr(nPos + 1));
     h2Sum->setBinLabel(i, strLabel, 2);
     mapIdxLayer[strLayer] = i;
@@ -589,6 +595,86 @@ void GEMDQMHarvester::createLumiFuncHist(edm::Service<DQMStore> &store,
 
   for (Int_t nX = 1; nX <= nMaxBin; nX++) {
     h2Summary->setBinContent(nX, 0, 1);
+  }
+}
+
+std::string getNameChamberOccGE11(std::string strSuffix, Int_t nIdxCh) {
+  std::string strRegion;
+  std::string strChType = (nIdxCh % 2 == 0 ? "L" : "S");
+  Int_t nLayer;
+
+  if (strSuffix.find("-M-") != std::string::npos)
+    strRegion = "M";
+  else if (strSuffix.find("-P-") != std::string::npos)
+    strRegion = "P";
+  else
+    return "";
+
+  if (strSuffix.find("-L1") != std::string::npos)
+    nLayer = 1;
+  else if (strSuffix.find("-L2") != std::string::npos)
+    nLayer = 2;
+  else
+    return "";
+
+  return Form("GEM/Digis/Chambers_GE11-%s-L%i/occ_GE11-%s-%02iL%i-%s",
+              strRegion.c_str(),
+              nLayer,
+              strRegion.c_str(),
+              nIdxCh,
+              nLayer,
+              strChType.c_str());
+}
+
+std::string getNameChamberOccGE21(std::string strSuffix, Int_t nIdxChamber) {
+  return "";  // FIXME
+}
+
+std::string getNameChamberOccNull(std::string strSuffix, Int_t nIdxChamber) {
+  return "";  // For an initialization
+}
+
+void GEMDQMHarvester::createInactiveChannelFracHist(edm::Service<DQMStore> &store,
+                                                    std::string strSuffix,
+                                                    Int_t nIdxLayer,
+                                                    Int_t nNumChamber) {
+  std::string strTitle = "The fraction of inactive channels in " + strSuffix.substr(1);
+  MonitorElement *h2InactiveChannel =
+      store->book1D("inactive_frac_chamber" + strSuffix, strTitle, nNumChamber, 0.5, nNumChamber + 0.5);
+  h2InactiveChannel->setXTitle("Chamber");
+  h2InactiveChannel->setYTitle("Fraction of inactive channels");
+  for (Int_t i = 1; i <= nNumChamber; i++) {
+    h2InactiveChannel->setBinLabel(i, Form("%i", i), 1);
+  }
+
+  std::string (*funcNameCh)(std::string, Int_t) = getNameChamberOccNull;
+
+  if (strSuffix.find("_GE11") != std::string::npos) {
+    funcNameCh = getNameChamberOccGE11;
+  } else if (strSuffix.find("_GE21") != std::string::npos) {
+    funcNameCh = getNameChamberOccGE21;
+  }
+
+  for (Int_t nIdxCh = 1; nIdxCh <= nNumChamber; nIdxCh++) {
+    std::string strNameCh = funcNameCh(strSuffix, nIdxCh);
+    MonitorElement *h2SrcChamberOcc = store->get(strNameCh);
+    if (h2SrcChamberOcc == nullptr) {
+      // FIXME: It's about sending a message
+      continue;
+    }
+
+    Int_t nNumBinX = h2SrcChamberOcc->getNbinsX();
+    Int_t nNumBinY = h2SrcChamberOcc->getNbinsY();
+    Int_t nNumChannelInactive = 0;
+    for (Int_t i = 1; i <= nNumBinX; i++)
+      for (Int_t j = 1; j <= nNumBinY; j++) {
+        if (h2SrcChamberOcc->getBinContent(i, j) <= 0) {
+          nNumChannelInactive++;
+        }
+      }
+
+    Int_t nNumAllChannel = nNumBinX * nNumBinY;
+    h2InactiveChannel->setBinContent(nIdxCh, ((Double_t)nNumChannelInactive) / nNumAllChannel);
   }
 }
 

@@ -32,8 +32,9 @@ private:
 
   int nIdxFirstDigi_;
   int nClusterSizeBinNum_;
+  int nNumDivideEtaPartitionInRPhi_;
 
-  MEMap3Inf mapTotalRecHit_layer_;
+  MEMap3Inf mapRecHitXY_layer_;
   MEMap3Inf mapRecHitWheel_layer_;
   MEMap3Inf mapRecHitOcc_ieta_;
   MEMap3Inf mapRecHitOcc_phi_;
@@ -44,6 +45,8 @@ private:
   MEMap3Inf mapCLSOver5_;
 
   MEMap4Inf mapCLSPerCh_;
+
+  std::string strFolderMain_;
 
   Int_t nCLSMax_;
   Float_t fRadiusMin_;

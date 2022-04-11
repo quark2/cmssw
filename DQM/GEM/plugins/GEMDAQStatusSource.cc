@@ -134,6 +134,8 @@ void GEMDAQStatusSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run con
     return;
   loadChambers();
 
+  strFolderMain_ = "GEM/DAQStatus";
+
   nBXMin_ = -10;
   nBXMax_ = 10;
 
@@ -141,7 +143,7 @@ void GEMDAQStatusSource::bookHistograms(DQMStore::IBooker &ibooker, edm::Run con
   mapFEDIdToRe_[1468] = 1;
 
   ibooker.cd();
-  ibooker.setCurrentFolder("GEM/DAQStatus");
+  ibooker.setCurrentFolder(strFolderMain_);
 
   h2AMC13Status_ =
       ibooker.book2D("amc13_status", "AMC13 Status;AMC13;", 2, 0.5, 2.5, nBitAMC13_, 0.5, nBitAMC13_ + 0.5);
@@ -237,10 +239,14 @@ int GEMDAQStatusSource::ProcessWithMEMap3WithChamber(BookingHelper &bh, ME4IdsKe
   ME3IdsKey key3 = key4Tokey3(key);
   MEStationInfo &stationInfo = mapStationInfo_[key3];
 
+  bh.getBooker()->setCurrentFolder(strFolderMain_ + "/Chambers_" + getNameDirLayer(key3));
+
   mapStatusVFATPerCh_.SetBinConfX(stationInfo.nMaxVFAT_, -0.5);
   mapStatusVFATPerCh_.bookND(bh, key);
   mapStatusVFATPerCh_.SetLabelForVFATs(key, stationInfo.nNumEtaPartitions_, 1);
   SetLabelVFATStatus(mapStatusVFATPerCh_.FindHist(key));
+
+  bh.getBooker()->setCurrentFolder(strFolderMain_);
 
   return 0;
 }
