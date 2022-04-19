@@ -57,8 +57,6 @@ private:
   std::unordered_map<UInt_t, MonitorElement*> DigisFired_vs_eta_;
   std::unordered_map<UInt_t, MonitorElement*> rh_vs_eta_;
   std::unordered_map<UInt_t, MonitorElement*> recGlobalPos;
-
-  Bool_t bModeRelVal_;
 };
 
 #endif  // DQM_GEM_INTERFACE_GEMRecHitSource_h

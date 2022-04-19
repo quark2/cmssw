@@ -329,6 +329,7 @@ public:
       if (mapHist.find(key) == mapHist.end()) {
         edm::LogError(log_category_own_)
             << "WARNING: Cannot find the histogram corresponing to the given key\n";  // FIXME: It's about sending a message
+        return nullptr;
       }
       return mapHist[key];
     };
@@ -503,6 +504,15 @@ public:
 public:
   explicit GEMDQMBase(const edm::ParameterSet &cfg);
   ~GEMDQMBase() override{};
+
+  enum {
+    GEMDQM_RUNTYPE_ONLINE, 
+    GEMDQM_RUNTYPE_OFFLINE, 
+    GEMDQM_RUNTYPE_RELVAL, 
+    GEMDQM_RUNTYPE_NONE = -1
+  };
+
+  Int_t nRunType_;
 
   std::string log_category_;
 

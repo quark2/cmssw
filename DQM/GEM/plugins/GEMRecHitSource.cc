@@ -10,18 +10,17 @@ GEMRecHitSource::GEMRecHitSource(const edm::ParameterSet& cfg) : GEMDQMBase(cfg)
   nNumDivideEtaPartitionInRPhi_ = cfg.getParameter<int>("numDivideEtaPartitionInRPhi");
   nCLSMax_ = cfg.getParameter<int>("clsMax");
   nClusterSizeBinNum_ = cfg.getParameter<int>("ClusterSizeBinNum");
-  bModeRelVal_ = cfg.getParameter<bool>("modeRelVal");
 }
 
 void GEMRecHitSource::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("recHitsInputLabel", edm::InputTag("gemRecHits", ""));
+  desc.addUntracked<std::string>("runType", "online");
 
   desc.add<int>("idxFirstDigi", 0);
   desc.add<int>("numDivideEtaPartitionInRPhi", 10);
   desc.add<int>("clsMax", 10);
   desc.add<int>("ClusterSizeBinNum", 9);
-  desc.add<bool>("modeRelVal", false);
 
   desc.addUntracked<std::string>("logCategory", "GEMRecHitSource");
 
@@ -49,7 +48,7 @@ void GEMRecHitSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&
   mapRecHitWheel_layer_ = MEMap3Inf(
       this, "occ_rphi", "RecHit R-Phi Occupancy", 360, radS, radL, 8, 0, 8, "Phi-direction division", "iEta");
   mapRecHitXY_layer_ =
-      MEMap3Inf(this, "occ_xy", "RecHit R-Phi Occupancy", 160, -250, 250, 160, -250, 250, "X [cm]", "Y [cm]");
+      MEMap3Inf(this, "occ_xy", "RecHit xy Occupancy", 160, -250, 250, 160, -250, 250, "X [cm]", "Y [cm]");
   mapRecHitOcc_ieta_ = MEMap3Inf(this, "occ_ieta", "RecHit iEta Occupancy", 8, 0.5, 8.5, "iEta", "Number of RecHits");
   mapRecHitOcc_phi_ =
       MEMap3Inf(this, "occ_phi", "RecHit Phi Occupancy", 360, -5, 355, "#phi (degree)", "Number of RecHits");
@@ -92,12 +91,27 @@ void GEMRecHitSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&
   mapCLSPerCh_ = MEMap4Inf(
       this, "cls", "Cluster size of RecHits", nCLSMax_, 0.5, nCLSMax_ + 0.5, 1, 0.5, 1.5, "Cluster size", "iEta");
 
-  if (bModeRelVal_) {
+  if (nRunType_ == GEMDQM_RUNTYPE_OFFLINE) {
     mapRecHitXY_layer_.TurnOff();
-    mapRecHitWheel_layer_.TurnOff();
+    mapCLSOver5_.TurnOff();
+    mapCLSPerCh_.TurnOff();
+  }
+
+  if (nRunType_ == GEMDQM_RUNTYPE_RELVAL) {
+    mapRecHitXY_layer_.TurnOff();
     mapCLSAverage_.TurnOff();
     mapCLSOver5_.TurnOff();
     mapCLSPerCh_.TurnOff();
+  }
+
+  if (nRunType_ != GEMDQM_RUNTYPE_OFFLINE) {
+    mapRecHitWheel_layer_.TurnOff();
+  }
+
+  if (nRunType_ != GEMDQM_RUNTYPE_RELVAL) {
+    mapRecHitOcc_ieta_.TurnOff();
+    mapRecHitOcc_phi_.TurnOff();
+    mapCLSRecHit_ieta_.TurnOff();
   }
 
   GenerateMEPerChamber(ibooker);

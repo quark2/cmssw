@@ -5,6 +5,20 @@ using namespace std;
 using namespace edm;
 
 GEMDQMBase::GEMDQMBase(const edm::ParameterSet& cfg) : geomToken_(esConsumes<edm::Transition::BeginRun>()) {
+  std::string strRunType = cfg.getUntrackedParameter<std::string>("runType");
+
+  nRunType_ = GEMDQM_RUNTYPE_ONLINE;
+
+  if ( strRunType == "online" ) {
+    nRunType_ = GEMDQM_RUNTYPE_ONLINE;
+  } else if ( strRunType == "offline" ) {
+    nRunType_ = GEMDQM_RUNTYPE_OFFLINE;
+  } else if ( strRunType == "relval" ) {
+    nRunType_ = GEMDQM_RUNTYPE_RELVAL;
+  } else {
+    edm::LogError(log_category_) << "+++ Error : GEM geometry is unavailable on event loop. +++\n";
+  }
+
   log_category_ = cfg.getUntrackedParameter<std::string>("logCategory");
 
   nNumEtaPartitionGE0_ = 0;

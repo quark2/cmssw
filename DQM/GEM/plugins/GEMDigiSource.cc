@@ -7,7 +7,6 @@ GEMDigiSource::GEMDigiSource(const edm::ParameterSet& cfg) : GEMDQMBase(cfg) {
   tagDigi_ = consumes<GEMDigiCollection>(cfg.getParameter<edm::InputTag>("digisInputLabel"));
   lumiScalers_ = consumes<LumiScalersCollection>(
       cfg.getUntrackedParameter<edm::InputTag>("lumiCollection", edm::InputTag("scalersRawToDigi")));
-  bModeRelVal_ = cfg.getParameter<bool>("modeRelVal");
   nBXMin_ = cfg.getParameter<int>("bxMin");
   nBXMax_ = cfg.getParameter<int>("bxMax");
 }
@@ -15,8 +14,8 @@ GEMDigiSource::GEMDigiSource(const edm::ParameterSet& cfg) : GEMDQMBase(cfg) {
 void GEMDigiSource::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("digisInputLabel", edm::InputTag("muonGEMDigis", ""));
+  desc.addUntracked<std::string>("runType", "online");
   desc.addUntracked<std::string>("logCategory", "GEMDigiSource");
-  desc.add<bool>("modeRelVal", false);
   desc.add<int>("bxMin", -10);
   desc.add<int>("bxMax", 10);
   descriptions.add("GEMDigiSource", desc);
@@ -64,10 +63,20 @@ void GEMDigiSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, 
 
   mapDigiOccPerCh_ = MEMap4Inf(this, "occ", "Digi Occupancy", 1, -0.5, 1.5, 1, 0.5, 1.5, "Digi", "iEta");
 
-  if (bModeRelVal_) {
-    mapTotalDigi_layer_.TurnOff();
+  if (nRunType_ == GEMDQM_RUNTYPE_OFFLINE) {
     mapDigiWheel_layer_.TurnOff();
     mapDigiOccPerCh_.TurnOff();
+    mapBX_.TurnOff();
+  }
+
+  if (nRunType_ == GEMDQM_RUNTYPE_RELVAL) {
+    mapDigiWheel_layer_.TurnOff();
+    mapDigiOccPerCh_.TurnOff();
+  }
+
+  if (nRunType_ != GEMDQM_RUNTYPE_RELVAL) {
+    mapDigiOcc_ieta_.TurnOff();
+    mapDigiOcc_phi_.TurnOff();
   }
 
   ibooker.cd();
@@ -75,7 +84,7 @@ void GEMDigiSource::bookHistograms(DQMStore::IBooker& ibooker, edm::Run const&, 
   GenerateMEPerChamber(ibooker);
 
   h2SummaryOcc_ = nullptr;
-  if (!bModeRelVal_) {
+  if (nRunType_ == GEMDQM_RUNTYPE_ONLINE) {
     h2SummaryOcc_ = CreateSummaryHist(ibooker, "summaryOccDigi");
     h2SummaryOcc_->setTitle("Summary of occupancy on chambers");
     h2SummaryOcc_->setXTitle("Chamber");
